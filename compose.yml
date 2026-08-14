@@ -1,0 +1,83 @@
+name: devnote-practice
+
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: devnote-mysql
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-devnote}
+      MYSQL_USER: ${MYSQL_USERNAME:-devnote}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-devnote}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root-devnote}
+      TZ: UTC
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --default-time-zone=+00:00
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - devnote-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$${MYSQL_ROOT_PASSWORD} --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: devnote-backend
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      DATABASE_URL: jdbc:p6spy:mysql://mysql:3306/${MYSQL_DATABASE:-devnote}?useUnicode=true&characterEncoding=UTF-8&serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=false
+      DATABASE_USERNAME: ${MYSQL_USERNAME:-devnote}
+      DATABASE_PASSWORD: ${MYSQL_PASSWORD:-devnote}
+      # 버전형 마이그레이션 파일을 사용하지 않는 연습 프로젝트이므로,
+      # 기존 Docker DB 볼륨에 누락된 Entity 컬럼을 로컬에서 자동 보정합니다.
+      JPA_DDL_AUTO: ${JPA_DDL_AUTO:-update}
+      FILE_STORAGE_ROOT: /application/storage
+      SERVER_PORT: 8080
+      INITIAL_SUPER_ADMIN_PASSWORD_HASH: ${INITIAL_SUPER_ADMIN_PASSWORD_HASH:-600000:2519u3hcpq5hx8SaSCvL9A==:LQjLKoKo4WuJr2WDDpE3FAkNQCMtoPmH8e9U77Fa2Gc=}
+      AUTH_SESSION_TIMEOUT: ${AUTH_SESSION_TIMEOUT:-30m}
+      AUTH_REMEMBER_ME_DURATION: ${AUTH_REMEMBER_ME_DURATION:-30d}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+    volumes:
+      - devnote-file-storage:/application/storage
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/actuator/health/readiness | grep -q UP"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 40s
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api/v1}
+        VITE_HTTP_CLIENT: ${VITE_HTTP_CLIENT:-axios}
+        VITE_DATA_SOURCE: ${VITE_DATA_SOURCE:-backend}
+        VITE_MOCK_SCENARIO: ${VITE_MOCK_SCENARIO:-success}
+        VITE_DEVELOPMENT_MEMBER_ID: ${VITE_DEVELOPMENT_MEMBER_ID:-1}
+        VITE_ENABLE_DEVELOPMENT_MENU: ${VITE_ENABLE_DEVELOPMENT_MENU:-true}
+    container_name: devnote-frontend
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    # 프론트는 백엔드 상태와 독립적으로 시작합니다.
+    # 백엔드가 꺼져 있어도 더미 데이터 ON으로 React 연습이 가능합니다.
+    restart: unless-stopped
+
+volumes:
+  devnote-mysql-data:
+  devnote-file-storage:

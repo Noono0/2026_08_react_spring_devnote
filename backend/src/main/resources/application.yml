@@ -1,0 +1,110 @@
+spring:
+  application:
+    name: devnote-backend
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
+  datasource:
+    url: ${DATABASE_URL:jdbc:p6spy:mysql://localhost:3306/devnote?useUnicode=true&characterEncoding=UTF-8&serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=false}
+    username: ${DATABASE_USERNAME:devnote}
+    password: ${DATABASE_PASSWORD:devnote}
+    driver-class-name: com.p6spy.engine.spy.P6SpyDriver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+  jpa:
+    open-in-view: false
+    hibernate:
+      # 로컬 Docker에서는 기존 연습 DB에 새 Entity 컬럼이 추가되어도
+      # 서버가 시작될 수 있도록 update를 기본값으로 사용합니다.
+      # 운영 환경에서는 JPA_DDL_AUTO=validate로 변경해야 합니다.
+      ddl-auto: ${JPA_DDL_AUTO:update}
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          time_zone: UTC
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
+      data-locations: classpath:data.sql
+      continue-on-error: false
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 25MB
+  jackson:
+    time-zone: UTC
+
+server:
+  port: ${SERVER_PORT:8080}
+  shutdown: graceful
+  error:
+    include-message: never
+    include-stacktrace: never
+  servlet:
+    session:
+      timeout: ${AUTH_SESSION_TIMEOUT:30m}
+      cookie:
+        http-only: true
+        secure: ${SESSION_COOKIE_SECURE:false}
+        same-site: strict
+
+auth:
+  remember-me-duration: ${AUTH_REMEMBER_ME_DURATION:30d}
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+  api-docs:
+    path: /v3/api-docs
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: when_authorized
+
+mybatis:
+  mapper-locations: classpath:/mybatis/mapper/**/*.xml
+  type-aliases-package: com.example.devnote
+  configuration:
+    map-underscore-to-camel-case: true
+    default-fetch-size: 100
+    default-statement-timeout: 10
+
+application:
+  authentication:
+    # 초기 계정 admin / admin1234 해시입니다. 외부 배포 전 환경변수로 반드시 교체합니다.
+    initial-super-admin-password-hash: ${INITIAL_SUPER_ADMIN_PASSWORD_HASH:600000:2519u3hcpq5hx8SaSCvL9A==:LQjLKoKo4WuJr2WDDpE3FAkNQCMtoPmH8e9U77Fa2Gc=}
+  file-storage:
+    root-directory: ${FILE_STORAGE_ROOT:./storage}
+    maximum-file-size-bytes: 20971520
+    allowed-extensions:
+      - png
+      - jpg
+      - jpeg
+      - webp
+      - gif
+      - pdf
+      - txt
+      - csv
+      - docx
+      - xlsx
+      - pptx
+      - zip
+
+logging:
+  level:
+    root: INFO
+    com.example.devnote: DEBUG
+    p6spy: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [traceId=%X{traceId:-none}] [userId=%X{userId:-anonymous}] [%thread] %logger{40} - %msg%n"

@@ -1,0 +1,77 @@
+@backendUrl = http://localhost:8080
+@snippetId = 1
+
+### 슈퍼관리자 로그인 - 이후 요청은 HTTP Client의 Cookie 저장소를 사용합니다.
+POST {{backendUrl}}/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "loginId": "admin",
+  "password": "admin1234"
+}
+
+### Java 정규식 - 이름 Capture Group 찾기
+POST {{backendUrl}}/api/v1/utilities/regex/java
+Content-Type: application/json
+
+{
+  "pattern": "(?<year>\\d{4})-(?<month>\\d{2})-(?<day>\\d{2})",
+  "flags": "",
+  "input": "작성 2026-08-13 / 수정 2026-08-14",
+  "mode": "FIND",
+  "replacement": ""
+}
+
+### 회원별 Developer Snippet 생성
+POST {{backendUrl}}/api/v1/snippets
+Content-Type: application/json
+
+{
+  "title": "TanStack Query 갱신 예제",
+  "description": "Mutation 성공 후 목록 queryKey를 무효화하는 코드",
+  "language": "TypeScript",
+  "code": "await queryClient.invalidateQueries({ queryKey: ['snippets'] });",
+  "tags": ["react", "tanstack-query"],
+  "favorite": true
+}
+
+### 회원별 Snippet 검색·서버 페이징
+GET {{backendUrl}}/api/v1/snippets?pageNumber=0&pageSize=10&keyword=Query&language=TypeScript&favoriteOnly=true&status=ACTIVE&sort=LATEST
+
+### Snippet 수정 - 위 생성 응답의 snippetId로 바꾸세요.
+PUT {{backendUrl}}/api/v1/snippets/{{snippetId}}
+Content-Type: application/json
+
+{
+  "title": "TanStack Query 목록 갱신",
+  "description": "현재 로그인 회원에게만 보이는 수정 예제",
+  "language": "TypeScript",
+  "code": "await queryClient.invalidateQueries({ queryKey: ['snippets'] });",
+  "tags": ["react", "query"],
+  "favorite": false
+}
+
+### Snippet 휴지통 이동
+DELETE {{backendUrl}}/api/v1/snippets/{{snippetId}}
+
+### 휴지통 목록
+GET {{backendUrl}}/api/v1/snippets?pageNumber=0&pageSize=10&keyword=&language=ALL&favoriteOnly=false&status=TRASH&sort=LATEST
+
+### Snippet 복구
+POST {{backendUrl}}/api/v1/snippets/{{snippetId}}/restore
+
+### 여러 Snippet 휴지통 이동 - 실제 본인 소유 ID로 바꾸세요.
+POST {{backendUrl}}/api/v1/snippets/bulk-delete
+Content-Type: application/json
+
+{
+  "snippetIds": [1, 2]
+}
+
+### 여러 Snippet 복구
+POST {{backendUrl}}/api/v1/snippets/bulk-restore
+Content-Type: application/json
+
+{
+  "snippetIds": [1, 2]
+}

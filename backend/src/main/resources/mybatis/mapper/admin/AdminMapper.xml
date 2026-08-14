@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.devnote.admin.AdminMapper">
+    <select id="selectGrades" resultType="com.example.devnote.admin.dao.row.GradeRow">
+        SELECT grade_code, grade_name, minimum_points, sort_order, use_yn
+        FROM member_grades ORDER BY sort_order, grade_code
+    </select>
+
+    <update id="updateGrade">
+        UPDATE member_grades SET grade_name = #{gradeName}, minimum_points = #{minimumPoints},
+            sort_order = #{sortOrder}, use_yn = #{useYn}, updated_at = CURRENT_TIMESTAMP(6)
+        WHERE grade_code = #{gradeCode}
+    </update>
+
+    <select id="selectRolePermissions" resultType="com.example.devnote.admin.dao.row.RolePermissionRow">
+        SELECT role_list.member_role, permission.permission_code, permission.permission_name,
+               permission.permission_description, COALESCE(role_permission.allowed_yn, 'N') AS allowed_yn
+        FROM (
+            SELECT 'USER' AS member_role UNION ALL SELECT 'ADMIN' UNION ALL SELECT 'SUPER_ADMIN'
+        ) role_list
+        CROSS JOIN permissions permission
+        LEFT JOIN role_permissions role_permission
+          ON role_permission.member_role = role_list.member_role
+         AND role_permission.permission_code = permission.permission_code
+        ORDER BY FIELD(role_list.member_role, 'USER', 'ADMIN', 'SUPER_ADMIN'), permission.permission_code
+    </select>
+
+    <insert id="upsertRolePermission">
+        INSERT INTO role_permissions (member_role, permission_code, allowed_yn)
+        VALUES (#{memberRole}, #{permissionCode}, #{allowedYn})
+        ON DUPLICATE KEY UPDATE allowed_yn = VALUES(allowed_yn), updated_at = CURRENT_TIMESTAMP(6)
+    </insert>
+
+    <insert id="insertVisitorEvent">
+        INSERT INTO visitor_events (visitor_key, member_id, visited_path)
+        VALUES (#{visitorKey}, #{memberId}, #{visitedPath})
+    </insert>
+
+    <select id="selectTodayVisitorCount" resultType="long">
+        SELECT COUNT(DISTINCT visitor_key) FROM visitor_events WHERE visited_at &gt;= CURRENT_DATE()
+    </select>
+
+    <select id="selectMonthVisitorCount" resultType="long">
+        SELECT COUNT(DISTINCT visitor_key) FROM visitor_events
+        WHERE visited_at &gt;= DATE_FORMAT(CURRENT_DATE(), '%Y-%m-01')
+    </select>
+
+    <select id="selectDailyVisitSeries" resultType="com.example.devnote.admin.dao.row.VisitSeriesRow">
+        SELECT DATE_FORMAT(visited_at, '%Y-%m-%d') AS period,
+               COUNT(DISTINCT visitor_key) AS visitors, COUNT(*) AS page_views
+        FROM visitor_events WHERE visited_at &gt;= CURRENT_DATE() - INTERVAL 13 DAY
+        GROUP BY DATE_FORMAT(visited_at, '%Y-%m-%d') ORDER BY period
+    </select>
+
+    <select id="selectMonthlyVisitSeries" resultType="com.example.devnote.admin.dao.row.VisitSeriesRow">
+        SELECT DATE_FORMAT(visited_at, '%Y-%m') AS period,
+               COUNT(DISTINCT visitor_key) AS visitors, COUNT(*) AS page_views
+        FROM visitor_events WHERE visited_at &gt;= DATE_FORMAT(CURRENT_DATE() - INTERVAL 11 MONTH, '%Y-%m-01')
+        GROUP BY DATE_FORMAT(visited_at, '%Y-%m') ORDER BY period
+    </select>
+
+    <select id="selectRecentVisits" resultType="com.example.devnote.admin.dao.row.RecentVisitRow">
+        SELECT visit.visitor_key, visit.member_id, member.login_id, member.member_name,
+               visit.visited_path, visit.visited_at
+        FROM visitor_events visit
+        LEFT JOIN members member ON member.member_id = visit.member_id
+        ORDER BY visit.visited_at DESC, visit.visitor_event_id DESC
+        LIMIT 50
+    </select>
+</mapper>

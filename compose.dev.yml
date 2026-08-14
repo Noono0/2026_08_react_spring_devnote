@@ -1,0 +1,24 @@
+name: devnote-practice-development
+
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: devnote-mysql-development
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-devnote}
+      MYSQL_USER: ${MYSQL_USERNAME:-devnote}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-devnote}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root-devnote}
+      TZ: UTC
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - devnote-mysql-development-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$${MYSQL_ROOT_PASSWORD} --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  devnote-mysql-development-data:

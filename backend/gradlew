@@ -1,0 +1,40 @@
+#!/bin/sh
+set -eu
+
+GRADLE_VERSION="8.14.4"
+APP_HOME=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+WRAPPER_HOME="$APP_HOME/.gradle-wrapper"
+GRADLE_HOME="$WRAPPER_HOME/gradle-$GRADLE_VERSION"
+ARCHIVE="$WRAPPER_HOME/gradle-$GRADLE_VERSION-bin.zip"
+DISTRIBUTION_URL="https://services.gradle.org/distributions/gradle-$GRADLE_VERSION-bin.zip"
+
+if [ ! -x "$GRADLE_HOME/bin/gradle" ]; then
+    mkdir -p "$WRAPPER_HOME"
+    echo "Gradle $GRADLE_VERSION 다운로드: $DISTRIBUTION_URL"
+
+    if command -v curl >/dev/null 2>&1; then
+        curl --fail --location --retry 2 --output "$ARCHIVE" "$DISTRIBUTION_URL"
+    elif command -v wget >/dev/null 2>&1; then
+        wget --output-document="$ARCHIVE" "$DISTRIBUTION_URL"
+    else
+        echo "오류: curl 또는 wget이 필요합니다." >&2
+        exit 1
+    fi
+
+    if command -v unzip >/dev/null 2>&1; then
+        unzip -q -o "$ARCHIVE" -d "$WRAPPER_HOME"
+    elif command -v python3 >/dev/null 2>&1; then
+        python3 - "$ARCHIVE" "$WRAPPER_HOME" <<'INNERPY'
+import sys, zipfile
+archive, output = sys.argv[1], sys.argv[2]
+with zipfile.ZipFile(archive) as zipped:
+    zipped.extractall(output)
+INNERPY
+    else
+        echo "오류: unzip 또는 python3이 필요합니다." >&2
+        exit 1
+    fi
+    rm -f "$ARCHIVE"
+fi
+
+exec "$GRADLE_HOME/bin/gradle" "$@"

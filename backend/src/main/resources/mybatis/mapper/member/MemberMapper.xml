@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.devnote.member.MemberMapper">
+    <sql id="memberColumns">
+        member_id, login_id, password_hash, email, member_name, member_role, grade_code,
+        account_status, use_yn, last_login_at, created_at, updated_at
+    </sql>
+
+    <select id="selectMemberByLoginId" resultType="com.example.devnote.member.dao.row.MemberRow">
+        SELECT <include refid="memberColumns"/> FROM members WHERE login_id = #{loginId} AND use_yn = 'Y'
+    </select>
+
+    <select id="selectMemberByEmail" resultType="com.example.devnote.member.dao.row.MemberRow">
+        SELECT <include refid="memberColumns"/> FROM members WHERE email = #{email} AND use_yn = 'Y'
+    </select>
+
+    <select id="selectMemberById" resultType="com.example.devnote.member.dao.row.MemberRow">
+        SELECT <include refid="memberColumns"/> FROM members WHERE member_id = #{memberId} AND use_yn = 'Y'
+    </select>
+
+    <select id="selectAllMembers" resultType="com.example.devnote.member.dao.row.MemberRow">
+        SELECT <include refid="memberColumns"/> FROM members ORDER BY member_id DESC
+    </select>
+
+    <insert id="insertMember" parameterType="com.example.devnote.member.dao.parameter.MemberCreateParameter" useGeneratedKeys="true" keyProperty="memberId">
+        INSERT INTO members (login_id, password_hash, email, member_name, member_role, grade_code, account_status, use_yn)
+        VALUES (#{loginId}, #{passwordHash}, #{email}, #{memberName}, #{memberRole}, #{gradeCode}, 'ACTIVE', 'Y')
+    </insert>
+
+    <update id="updateLastLoginAt">
+        UPDATE members SET last_login_at = CURRENT_TIMESTAMP(6) WHERE member_id = #{memberId}
+    </update>
+
+    <update id="updateMemberManagement">
+        UPDATE members
+        SET grade_code = #{gradeCode}, member_role = #{memberRole}, account_status = #{accountStatus}, updated_at = CURRENT_TIMESTAMP(6)
+        WHERE member_id = #{memberId} AND use_yn = 'Y'
+    </update>
+
+    <update id="upsertSuperAdministrator">
+        UPDATE members
+        SET login_id = 'admin', password_hash = #{passwordHash}, member_name = '슈퍼관리자',
+            member_role = 'SUPER_ADMIN', grade_code = 'DIAMOND', account_status = 'ACTIVE', use_yn = 'Y'
+        WHERE member_id = 1 AND login_id IS NULL
+    </update>
+</mapper>

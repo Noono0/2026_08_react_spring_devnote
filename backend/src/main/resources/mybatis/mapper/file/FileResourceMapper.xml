@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.devnote.file.FileResourceMapper">
+    <insert id="insertFile"
+            parameterType="com.example.devnote.file.dao.parameter.FileCreateParameter"
+            useGeneratedKeys="true"
+            keyProperty="fileId">
+        INSERT INTO file_resources (
+            uploader_id,
+            original_file_name,
+            stored_file_name,
+            file_extension,
+            mime_type,
+            file_size,
+            storage_path,
+            file_status
+        ) VALUES (
+            #{uploaderId},
+            #{originalFileName},
+            #{storedFileName},
+            #{fileExtension},
+            #{mimeType},
+            #{fileSize},
+            #{storagePath},
+            #{fileStatus}
+        )
+    </insert>
+
+    <select id="selectFileById" resultType="com.example.devnote.file.dao.row.FileResourceRow">
+        SELECT
+            file_id,
+            uploader_id,
+            original_file_name,
+            stored_file_name,
+            file_extension,
+            mime_type,
+            file_size,
+            storage_path,
+            file_status
+        FROM file_resources
+        WHERE file_id = #{fileId}
+    </select>
+
+    <update id="updateFileStatus">
+        UPDATE file_resources
+        SET file_status = #{fileStatus}
+        WHERE file_id = #{fileId}
+          AND uploader_id = #{uploaderId}
+          AND file_status != 'DELETED'
+    </update>
+
+</mapper>

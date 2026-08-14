@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.devnote.portfolio.PortfolioSectionMapper">
+    <sql id="sectionColumns">
+        section.portfolio_section_id, section.section_type, section.content_mode,
+        section.section_title, section.section_subtitle, section.start_date, section.end_date,
+        section.current_yn, section.external_url, section.thumbnail_file_id,
+        CASE WHEN section.thumbnail_file_id IS NULL THEN NULL ELSE CONCAT('/api/v1/files/', section.thumbnail_file_id, '/content') END AS thumbnail_image_url,
+        CAST(section.content_json AS CHAR) AS content_json, section.content_html, section.content_text,
+        section.layout_type, section.sort_order, section.visibility, section.version_number,
+        section.use_yn, section.created_at, section.updated_at
+    </sql>
+
+    <select id="selectPublicSections" resultType="com.example.devnote.portfolio.dao.row.PortfolioSectionRow">
+        SELECT <include refid="sectionColumns"/>
+        FROM portfolio_sections section
+        WHERE section.use_yn = 'Y' AND section.visibility = 'PUBLIC'
+        ORDER BY section.sort_order, section.portfolio_section_id
+    </select>
+
+    <select id="selectAllSections" resultType="com.example.devnote.portfolio.dao.row.PortfolioSectionRow">
+        SELECT <include refid="sectionColumns"/>
+        FROM portfolio_sections section
+        WHERE section.use_yn = 'Y'
+        ORDER BY section.sort_order, section.portfolio_section_id
+    </select>
+
+    <select id="selectSectionById" resultType="com.example.devnote.portfolio.dao.row.PortfolioSectionRow">
+        SELECT <include refid="sectionColumns"/>
+        FROM portfolio_sections section
+        WHERE section.portfolio_section_id = #{portfolioSectionId}
+    </select>
+
+    <insert id="insertSection" parameterType="com.example.devnote.portfolio.dao.parameter.PortfolioSectionSaveParameter" useGeneratedKeys="true" keyProperty="portfolioSectionId">
+        INSERT INTO portfolio_sections (
+            section_type, content_mode, section_title, section_subtitle, start_date, end_date,
+            current_yn, external_url, thumbnail_file_id, content_json, content_html, content_text,
+            layout_type, sort_order, visibility
+        ) VALUES (
+            #{sectionType}, #{contentMode}, #{sectionTitle}, #{sectionSubtitle}, #{startDate}, #{endDate},
+            #{currentYn}, #{externalUrl}, #{thumbnailFileId}, CAST(#{contentJson} AS JSON), #{contentHtml}, #{contentText},
+            #{layoutType}, #{sortOrder}, #{visibility}
+        )
+    </insert>
+
+    <update id="updateSection" parameterType="com.example.devnote.portfolio.dao.parameter.PortfolioSectionSaveParameter">
+        UPDATE portfolio_sections
+        SET section_type = #{sectionType}, content_mode = #{contentMode}, section_title = #{sectionTitle},
+            section_subtitle = #{sectionSubtitle}, start_date = #{startDate}, end_date = #{endDate},
+            current_yn = #{currentYn}, external_url = #{externalUrl}, thumbnail_file_id = #{thumbnailFileId},
+            content_json = CAST(#{contentJson} AS JSON), content_html = #{contentHtml}, content_text = #{contentText},
+            layout_type = #{layoutType}, sort_order = #{sortOrder}, visibility = #{visibility},
+            version_number = version_number + 1, updated_at = CURRENT_TIMESTAMP(6)
+        WHERE portfolio_section_id = #{portfolioSectionId}
+          AND version_number = #{versionNumber}
+          AND use_yn = 'Y'
+    </update>
+
+    <update id="softDeleteSection">
+        UPDATE portfolio_sections
+        SET use_yn = 'N', version_number = version_number + 1, updated_at = CURRENT_TIMESTAMP(6)
+        WHERE portfolio_section_id = #{portfolioSectionId}
+          AND version_number = #{versionNumber}
+          AND use_yn = 'Y'
+    </update>
+
+    <delete id="deleteEditorImages">
+        DELETE FROM portfolio_section_files
+        WHERE portfolio_section_id = #{portfolioSectionId} AND file_role = 'EDITOR_IMAGE'
+    </delete>
+
+    <insert id="insertSectionFile">
+        INSERT INTO portfolio_section_files (portfolio_section_id, file_id, file_role, sort_order)
+        VALUES (#{portfolioSectionId}, #{fileId}, #{fileRole}, #{sortOrder})
+    </insert>
+
+    <select id="selectEditorImageFileIds" resultType="long">
+        SELECT file_id FROM portfolio_section_files
+        WHERE portfolio_section_id = #{portfolioSectionId} AND file_role = 'EDITOR_IMAGE'
+        ORDER BY sort_order, portfolio_section_file_id
+    </select>
+</mapper>
+

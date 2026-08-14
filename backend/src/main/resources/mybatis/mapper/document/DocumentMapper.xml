@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.devnote.document.DocumentMapper">
+
+    <insert id="insertDocument"
+            parameterType="com.example.devnote.document.dao.parameter.DocumentCreateParameter"
+            useGeneratedKeys="true"
+            keyProperty="documentId">
+        INSERT INTO documents (
+            member_id,
+            thumbnail_file_id,
+            document_title,
+            document_scope,
+            content_json,
+            content_html,
+            content_text,
+            document_status
+        ) VALUES (
+            #{memberId},
+            #{thumbnailFileId},
+            #{documentTitle},
+            #{documentScope},
+            CAST(#{contentJson} AS JSON),
+            #{contentHtml},
+            #{contentText},
+            #{documentStatus}
+        )
+    </insert>
+
+    <sql id="documentSearchWhereClause">
+        WHERE document.use_yn = 'Y'
+        <if test="documentScope != null">
+            AND document.document_scope = #{documentScope}
+        </if>
+        <if test="documentStatus != null">
+            AND document.document_status = #{documentStatus}
+        </if>
+        <if test="authorId != null">
+            AND document.member_id = #{authorId}
+        </if>
+        <if test="searchKeyword != null and searchKeyword != ''">
+            <choose>
+                <when test="searchType == 'TITLE'">
+                    AND document.document_title LIKE CONCAT('%', #{searchKeyword}, '%')
+                </when>
+                <when test="searchType == 'CONTENT'">
+                    AND document.content_text LIKE CONCAT('%', #{searchKeyword}, '%')
+                </when>
+                <when test="searchType == 'AUTHOR'">
+                    AND member.member_name LIKE CONCAT('%', #{searchKeyword}, '%')
+                </when>
+                <otherwise>
+                    AND (
+                        document.document_title LIKE CONCAT('%', #{searchKeyword}, '%')
+                        OR document.content_text LIKE CONCAT('%', #{searchKeyword}, '%')
+                    )
+                </otherwise>
+            </choose>
+        </if>
+    </sql>
+
+    <select id="selectDocumentList" resultType="com.example.devnote.document.dto.DocumentListItemResponse">
+        SELECT
+            document.document_id,
+            document.document_title,
+            document.document_status,
+            document.thumbnail_file_id,
+            CASE
+                WHEN document.thumbnail_file_id IS NULL THEN NULL
+                ELSE CONCAT('/api/v1/files/', document.thumbnail_file_id, '/content')
+            END AS thumbnail_image_url,
+            document.version_number,
+            document.view_count,
+            member.member_id AS author_id,
+            member.member_name AS author_name,
+            document.created_at,
+            document.updated_at
+        FROM documents document
+        INNER JOIN members member ON member.member_id = document.member_id
+        <include refid="documentSearchWhereClause"/>
+        ORDER BY
+        <choose>
+            <when test="sortProperty == 'CREATED_AT'">document.created_at</when>
+            <when test="sortProperty == 'VIEW_COUNT'">document.view_count</when>
+            <when test="sortProperty == 'TITLE'">document.document_title</when>
+            <otherwise>document.updated_at</otherwise>
+        </choose>
+        <choose>
+            <when test="sortDirection == 'ASC'">ASC</when>
+            <otherwise>DESC</otherwise>
+        </choose>, document.document_id DESC
+        LIMIT #{pageSize} OFFSET #{offset}
+    </select>
+
+    <select id="countDocumentList" resultType="long">
+        SELECT COUNT(*)
+        FROM documents document
+        INNER JOIN members member ON member.member_id = document.member_id
+        <include refid="documentSearchWhereClause"/>
+    </select>
+
+    <select id="selectDocumentById" resultType="com.example.devnote.document.dao.row.DocumentDetailRow">
+        SELECT
+            document.document_id,
+            document.member_id AS author_id,
+            member.member_name AS author_name,
+            document.document_title,
+            document.document_scope,
+            document.thumbnail_file_id,
+            CASE
+                WHEN document.thumbnail_file_id IS NULL THEN NULL
+                ELSE CONCAT('/api/v1/files/', document.thumbnail_file_id, '/content')
+            END AS thumbnail_image_url,
+            CAST(document.content_json AS CHAR) AS content_json,
+            document.content_html,
+            document.content_text,
+            document.document_status,
+            document.version_number,
+            document.view_count,
+            document.use_yn,
+            document.deleted_at,
+            document.created_at,
+            document.updated_at
+        FROM documents document
+        INNER JOIN members member ON member.member_id = document.member_id
+        WHERE document.document_id = #{documentId}
+    </select>
+
+    <update id="updateDocument" parameterType="com.example.devnote.document.dao.parameter.DocumentUpdateParameter">
+        UPDATE documents
+        SET
+            thumbnail_file_id = #{thumbnailFileId},
+            document_title = #{documentTitle},
+            content_json = CAST(#{contentJson} AS JSON),
+            content_html = #{contentHtml},
+            content_text = #{contentText},
+            document_status = #{documentStatus},
+            version_number = version_number + 1,
+            updated_at = CURRENT_TIMESTAMP(6)
+        WHERE document_id = #{documentId}
+          AND member_id = #{memberId}
+          AND document_scope = #{documentScope}
+          AND version_number = #{versionNumber}
+          AND use_yn = 'Y'
+    </update>
+
+    <update id="softDeleteDocument">
+        UPDATE documents
+        SET use_yn = 'N', deleted_at = CURRENT_TIMESTAMP(6), updated_at = CURRENT_TIMESTAMP(6)
+        WHERE document_id = #{documentId}
+          AND member_id = #{memberId}
+          AND document_scope = #{documentScope}
+          AND use_yn = 'Y'
+    </update>
+
+    <update id="restoreDocument">
+        UPDATE documents
+        SET use_yn = 'Y', deleted_at = NULL, updated_at = CURRENT_TIMESTAMP(6)
+        WHERE document_id = #{documentId}
+          AND member_id = #{memberId}
+          AND document_scope = #{documentScope}
+          AND use_yn = 'N'
+    </update>
+
+    <update id="updateDocumentScope">
+        UPDATE documents
+        SET document_scope = #{documentScope}, use_yn = 'Y'
+        WHERE document_id = #{documentId}
+          AND deleted_at IS NULL
+    </update>
+
+    <insert id="insertDocumentHistory"
+            parameterType="com.example.devnote.document.dao.parameter.DocumentHistoryCreateParameter">
+        INSERT INTO document_histories (
+            document_id,
+            version_number,
+            thumbnail_file_id,
+            document_title,
+            document_status,
+            content_json,
+            content_html,
+            content_text,
+            change_summary,
+            changed_by
+        ) VALUES (
+            #{documentId},
+            #{versionNumber},
+            #{thumbnailFileId},
+            #{documentTitle},
+            #{documentStatus},
+            CAST(#{contentJson} AS JSON),
+            #{contentHtml},
+            #{contentText},
+            #{changeSummary},
+            #{changedBy}
+        )
+    </insert>
+
+    <select id="selectDocumentHistories" resultType="com.example.devnote.document.dto.DocumentHistoryResponse">
+        SELECT
+            history.document_history_id,
+            history.document_id,
+            history.version_number,
+            history.document_title,
+            history.change_summary,
+            history.changed_by,
+            member.member_name AS changed_by_name,
+            history.created_at
+        FROM document_histories history
+        INNER JOIN members member ON member.member_id = history.changed_by
+        WHERE history.document_id = #{documentId}
+        ORDER BY history.version_number DESC
+    </select>
+
+    <delete id="deleteDocumentAttachments">
+        DELETE FROM document_files
+        WHERE document_id = #{documentId}
+          AND file_role = 'ATTACHMENT'
+    </delete>
+
+    <insert id="insertDocumentAttachment">
+        INSERT INTO document_files (document_id, file_id, file_role, sort_order)
+        VALUES (#{documentId}, #{fileId}, 'ATTACHMENT', #{sortOrder})
+    </insert>
+
+    <select id="selectDocumentAttachments" resultType="com.example.devnote.file.dto.DocumentAttachmentResponse">
+        SELECT
+            file.file_id,
+            file.original_file_name,
+            file.mime_type,
+            file.file_size,
+            CONCAT('/api/v1/files/', file.file_id, '/download') AS download_url
+        FROM document_files document_file
+        INNER JOIN file_resources file ON file.file_id = document_file.file_id
+        WHERE document_file.document_id = #{documentId}
+          AND document_file.file_role = 'ATTACHMENT'
+          AND file.file_status != 'DELETED'
+        ORDER BY document_file.sort_order ASC, document_file.document_file_id ASC
+    </select>
+
+</mapper>

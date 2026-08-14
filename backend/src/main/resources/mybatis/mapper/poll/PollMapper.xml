@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.devnote.poll.PollMapper">
+    <select id="selectPolls" resultType="com.example.devnote.poll.dao.row.PollRow">
+        SELECT poll.poll_id, poll.question, poll.poll_status, poll.allow_multiple, poll.max_selections,
+               poll.realtime_results, poll.ends_at, poll.result_published_at, poll.created_by,
+               member.member_name AS creator_name, poll.created_at
+        FROM polls poll
+        JOIN members member ON member.member_id = poll.created_by
+        WHERE poll.use_yn = 'Y'
+        <if test="status != null and status != 'ALL'">
+            AND CASE
+                WHEN poll.poll_status = 'OPEN'
+                 AND COALESCE(poll.ends_at, DATE_ADD(poll.created_at, INTERVAL 60 MINUTE)) &lt;= UTC_TIMESTAMP(6)
+                THEN 'CLOSED'
+                ELSE poll.poll_status
+            END = #{status}
+        </if>
+        ORDER BY poll.created_at DESC, poll.poll_id DESC
+        LIMIT #{pageSize} OFFSET #{offset}
+    </select>
+
+    <select id="countPolls" resultType="long">
+        SELECT COUNT(*)
+        FROM polls poll
+        WHERE poll.use_yn = 'Y'
+        <if test="status != null and status != 'ALL'">
+            AND CASE
+                WHEN poll.poll_status = 'OPEN'
+                 AND COALESCE(poll.ends_at, DATE_ADD(poll.created_at, INTERVAL 60 MINUTE)) &lt;= UTC_TIMESTAMP(6)
+                THEN 'CLOSED'
+                ELSE poll.poll_status
+            END = #{status}
+        </if>
+    </select>
+
+    <select id="selectPoll" resultType="com.example.devnote.poll.dao.row.PollRow">
+        SELECT poll.poll_id, poll.question, poll.poll_status, poll.allow_multiple, poll.max_selections,
+               poll.realtime_results, poll.ends_at, poll.result_published_at, poll.created_by,
+               member.member_name AS creator_name, poll.created_at
+        FROM polls poll
+        JOIN members member ON member.member_id = poll.created_by
+        WHERE poll.poll_id = #{pollId} AND poll.use_yn = 'Y'
+    </select>
+
+    <!-- 같은 회원의 서로 다른 세션에서 동시에 투표하는 경우도 순차 처리합니다. -->
+    <select id="selectPollForUpdate" resultType="com.example.devnote.poll.dao.row.PollRow">
+        SELECT poll.poll_id, poll.question, poll.poll_status, poll.allow_multiple, poll.max_selections,
+               poll.realtime_results, poll.ends_at, poll.result_published_at, poll.created_by,
+               member.member_name AS creator_name, poll.created_at
+        FROM polls poll
+        JOIN members member ON member.member_id = poll.created_by
+        WHERE poll.poll_id = #{pollId} AND poll.use_yn = 'Y'
+        FOR UPDATE
+    </select>
+
+    <select id="selectPollOptions" resultType="com.example.devnote.poll.dao.row.PollOptionRow">
+        SELECT poll_option.poll_option_id, poll_option.option_label, poll_option.sort_order,
+               COUNT(selection.poll_ballot_selection_id) AS vote_count
+        FROM poll_options poll_option
+        LEFT JOIN poll_ballot_selections selection ON selection.poll_option_id = poll_option.poll_option_id
+        WHERE poll_option.poll_id = #{pollId}
+        GROUP BY poll_option.poll_option_id, poll_option.option_label, poll_option.sort_order
+        ORDER BY poll_option.sort_order, poll_option.poll_option_id
+    </select>
+
+    <select id="countPollOptions" resultType="int">
+        SELECT COUNT(*) FROM poll_options
+        WHERE poll_id = #{pollId}
+          AND poll_option_id IN
+          <foreach collection="pollOptionIds" item="pollOptionId" open="(" separator="," close=")">
+              #{pollOptionId}
+          </foreach>
+    </select>
+
+    <select id="countVote" resultType="int">
+        SELECT COUNT(*) FROM poll_ballots
+        WHERE poll_id = #{pollId}
+          AND (visitor_key = #{visitorKey}<if test="memberId != null"> OR member_id = #{memberId}</if>)
+    </select>
+
+    <select id="selectVotedOptionIds" resultType="long">
+        SELECT selection.poll_option_id
+        FROM poll_ballots ballot
+        JOIN poll_ballot_selections selection ON selection.poll_ballot_id = ballot.poll_ballot_id
+        WHERE ballot.poll_id = #{pollId}
+          AND (ballot.visitor_key = #{visitorKey}<if test="memberId != null"> OR ballot.member_id = #{memberId}</if>)
+    </select>
+
+    <select id="countPollBallots" resultType="long">
+        SELECT COUNT(*) FROM poll_ballots WHERE poll_id = #{pollId}
+    </select>
+
+    <insert id="insertPollBallot" useGeneratedKeys="true" keyProperty="pollBallotId">
+        INSERT INTO poll_ballots (poll_id, visitor_key, member_id)
+        VALUES (#{pollId}, #{visitorKey}, #{memberId})
+    </insert>
+
+    <insert id="insertPollBallotSelection">
+        INSERT INTO poll_ballot_selections (poll_ballot_id, poll_option_id)
+        VALUES (#{pollBallotId}, #{pollOptionId})
+    </insert>
+
+    <insert id="insertPoll" useGeneratedKeys="true" keyProperty="pollId">
+        INSERT INTO polls (question, poll_status, allow_multiple, max_selections, realtime_results, ends_at, created_by)
+        VALUES (#{question}, 'OPEN', #{allowMultiple}, #{maxSelections}, #{realtimeResults}, #{endsAt}, #{createdBy})
+    </insert>
+
+    <insert id="insertPollOption">
+        INSERT INTO poll_options (poll_id, option_label, sort_order)
+        VALUES (#{pollId}, #{optionLabel}, #{sortOrder})
+    </insert>
+
+    <delete id="deletePollOptions">
+        DELETE FROM poll_options WHERE poll_id = #{pollId}
+    </delete>
+
+    <update id="updatePollDefinition">
+        UPDATE polls
+        SET question = #{question}, allow_multiple = #{allowMultiple}, max_selections = #{maxSelections},
+            realtime_results = #{realtimeResults}, ends_at = #{endsAt}
+        WHERE poll_id = #{pollId}
+    </update>
+
+    <update id="updatePollStatus">
+        UPDATE polls
+        SET poll_status = #{status},
+            result_published_at = CASE
+                WHEN #{status} = 'RESULTS_PUBLISHED' THEN CURRENT_TIMESTAMP(6)
+                ELSE result_published_at
+            END
+        WHERE poll_id = #{pollId}
+    </update>
+
+    <update id="softDeletePoll">
+        UPDATE polls
+        SET use_yn = 'N', deleted_by = #{deletedBy}, deleted_at = CURRENT_TIMESTAMP(6)
+        WHERE poll_id = #{pollId} AND use_yn = 'Y'
+    </update>
+</mapper>
