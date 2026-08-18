@@ -40,7 +40,11 @@ public enum ErrorCode {
     FILE_EXTENSION_NOT_ALLOWED(HttpStatus.UNPROCESSABLE_ENTITY, "FILE_EXTENSION_NOT_ALLOWED", "허용되지 않은 파일 확장자입니다."),
     FILE_SIZE_EXCEEDED(HttpStatus.PAYLOAD_TOO_LARGE, "FILE_SIZE_EXCEEDED", "업로드 가능한 파일 크기를 초과했습니다."),
     FILE_EMPTY(HttpStatus.BAD_REQUEST, "FILE_EMPTY", "비어 있는 파일은 업로드할 수 없습니다."),
-    FILE_STORAGE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "FILE_STORAGE_FAILED", "파일 저장 중 오류가 발생했습니다.");
+    FILE_STORAGE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "FILE_STORAGE_FAILED", "파일 저장 중 오류가 발생했습니다."),
+    DIAGRAM_NOT_FOUND(HttpStatus.NOT_FOUND, "DIAGRAM_NOT_FOUND", "요청한 다이어그램을 찾을 수 없습니다."),
+    DIAGRAM_VERSION_CONFLICT(HttpStatus.CONFLICT, "DIAGRAM_VERSION_CONFLICT", "다른 화면에서 다이어그램을 먼저 수정했습니다."),
+    DIAGRAM_MODEL_INVALID(HttpStatus.UNPROCESSABLE_ENTITY, "DIAGRAM_MODEL_INVALID", "다이어그램 데이터 형식이 올바르지 않습니다."),
+    DIAGRAM_VERSION_NOT_FOUND(HttpStatus.NOT_FOUND, "DIAGRAM_VERSION_NOT_FOUND", "요청한 다이어그램 버전을 찾을 수 없습니다.");
 
     private final HttpStatus httpStatus;
     private final String code;

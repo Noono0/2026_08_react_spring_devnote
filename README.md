@@ -1,5 +1,8 @@
 # DevNote Portfolio & React Beginner-to-Advanced Lab
 
+> **기능별 상세 문서**
+> - [Diagram Designer](docs/diagram-designer.md) — ERD·순서도 편집, SQL ↔ ERD 변환, 버전 관리, 사용 오픈소스와 라이선스
+
 첫 화면은 실제 포트폴리오로 사용하고, `/react` 아래에서는 React 왕초보가 단순한 상태 변경부터 **폼, Effect, 비동기, 접근성, 다양한 CRUD와 Spring Boot·MyBatis·MySQL 실무 흐름까지 단계별로 연습하는 프로젝트**입니다.
 
 ## 사이트 구성과 로그인
