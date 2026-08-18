@@ -1,3 +1,15 @@
+/**
+ * ============================================================================
+ * localSearchApi.ts — 자동완성 연습용 가짜 검색 API
+ * ============================================================================
+ *
+ * localTaskApi처럼 서버 없이 API를 흉내 내지만, 두 가지가 더 있다.
+ *   1. 시나리오(정상/느림/빈 결과/오류)를 골라 상황을 재현할 수 있다
+ *   2. AbortSignal을 받아서 요청 취소를 실제로 지원한다  ← 아래가 핵심
+ *
+ * 화면 쪽 구현은 SearchAutocompletePracticePage.tsx를 보자.
+ */
+
 import type {
   LearningTopicSearchResult,
   SearchPracticeScenario,
@@ -20,38 +32,94 @@ const learningTopicSearchData: LearningTopicSearchResult[] = [
   { topicId: 14, topicTitle: "MSW로 API 상황 재현하기", categoryName: "테스트", description: "성공, 지연, 빈 결과와 서버 오류를 브라우저와 테스트에서 재현합니다.", keywords: ["mock", "network", "test"] },
 ];
 
+/**
+ * ★★ "취소할 수 있는 기다리기"를 만든다. 이 파일에서 가장 배울 게 많은 부분이다.
+ *
+ * 보통의 setTimeout은 한번 걸면 중간에 멈출 수 없다.
+ * 여기서는 Promise와 AbortSignal을 엮어 취소 가능한 대기를 만든다.
+ *
+ * [Promise의 두 결말]
+ *   resolve(값)  → 성공. await가 그 값을 돌려주며 풀린다.
+ *   reject(에러) → 실패. await 자리에서 에러가 던져진다.
+ *
+ * [여기서 벌어지는 경주]
+ *   두 가지 중 먼저 일어나는 쪽이 이긴다.
+ *     (A) 시간이 다 지남      → resolve → 정상 응답
+ *     (B) 누가 abort()를 부름 → reject  → 취소 에러
+ *   Promise는 한 번 결말이 나면 그 뒤 호출은 무시되므로 안전하다.
+ */
 const waitForSearchResponse = (
   delayMilliseconds: number,
   abortSignal: AbortSignal,
 ): Promise<void> => new Promise((resolve, reject) => {
+  // (A) 정해진 시간 뒤 성공 처리.
   const timeoutId = window.setTimeout(resolve, delayMilliseconds);
+
+  // (B) 취소 신호가 오면 실행될 처리를 등록해 둔다.
   abortSignal.addEventListener("abort", () => {
+    // ★ 예약된 타이머를 반드시 지워야 한다.
+    //   안 지우면 취소한 뒤에도 타이머가 살아 있어 메모리를 붙잡고 있는다.
     window.clearTimeout(timeoutId);
+
+    // ★ 왜 그냥 new Error가 아니라 DOMException("...", "AbortError")일까?
+    //   브라우저의 fetch가 취소될 때 던지는 것과 똑같은 모양을 맞춘 것이다.
+    //   화면 쪽에서 `error.name === "AbortError"` 하나로
+    //   진짜 fetch든 이 가짜 API든 똑같이 걸러낼 수 있다.
+    //   "가짜라도 진짜와 같은 규칙을 따른다"는 게 좋은 모의 구현의 조건이다.
     reject(new DOMException("검색 요청이 취소되었습니다.", "AbortError"));
+
+    // { once: true } → 한 번 실행되면 리스너가 자동으로 제거된다.
+    // 직접 removeEventListener를 부를 필요가 없어 편하고 안전하다.
   }, { once: true });
 });
 
+/**
+ * 학습 주제를 검색한다.
+ *
+ * @param searchKeyword 검색어
+ * @param scenario      재현할 상황 (success / slow / empty / error)
+ * @param abortSignal   취소 신호
+ */
 export const searchLearningTopics = async (
   searchKeyword: string,
   scenario: SearchPracticeScenario,
   abortSignal: AbortSignal,
 ): Promise<LearningTopicSearchResult[]> => {
+  // "느린 응답" 시나리오는 2초, 나머지는 0.5초를 기다린다.
+  // 2초 지연이 있어야 "요청 중에 검색어를 바꿔 취소되는" 상황을 실험할 수 있다.
   const responseDelay = scenario === "slow" ? 2_000 : 500;
   await waitForSearchResponse(responseDelay, abortSignal);
 
+  // ★ 기다린 "뒤"에 시나리오를 판정한다.
+  //   즉시 던지면 로딩 상태를 볼 수 없어 실제 서버 오류와 느낌이 달라진다.
   if (scenario === "error") {
     throw new Error("연습용 검색 서버 오류가 발생했습니다.");
   }
   if (scenario === "empty") {
+    // ★ 빈 배열과 오류는 전혀 다른 결과다.
+    //   빈 배열 = "정상적으로 처리했는데 맞는 게 없다"
+    //   오류    = "처리 자체를 못 했다"
+    //   화면에서 이 둘을 다르게 안내해야 하는 이유다.
     return [];
   }
 
+  // ★ toLocaleLowerCase("ko-KR") — 그냥 toLowerCase()와 무엇이 다른가?
+  //   언어권마다 대소문자 규칙이 다르다. 유명한 예가 터키어인데,
+  //   대문자 "I"를 소문자로 바꾸면 영어는 "i", 터키어는 "ı"(점 없는 i)가 된다.
+  //   지역을 명시하면 사용자의 브라우저 설정과 무관하게 결과가 일정해진다.
+  //   한국어에는 대소문자가 없지만, 섞여 들어오는 영어를 위해 이렇게 쓴다.
   const normalizedKeyword = searchKeyword.trim().toLocaleLowerCase("ko-KR");
+
   return learningTopicSearchData.filter((topic) => (
+    // 네 군데 중 하나라도 검색어를 포함하면 결과에 넣는다.
     topic.topicTitle.toLocaleLowerCase("ko-KR").includes(normalizedKeyword)
     || topic.categoryName.toLocaleLowerCase("ko-KR").includes(normalizedKeyword)
     || topic.description.toLocaleLowerCase("ko-KR").includes(normalizedKeyword)
+    // keywords는 배열이므로 some()으로 "하나라도 맞는지" 확인한다.
     || topic.keywords.some((keyword) => keyword.toLocaleLowerCase("ko-KR").includes(normalizedKeyword))
+    // ★ 최대 6개까지만 돌려준다.
+    //   자동완성 목록이 화면을 다 덮을 만큼 길면 오히려 쓰기 불편하다.
+    //   실제 서버 API에서도 이런 개수 제한을 두는 게 일반적이다.
   )).slice(0, 6);
 };
 

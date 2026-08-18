@@ -1,17 +1,75 @@
+/**
+ * ============================================================================
+ * apiErrorTypes.ts — 서버가 "실패"를 알려줄 때 쓰는 응답 모양
+ * ============================================================================
+ *
+ * 성공 응답의 모양이 apiResponseTypes.ts에 정해져 있듯이,
+ * 실패 응답에도 정해진 모양이 있다.
+ *
+ * 이 구조는 RFC 7807 "Problem Details for HTTP APIs"라는 웹 표준을 따른 것이다.
+ * 표준을 쓰면 프론트/백엔드 개발자가 매번 "에러는 어떻게 보낼까요?"를 상의할 필요가 없다.
+ *
+ * [실제 응답 예시 — 폼 검증 실패(400)]
+ *   {
+ *     "status": 400,
+ *     "errorCode": "VALIDATION_FAILED",
+ *     "detail": "입력값을 확인해 주세요.",
+ *     "traceId": "a1b2c3...",
+ *     "fieldErrors": [
+ *       { "fieldName": "title", "message": "제목은 필수입니다." }
+ *     ]
+ *   }
+ */
+
+/**
+ * 폼의 특정 입력칸 하나에 대한 오류.
+ *
+ * 이게 왜 따로 필요한가?
+ *   "입력값이 잘못됐습니다"라고만 하면 사용자는 어디가 틀렸는지 모른다.
+ *   어느 칸이 왜 틀렸는지 알려줘야 그 칸 밑에 빨간 글씨를 붙일 수 있다.
+ */
 export interface ApiFieldError {
-  fieldName: string;
+  fieldName: string;   // 어느 입력칸인지. 예: "title", "email"
+
+  // 사용자가 실제로 입력했던 값. 디버깅에 유용하다.
+  // 타입이 `unknown`인 이유: 문자열일 수도, 숫자일 수도, 객체일 수도 있어서다.
+  // any 대신 unknown을 쓰면 "쓰기 전에 반드시 타입을 확인하라"고 강제할 수 있다.
   rejectedValue?: unknown;
-  message: string;
+
+  message: string;     // 그 칸 밑에 보여줄 안내 문구
 }
 
+/**
+ * 오류 응답 전체의 모양.
+ *
+ * ★ `?`가 붙은 것과 안 붙은 것의 차이가 중요하다.
+ *   `?` 없는 것(status, errorCode, fieldErrors)은 항상 있다고 보장된다 → 그냥 쓰면 된다.
+ *   `?` 붙은 것은 없을 수 있다 → 쓰기 전에 확인하거나 기본값을 줘야 한다.
+ */
 export interface ApiProblemDetails {
-  type?: string;
-  title?: string;
+  type?: string;      // 오류 종류를 설명하는 문서 주소 (표준 항목이지만 이 프로젝트는 잘 안 씀)
+  title?: string;     // 오류의 짧은 제목
+
+  // HTTP 상태 코드. 이 값 하나로 대략적인 원인을 알 수 있다.
+  //   400 잘못된 요청  401 로그인 안 됨  403 권한 없음  404 없는 자원
+  //   409 충돌(중복 등)  500 서버 잘못  502/503/504 서버 일시 장애
+  //   0   → 서버에 아예 닿지도 못함 (네트워크 끊김, 요청 취소)
   status: number;
-  detail?: string;
-  instance?: string;
+
+  detail?: string;    // 사용자에게 보여줄 자세한 설명
+  instance?: string;  // 오류가 난 요청 주소
+
+  // 우리 서비스가 자체적으로 정한 오류 코드. 예: "DOCUMENT_NOT_FOUND"
+  // status(404)만으로는 "문서가 없는 건지 회원이 없는 건지" 구분이 안 된다.
+  // 프로그램이 조건 분기할 때는 이 값을 쓴다.
   errorCode: string;
-  traceId?: string;
-  timestamp?: string;
+
+  traceId?: string;   // 서버 로그와 대조하기 위한 추적 번호
+  timestamp?: string; // 오류 발생 시각
+
+  // 입력칸별 오류 목록.
+  // ★ `?`가 없다 = 항상 배열이 있다. 오류가 없으면 빈 배열 []이 온다.
+  //   이렇게 설계하면 쓰는 쪽에서 매번 "있나 없나" 확인할 필요 없이
+  //   바로 .map()을 돌릴 수 있어 편하다. (좋은 API 설계 습관이다)
   fieldErrors: ApiFieldError[];
 }
