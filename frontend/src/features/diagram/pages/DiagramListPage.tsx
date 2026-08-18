@@ -14,6 +14,7 @@ import { useCreateDiagramMutation, useDeleteDiagramMutation, useDiagramListQuery
 import { createEmptyDiagramModel, stringifyDiagramModel } from "../utils/diagramModel";
 import type { DiagramListItem, DiagramSearchCondition, DiagramType } from "../types/diagramTypes";
 import { ConfirmDialog } from "@/shared/ui/ConfirmDialog";
+import { UtilityHelpDialog, UtilityPageTitle } from "@/features/utility/components/UtilityHelpDialog";
 import { applicationNotification } from "@/shared/notification/applicationNotification";
 import { convertRequestErrorToProblemDetails } from "@/shared/api/error/apiErrorHelpers";
 import { apiErrorMessageMap } from "@/shared/api/error/apiErrorMessageMap";
@@ -50,6 +51,7 @@ export const DiagramListPage = () => {
   // (글자마다 URL을 바꾸면 요청이 폭주한다 — DocumentSearchForm과 같은 판단)
   const [searchKeywordInput, setSearchKeywordInput] = useState(searchCondition.searchKeyword);
   const [deleteTarget, setDeleteTarget] = useState<DiagramListItem | null>(null);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   const diagramListQuery = useDiagramListQuery(searchCondition);
   const createDiagramMutation = useCreateDiagramMutation();
@@ -95,11 +97,16 @@ export const DiagramListPage = () => {
 
   return (
     <section>
+      <UtilityPageTitle
+        kicker="Developer Utility · Design"
+        title="Diagram Designer"
+        description="ERD·순서도·시스템 구성도를 그려 저장하고, 버전으로 되돌릴 수 있습니다."
+        onHelpOpen={() => setHelpOpen(true)}
+      />
+
       <div className="page-heading-row">
         <div>
-          <span className="level-badge level-고급">Diagram Designer</span>
-          <h1>다이어그램</h1>
-          <p>ERD·순서도·시스템 구성도를 그리고 저장합니다. SQL DDL을 붙여 넣어 ERD를 자동으로 만들 수도 있습니다.</p>
+          <p>내가 만든 다이어그램 목록입니다. 제목을 누르면 편집 화면이 열립니다.</p>
         </div>
         <button type="button" onClick={() => void handleCreate()} disabled={createDiagramMutation.isPending}>
           {createDiagramMutation.isPending ? "만드는 중..." : "새 다이어그램"}
@@ -196,6 +203,48 @@ export const DiagramListPage = () => {
         onConfirm={() => void handleDelete()}
         onCancel={() => setDeleteTarget(null)}
       />
+
+      <UtilityHelpDialog
+        isOpen={helpOpen}
+        title="Diagram Designer"
+        description="테이블 구조나 흐름도를 그려 저장하고, 필요하면 이전 버전으로 되돌립니다."
+        onClose={() => setHelpOpen(false)}
+      >
+        <article>
+          <h3>시작하는 방법 두 가지</h3>
+          <ul>
+            <li><strong>빈 캔버스에서 그리기</strong>: “새 다이어그램”을 누른 뒤 편집 화면에서 “테이블 추가”</li>
+            <li><strong>SQL로 자동 생성</strong>: 편집 화면 아래 SQL 칸에 CREATE TABLE 문을 붙여 넣고 “SQL → ERD”</li>
+          </ul>
+        </article>
+        <article>
+          <h3>편집 방법</h3>
+          <ul>
+            <li>테이블을 끌어서 위치를 옮깁니다.</li>
+            <li>테이블 오른쪽 손잡이를 다른 테이블로 끌면 관계(외래키)가 연결됩니다.</li>
+            <li>선이나 테이블을 선택하고 Delete 키를 누르면 지워집니다.</li>
+          </ul>
+        </article>
+        <article>
+          <h3>버전 관리</h3>
+          <p>
+            저장할 때 내용이 실제로 바뀐 경우에만 이력이 남습니다. 위치만 조금 옮기고 반복 저장해도 이력이 쌓이지 않습니다.
+            다이어그램당 최근 30개까지 보관하며, 되돌리기도 새 버전으로 기록되므로 되돌린 뒤 다시 원래대로 돌아올 수 있습니다.
+          </p>
+        </article>
+        <article>
+          <h3>내보내기</h3>
+          <p>편집 화면에서 PNG·SVG로 내려받을 수 있고, “ERD → DDL”로 CREATE TABLE 문을 만들어 복사할 수 있습니다.</p>
+        </article>
+        <article>
+          <h3>알아둘 점</h3>
+          <ul>
+            <li>이 도구는 <strong>로그인한 내 계정에 저장</strong>됩니다. 다른 사람은 볼 수 없습니다.</li>
+            <li>DDL 생성 시 인덱스·기본값·CHECK 제약은 만들지 않습니다. 구조 설계용이며 실제 운영 DDL은 손봐야 합니다.</li>
+            <li>같은 다이어그램을 두 화면에서 동시에 편집하면 나중에 저장한 쪽이 거부됩니다(먼저 저장한 내용을 덮어쓰지 않기 위함).</li>
+          </ul>
+        </article>
+      </UtilityHelpDialog>
     </section>
   );
 };

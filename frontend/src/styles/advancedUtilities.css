@@ -291,3 +291,155 @@
     height: 380px;
   }
 }
+
+/* ============================================================================
+   Utility 허브 — 분류 그룹과 사용 상황 표시
+
+   기본 .utility-card 규칙은 global.css 에 있고, 여기서는 분류 도입으로
+   새로 필요해진 것만 더한다.
+   카드 제목을 h2 -> h3 로 낮췄기 때문에(그룹 제목이 h2) h3 규칙이 필요하다.
+   ============================================================================ */
+
+.utility-home-notice {
+  border: 1px solid var(--border-color);
+  border-left: 3px solid var(--primary-color);
+  border-radius: 12px;
+  background: var(--background-muted);
+  padding: 14px 18px;
+  margin-bottom: 28px;
+}
+
+.utility-home-notice strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--text-primary);
+}
+
+.utility-home-notice p {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.65;
+}
+
+.utility-home-group {
+  margin-bottom: 36px;
+}
+
+.utility-home-group-heading {
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.utility-home-group-heading h2 {
+  margin: 0 0 4px;
+  font-size: 1.05rem;
+}
+
+.utility-home-group-heading p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+/* 카드 제목이 h3 로 바뀌면서 기존 h2 규칙이 적용되지 않는다. */
+.utility-card h3 {
+  margin: 0 0 8px;
+  font-size: 1.05rem;
+}
+
+/* 사용 상황은 설명과 구분되도록 위에 옅은 구분선을 둔다. */
+.utility-card-usecase {
+  display: block;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border-color);
+  color: var(--text-muted);
+  font-size: 0.83rem;
+  line-height: 1.5;
+}
+
+/* 좁은 화면에서는 카드를 한 줄로 세운다. */
+@media (max-width: 900px) {
+  .utility-card-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============================================================================
+   API 도구 비교 안내 (ApiToolGuide)
+   네 개 API 도구의 도움말 상단에 공통으로 들어간다.
+   ============================================================================ */
+
+.api-tool-guide {
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--background-muted);
+  padding: 16px 18px;
+  margin-bottom: 18px;
+}
+
+.api-tool-guide-lead {
+  color: var(--text-secondary);
+  margin: 0 0 12px;
+}
+
+/* 표가 좁은 화면에서 페이지를 밀어내지 않도록 자체 스크롤을 준다. */
+.api-tool-guide-table-wrapper {
+  overflow-x: auto;
+  margin-bottom: 16px;
+}
+
+.api-tool-guide-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+  min-width: 640px;
+}
+
+.api-tool-guide-table th,
+.api-tool-guide-table td {
+  border: 1px solid var(--border-color);
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.api-tool-guide-table thead th {
+  background: var(--background-elevated);
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.api-tool-guide-table tbody th {
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.api-tool-guide-table td {
+  color: var(--text-secondary);
+}
+
+/* 지금 보고 있는 도구 행을 강조한다. */
+.api-tool-guide-current {
+  background: var(--primary-soft);
+}
+
+.api-tool-guide-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--primary-color);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.api-tool-guide-flow {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--text-secondary);
+  line-height: 1.8;
+}

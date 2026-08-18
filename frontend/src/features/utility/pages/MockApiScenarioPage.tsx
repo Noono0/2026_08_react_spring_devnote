@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthSessionQuery } from "@/features/auth/hooks/useAuthSession";
 import { UtilityHelpDialog, UtilityPageTitle } from "@/features/utility/components/UtilityHelpDialog";
+import { ApiToolGuide } from "@/features/utility/components/ApiToolGuide";
 import { ApiWorkspaceModuleNav } from "@/features/utility/components/ApiWorkspaceModuleNav";
 import type { ApiWorkspaceMethod, ApiWorkspaceRequest, ApiWorkspaceResponse } from "@/features/utility/types/apiWorkspaceTypes";
 import type { MockApiResponseStep, MockApiScenario } from "@/features/utility/types/mockApiTypes";
@@ -80,7 +81,50 @@ export const MockApiScenarioPage = () => {
           {testError ? <p className="field-error" role="alert">{testError}</p> : null}{testResponse ? <section className="mock-test-response"><header><strong className={testResponse.status < 400 ? "success-text" : "danger-text"}>{testResponse.status} {testResponse.statusText}</strong><span>{testResponse.elapsedMilliseconds}ms · {testResponse.sizeBytes} bytes</span></header><pre>{testResponse.body}</pre></section> : null}
         </> : <div className="portfolio-state-panel">편집할 Scenario를 선택해 주세요.</div>}</main>
       </div>
-      <UtilityHelpDialog isOpen={helpOpen} title="Mock API Scenario Builder" description="실제 서버를 변경하지 않고 로딩·오류·순차 상태를 반복 재현합니다." onClose={() => setHelpOpen(false)}><article><h3>mock:// 프로토콜</h3><p>브라우저 네트워크로 전송하지 않고 API Workspace 실행기가 저장된 Scenario를 찾아 응답합니다. 예: <code>mock://local/api/mock/items</code></p></article><article><h3>응답 모드</h3><p>고정은 첫 응답, 순차는 호출할 때마다 다음 응답, 무작위는 조건에 맞는 응답 중 하나를 선택합니다.</p></article><article><h3>활용 예</h3><p>첫 호출 200, 두 번째 401, 세 번째 500으로 구성해 토큰 만료·재로그인·오류 UI를 일정하게 테스트할 수 있습니다.</p></article></UtilityHelpDialog>
+      <UtilityHelpDialog isOpen={helpOpen} title="Mock API Scenario Builder" description="실제 서버 없이 로딩·오류·순차 응답을 반복해서 재현합니다." onClose={() => setHelpOpen(false)}>
+        <ApiToolGuide currentTool="MOCK" />
+        <article>
+          <h3>이 도구가 필요한 이유</h3>
+          <p>
+            화면을 만들 때 정작 확인하기 어려운 것이 <strong>실패했을 때의 모습</strong>입니다.
+            서버가 500을 주는 상황, 응답이 5초 걸리는 상황, 토큰이 만료된 상황을 실제로 만들어 내기 어렵기 때문입니다.
+            이 도구는 그런 응답을 원하는 대로 만들어 주므로, 로딩 표시와 오류 화면이 제대로 동작하는지 확인할 수 있습니다.
+            백엔드가 아직 없을 때 화면을 먼저 개발하는 용도로도 씁니다.
+          </p>
+        </article>
+        <article>
+          <h3>사용 절차</h3>
+          <ol>
+            <li><strong>Scenario 만들기</strong> — 경로와 응답(상태 코드·본문·지연 시간)을 정합니다.</li>
+            <li><strong>응답 모드 선택</strong> — 고정 / 순차 / 무작위 중 고릅니다.</li>
+            <li><strong>API Workspace에서 호출</strong> — URL에 <code>mock://</code> 를 붙여 요청합니다.</li>
+            <li><strong>화면 확인</strong> — 만들어 둔 응답이 돌아와 화면 반응을 볼 수 있습니다.</li>
+          </ol>
+        </article>
+        <article>
+          <h3>응답 모드</h3>
+          <ul>
+            <li><strong>고정</strong> — 몇 번을 호출해도 같은 응답. 정상 화면을 만들 때.</li>
+            <li><strong>순차</strong> — 호출할 때마다 다음 응답. 상태가 바뀌는 흐름을 볼 때.</li>
+            <li><strong>무작위</strong> — 조건에 맞는 응답 중 하나. 불안정한 서버를 흉내 낼 때.</li>
+          </ul>
+        </article>
+        <article>
+          <h3>활용 예</h3>
+          <p>
+            순차 모드로 <strong>첫 호출 200 → 두 번째 401 → 세 번째 500</strong> 을 구성하면
+            정상 동작, 토큰 만료 후 재로그인, 서버 오류 화면을 한 번에 이어서 확인할 수 있습니다.
+          </p>
+        </article>
+        <article>
+          <h3>mock:// 프로토콜</h3>
+          <p>
+            브라우저 네트워크로 나가지 않고 API Workspace 실행기가 저장된 Scenario를 찾아 응답합니다.
+            예: <code>mock://local/api/mock/items</code>
+            실제 요청이 아니므로 CORS 문제도 없고 서버에 부담도 주지 않습니다.
+          </p>
+        </article>
+      </UtilityHelpDialog>
     </section>
   );
 };

@@ -38,6 +38,7 @@ import { applicationNotification } from "@/shared/notification/applicationNotifi
 import { convertRequestErrorToProblemDetails } from "@/shared/api/error/apiErrorHelpers";
 import { apiErrorMessageMap } from "@/shared/api/error/apiErrorMessageMap";
 import { ConfirmDialog } from "@/shared/ui/ConfirmDialog";
+import { UtilityHelpDialog, UtilityPageTitle } from "@/features/utility/components/UtilityHelpDialog";
 
 const DIAGRAM_TYPES: DiagramType[] = ["ERD", "FLOWCHART", "UML", "SYSTEM", "GENERAL"];
 
@@ -66,6 +67,7 @@ export const DiagramEditorPage = () => {
   const [sqlInput, setSqlInput] = useState("");
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [restoreTargetVersion, setRestoreTargetVersion] = useState<number | null>(null);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   const canvasReference = useRef<HTMLDivElement>(null);
 
@@ -214,11 +216,16 @@ export const DiagramEditorPage = () => {
 
   return (
     <section className="diagram-editor-page">
+      <UtilityPageTitle
+        kicker="Developer Utility · Design"
+        title="Diagram Designer"
+        description="테이블을 드래그해 배치하고, 오른쪽 손잡이를 끌어 관계를 연결합니다."
+        onHelpOpen={() => setHelpOpen(true)}
+      />
+
       <div className="page-heading-row">
         <div>
-          <span className="level-badge level-고급">Diagram Designer</span>
-          <h1>다이어그램 편집</h1>
-          <p>테이블을 드래그해 배치하고, 오른쪽 손잡이를 끌어 관계를 연결합니다.</p>
+          <p>저장하지 않은 변경이 있으면 저장 버튼에 * 표시가 붙습니다.</p>
         </div>
         <div className="button-row">
           <button type="button" onClick={() => void handleSave()} disabled={updateDiagramMutation.isPending}>
@@ -326,6 +333,47 @@ export const DiagramEditorPage = () => {
         onConfirm={() => void handleRestoreVersion()}
         onCancel={() => setRestoreTargetVersion(null)}
       />
+
+      <UtilityHelpDialog
+        isOpen={helpOpen}
+        title="Diagram Designer"
+        description="테이블을 배치하고 관계를 연결해 ERD를 만듭니다."
+        onClose={() => setHelpOpen(false)}
+      >
+        <article>
+          <h3>캔버스 조작</h3>
+          <ul>
+            <li>테이블을 끌어서 위치를 옮깁니다.</li>
+            <li>테이블 <strong>오른쪽 손잡이</strong>를 다른 테이블의 왼쪽으로 끌면 관계가 연결됩니다.</li>
+            <li>빈 곳을 끌면 화면이 이동하고, 마우스 휠로 확대·축소합니다.</li>
+            <li>테이블이나 선을 선택하고 Delete 키를 누르면 지워집니다.</li>
+            <li>왼쪽 아래 컨트롤과 오른쪽 아래 미니맵으로 전체 위치를 파악할 수 있습니다.</li>
+          </ul>
+        </article>
+        <article>
+          <h3>SQL 연동</h3>
+          <ul>
+            <li><strong>SQL → ERD</strong>: 아래 칸에 CREATE TABLE 문을 붙여 넣으면 테이블과 외래키를 읽어 자동 배치합니다.</li>
+            <li><strong>ERD → DDL</strong>: 지금 그린 구조를 CREATE TABLE 문으로 만들어 아래 칸에 넣어 줍니다. 복사해서 쓰면 됩니다.</li>
+          </ul>
+          <p>DDL 생성 시 인덱스·기본값·CHECK 제약은 만들지 않습니다. 구조 설계용이라 실제 운영 DDL은 손봐야 합니다.</p>
+        </article>
+        <article>
+          <h3>저장과 버전</h3>
+          <p>
+            내용이 실제로 바뀐 저장만 이력에 남습니다. 최근 30개까지 보관합니다.
+            되돌리기도 새 버전으로 기록되므로, 되돌린 뒤에도 되돌리기 직전 상태로 다시 갈 수 있습니다.
+          </p>
+          <p>
+            같은 다이어그램을 두 화면에서 동시에 편집하면 나중에 저장한 쪽이 거부됩니다.
+            먼저 저장한 사람의 내용을 모르고 덮어쓰는 것을 막기 위한 동작입니다.
+          </p>
+        </article>
+        <article>
+          <h3>내보내기</h3>
+          <p>PNG는 배경이 흰색으로 채워지고 2배 해상도로 저장됩니다. SVG는 확대해도 깨지지 않아 문서에 넣기 좋습니다.</p>
+        </article>
+      </UtilityHelpDialog>
     </section>
   );
 };
