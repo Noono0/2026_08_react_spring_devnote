@@ -8,6 +8,7 @@ import {
   toDateTimeLocalValue,
 } from "@/features/utility/utils/pollRules";
 import { applicationNotification } from "@/shared/notification/applicationNotification";
+import { createUuid } from "@/shared/lib/createUuid";
 
 interface EditablePollOption {
   key: string;
@@ -21,7 +22,7 @@ interface PollEditorProps {
   onSubmit: (request: PollDefinitionRequest) => Promise<void>;
 }
 
-const createOptionKey = (): string => crypto.randomUUID();
+const createOptionKey = (): string => createUuid();
 
 export const PollEditor = ({ initialPoll, pending, onCancel, onSubmit }: PollEditorProps) => {
   const [question, setQuestion] = useState(initialPoll?.question ?? "");

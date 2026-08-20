@@ -12,11 +12,12 @@
  */
 
 import { applicationEnvironment } from "@/shared/config/applicationEnvironment";
+import { createUuid } from "@/shared/lib/createUuid";
 
 /**
  * 요청마다 붙일 고유 ID를 만든다.
  *
- * crypto.randomUUID(): 브라우저가 제공하는 진짜 랜덤 ID 생성기.
+ * createUuid(): 브라우저가 제공하는 진짜 랜덤 ID 생성기.
  *   결과 예: "3f2a1b4c-9d8e-4f7a-b6c5-1e2d3c4b5a69"
  *
  * .replaceAll("-", ""): 하이픈을 전부 없애 32글자로 만든다.
@@ -26,7 +27,7 @@ import { applicationEnvironment } from "@/shared/config/applicationEnvironment";
  *   되긴 하지만 값이 겹칠 확률이 있고, 예측도 가능하다.
  *   브라우저가 공짜로 제대로 된 걸 주는데 굳이 직접 만들 이유가 없다.
  */
-export const createRequestId = (): string => crypto.randomUUID().replaceAll("-", "");
+export const createRequestId = (): string => createUuid().replaceAll("-", "");
 
 /**
  * 모든 요청에 공통으로 붙일 헤더를 만든다.

@@ -1,3 +1,5 @@
+import { createUuid } from "@/shared/lib/createUuid";
+
 export type TestDataType = "SEQUENCE" | "STRING" | "NAME" | "EMAIL" | "PHONE" | "INTEGER" | "DECIMAL" | "DATE" | "UUID" | "BOOLEAN" | "ENUM";
 
 export interface TestDataRule {
@@ -41,7 +43,7 @@ const generateValue = (rule: TestDataRule, rowIndex: number): TestDataRow[string
       date.setDate(date.getDate() - randomInteger(0, 365));
       return date.toISOString().slice(0, 10);
     }
-    case "UUID": return crypto.randomUUID();
+    case "UUID": return createUuid();
     case "BOOLEAN": return Math.random() >= 0.5;
     case "ENUM": {
       const values = rule.option.split(",").map((value) => value.trim()).filter(Boolean);
