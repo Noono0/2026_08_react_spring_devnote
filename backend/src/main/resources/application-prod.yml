@@ -1,0 +1,94 @@
+# ============================================================================
+# 운영 프로파일 (SPRING_PROFILES_ACTIVE=prod)
+#
+# application.yml 의 값을 덮어쓰는 부분만 적는다.
+# 여기 없는 설정은 application.yml 것을 그대로 쓴다.
+#
+# 적용 대상: Oracle Cloud Always Free (VM.Standard.E2.1.Micro, 1GB) 2대 구성
+#   - 인스턴스 A: MySQL
+#   - 인스턴스 B: 백엔드 + 프론트(nginx)
+# ============================================================================
+
+spring:
+  datasource:
+    # p6spy 제거.
+    # p6spy 는 모든 SQL 을 가로채 로깅하는 개발용 드라이버다.
+    # 1GB / 1-8 OCPU 환경에서는 이 오버헤드가 아깝고, 운영에서 쿼리 원문을
+    # 로그로 남기는 것 자체가 정보 노출 위험이기도 하다.
+    # DATABASE_URL 에 jdbc:mysql:// (jdbc:p6spy:mysql:// 아님) 을 넣어야 한다.
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      # 1GB 서버에서 커넥션을 많이 열어 둘 이유가 없다.
+      # 커넥션 하나당 MySQL 쪽 메모리도 함께 소모된다.
+      maximum-pool-size: 5
+      minimum-idle: 2
+      connection-timeout: 10000
+
+  jpa:
+    hibernate:
+      # ★ 운영에서는 절대 update 를 쓰지 않는다.
+      #   update 는 Entity 가 바뀌면 운영 DB 스키마를 말없이 변경한다.
+      #   컬럼이 사라지거나 타입이 바뀌면 데이터가 손상될 수 있다.
+      #   validate 는 "스키마가 Entity 와 맞는지 확인만" 하고 다르면 기동을 멈춘다.
+      #
+      # ★ 환경변수로 덮어쓸 수 있게 둔 이유
+      #   이 프로젝트는 테이블을 schema.sql 로 만들고 Entity 는 그것을 쓰기만 한다.
+      #   둘 사이에 사소한 차이(컬럼 타입·길이 등)라도 있으면 validate 는
+      #   기동을 거부한다. 서버에서 이미지를 다시 빌드할 수 없는 구성이므로
+      #   그때는 .env.app 에 JPA_DDL_AUTO=none 을 넣어 우선 띄우고,
+      #   로그에 찍힌 불일치 항목을 로컬에서 고친 뒤 validate 로 되돌린다.
+      #   ※ none 은 "아무것도 안 함"이라 안전하다. update 는 운영에서 쓰지 않는다.
+      ddl-auto: ${JPA_DDL_AUTO:validate}
+    properties:
+      hibernate:
+        # 운영에서 SQL 을 콘솔에 찍을 이유가 없다. 로그만 커지고 느려진다.
+        format_sql: false
+    show-sql: false
+
+  sql:
+    init:
+      # ★ 첫 배포에서는 always 로 두어 schema.sql / data.sql 을 실행해야 한다.
+      #   테이블이 만들어진 뒤에는 never 로 바꾸는 것을 권장한다.
+      #   (schema.sql 이 IF NOT EXISTS 라 재실행해도 안전하지만,
+      #    매 기동마다 DDL 을 도는 것은 불필요하다)
+      mode: ${SQL_INIT_MODE:always}
+
+server:
+  servlet:
+    session:
+      cookie:
+        # ★ HTTPS 를 붙인 뒤 반드시 true 로 둔다.
+        #   Cloudflare 를 앞에 두면 브라우저-Cloudflare 구간이 HTTPS 이므로 true 가 맞다.
+        secure: ${SESSION_COOKIE_SECURE:true}
+  # Cloudflare / nginx 뒤에 있으므로 원본 클라이언트 IP 를 헤더에서 읽는다.
+  # 이 설정이 없으면 접속 로그의 IP 가 전부 프록시 IP 로 찍힌다.
+  forward-headers-strategy: native
+
+springdoc:
+  # ★ 운영에서 Swagger UI 를 열어 두면 API 구조가 그대로 노출된다.
+  #   포트폴리오라 보여주고 싶다면 api-docs 만 켜고 UI 는 닫는 식으로 조절한다.
+  swagger-ui:
+    enabled: ${SWAGGER_UI_ENABLED:false}
+  api-docs:
+    enabled: ${API_DOCS_ENABLED:false}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # 헬스체크만 남긴다.
+        # metrics / prometheus 는 수집기가 없으면 쓸모없고, 내부 정보를 노출한다.
+        include: health
+  endpoint:
+    health:
+      # 상세 정보(DB 연결 상태 등)를 익명에게 보여주지 않는다.
+      show-details: never
+
+logging:
+  level:
+    root: WARN
+    # 애플리케이션 흐름은 남기되 DEBUG 는 끈다.
+    # DEBUG 로 두면 1GB 서버에서 디스크와 CPU 를 계속 소모한다.
+    com.example.devnote: INFO
+    # p6spy 를 안 쓰므로 로거도 끈다.
+    p6spy: "OFF"

@@ -1,0 +1,75 @@
+# ============================================================================
+# 인스턴스 A — MySQL 전용
+#
+# Oracle Cloud Always Free VM.Standard.E2.1.Micro (1 OCPU 1/8, 1GB) 기준.
+# 이 인스턴스에는 MySQL 만 올린다.
+#
+# 실행:
+#   docker compose -f compose.db.yml --env-file .env.db up -d
+# ============================================================================
+
+name: devnote-db
+
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: devnote-mysql
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USERNAME}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      TZ: UTC
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --default-time-zone=+00:00
+      # ── 1GB 서버용 메모리 절감 ─────────────────────────────────
+      # 기본값(128M)도 크지 않지만, 이 프로젝트 데이터 규모에서는
+      # 64M 로도 충분하고 그만큼 OS 와 커넥션에 여유가 생긴다.
+      - --innodb-buffer-pool-size=64M
+      # performance_schema 는 진단용 통계를 상시 수집한다.
+      # 수백 MB 를 쓰는 경우도 있어 1GB 환경에서는 끄는 편이 낫다.
+      - --performance-schema=OFF
+      # 커넥션 수 제한. 백엔드 커넥션 풀이 5개이므로 넉넉하다.
+      # 무제한으로 두면 커넥션 폭주 시 메모리로 서버가 죽는다.
+      - --max-connections=30
+
+    ports:
+      # ★ 인스턴스 B(백엔드)에서만 접근할 수 있게 사설 IP 에 바인딩한다.
+      #   "3306:3306" 으로 두면 공인 IP 에도 열려 인터넷에서 접근 가능해진다.
+      #   MYSQL_BIND_HOST 에는 이 인스턴스의 사설 IP(예: 10.0.0.2)를 넣는다.
+      #
+      #   추가로 OCI 보안 목록(Security List)에서도
+      #   인스턴스 B 의 사설 IP 에서만 3306 을 허용해야 한다. 이중으로 막는다.
+      - "${MYSQL_BIND_HOST}:3306:3306"
+
+    volumes:
+      - devnote-mysql-data:/var/lib/mysql
+
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$${MYSQL_ROOT_PASSWORD} --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
+
+    # 컨테이너가 메모리를 독점해 OS 까지 멈추는 것을 막는다.
+    # 한도를 넘으면 컨테이너만 재시작되고 서버는 살아 있는다.
+    deploy:
+      resources:
+        limits:
+          memory: 700M
+
+    restart: unless-stopped
+
+    logging:
+      # 로그가 무한정 쌓여 디스크를 채우는 것을 막는다.
+      # 무료 인스턴스는 디스크가 곧 수명이라 이 설정이 중요하다.
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  devnote-mysql-data:

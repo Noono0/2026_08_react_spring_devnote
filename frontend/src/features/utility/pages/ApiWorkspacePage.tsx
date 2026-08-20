@@ -43,6 +43,7 @@ import { copyText } from "@/features/utility/utils/browserFileUtils";
 import { applicationNotification } from "@/shared/notification/applicationNotification";
 import { ConfirmDialog } from "@/shared/ui/ConfirmDialog";
 import { ModalDialog } from "@/shared/ui/ModalDialog";
+import { ApiToolGuide } from "@/features/utility/components/ApiToolGuide";
 
 const methods: ApiWorkspaceMethod[] = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"];
 
@@ -473,6 +474,7 @@ export const ApiWorkspacePage = () => {
       </div>
 
       <ModalDialog isOpen={helpOpen} title="API Workspace 도움말" description="브라우저에서 안전하게 API 요청 흐름을 연습합니다." size="large" onRequestClose={() => setHelpOpen(false)}>
+        <ApiToolGuide currentTool="WORKSPACE" />
         <div className="api-help-grid"><article><span>1</span><div><h3>요청 작성</h3><p>Method와 URL을 입력하고 Params, Authorization, Headers, Body를 필요한 만큼 설정합니다.</p></div></article><article><span>2</span><div><h3>실행과 취소</h3><p>Send 또는 Enter로 전송합니다. 실행 중에는 Cancel로 요청을 중단할 수 있습니다.</p></div></article><article><span>3</span><div><h3>응답과 Actual Request</h3><p>응답 상태·시간·크기와 환경변수 치환 후 실제 전송 구성을 함께 비교합니다.</p></div></article><article><span>4</span><div><h3>Collection 디렉터리</h3><p>요청을 검색·복제하고 Collection과 Folder의 이름·구조를 관리합니다.</p></div></article><article><span>5</span><div><h3>다른 도구와 공유</h3><p>Postman Collection v2.1·Environment JSON을 가져오거나 내보내고, 단일 요청은 cURL로 주고받습니다.</p></div></article><article><span>6</span><div><h3>Collection Runner</h3><p>Collection 요청을 반복·간격 설정으로 순차 실행하고 매일 예약과 최근 실행 결과를 관리합니다.</p></div></article></div><div className="api-help-warning"><strong>주의사항</strong><ul><li>CORS가 허용되지 않은 외부 API는 브라우저에서 호출할 수 없습니다.</li><li>Secret과 파일은 열린 탭 복구·History·저장 요청에 원문으로 남기지 않습니다.</li><li>Actual Request에서도 Authorization·API Key·민감 Header 값은 마스킹합니다.</li><li>Postman 내보내기는 Secret을 자리표시자 또는 빈 값으로 바꾸므로 대상 도구에서 다시 설정해야 합니다.</li><li>예약 실행은 API Workspace 페이지가 열려 있을 때 동작하며, 놓친 일정은 다시 열 때 1회 실행합니다.</li><li>Response Body 저장은 기본 OFF이며 민감한 응답은 저장하지 않는 것이 안전합니다.</li></ul></div>
       </ModalDialog>
 

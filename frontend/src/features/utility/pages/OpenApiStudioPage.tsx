@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthSessionQuery } from "@/features/auth/hooks/useAuthSession";
 import { UtilityHelpDialog, UtilityPageTitle } from "@/features/utility/components/UtilityHelpDialog";
+import { ApiToolGuide } from "@/features/utility/components/ApiToolGuide";
 import { ApiWorkspaceModuleNav } from "@/features/utility/components/ApiWorkspaceModuleNav";
 import type { ApiWorkspaceMethod } from "@/features/utility/types/apiWorkspaceTypes";
 import type { OpenApiDocumentSummary } from "@/features/utility/types/openApiTypes";
@@ -150,7 +151,38 @@ export const OpenApiStudioPage = () => {
         </>
       ) : <div className="portfolio-state-panel advanced-empty-state">문서를 분석하면 Endpoint 목록과 요청 예제가 표시됩니다.</div>}
 
-      <UtilityHelpDialog isOpen={helpOpen} title="OpenAPI Studio" description="API 계약 문서를 API Workspace 실행 데이터로 변환합니다." onClose={() => setHelpOpen(false)}><article><h3>권장 입력</h3><p>Springdoc의 <code>/v3/api-docs</code> JSON을 가장 정확하게 지원합니다. URL 요청이 CORS로 막히면 JSON 파일을 선택하거나 내용을 붙여 넣으세요.</p></article><article><h3>가져오기 규칙</h3><p>첫 번째 server를 기본 URL로 사용하고 Path·Query·Header Parameter와 JSON Request Body 예제를 생성합니다. 태그별 Folder를 만들며, 인증 값은 저장하지 않습니다.</p></article><article><h3>현재 지원 범위</h3><p>OpenAPI 3.x와 로컬 <code>$ref</code>, JSON 요청 예제를 지원합니다. 콜백·링크·복잡한 polymorphism은 원문 Schema 확인이 필요합니다.</p></article></UtilityHelpDialog>
+      <UtilityHelpDialog isOpen={helpOpen} title="OpenAPI Studio" description="API 문서를 읽어 실행 가능한 요청 목록으로 바꿉니다." onClose={() => setHelpOpen(false)}>
+        <ApiToolGuide currentTool="OPENAPI" />
+        <article>
+          <h3>이 도구는 무엇을 하나요?</h3>
+          <p>
+            Swagger(OpenAPI) 문서를 읽어서 그 안에 정의된 API들을 <strong>실행 가능한 요청 목록</strong>으로 만들어 줍니다.
+            문서를 보며 요청을 손으로 하나씩 만드는 대신, 한 번에 가져와 API Workspace에서 바로 실행할 수 있습니다.
+          </p>
+        </article>
+        <article>
+          <h3>사용 절차</h3>
+          <ol>
+            <li><strong>문서 넣기</strong> — URL 입력, JSON 파일 선택, 내용 붙여넣기 중 하나를 고릅니다.</li>
+            <li><strong>분석</strong> — API 목록과 각 요청의 Parameter·Body가 표시됩니다.</li>
+            <li><strong>선택</strong> — 필요한 API만 체크합니다. 전부 가져올 필요는 없습니다.</li>
+            <li><strong>Collection으로 가져오기</strong> — API Workspace에 저장됩니다.</li>
+            <li><strong>API Workspace로 이동</strong> — 가져온 요청을 실행하고 응답을 확인합니다.</li>
+          </ol>
+        </article>
+        <article>
+          <h3>권장 입력</h3>
+          <p>Springdoc의 <code>/v3/api-docs</code> JSON을 가장 정확하게 지원합니다. URL 요청이 CORS로 막히면 JSON 파일을 선택하거나 내용을 붙여 넣으세요.</p>
+        </article>
+        <article>
+          <h3>가져오기 규칙</h3>
+          <p>첫 번째 server를 기본 URL로 사용하고 Path·Query·Header Parameter와 JSON Request Body 예제를 생성합니다. 태그별 Folder를 만들며, 인증 값은 저장하지 않습니다.</p>
+        </article>
+        <article>
+          <h3>현재 지원 범위</h3>
+          <p>OpenAPI 3.x와 로컬 <code>$ref</code>, JSON 요청 예제를 지원합니다. 콜백·링크·복잡한 polymorphism은 원문 Schema 확인이 필요합니다.</p>
+        </article>
+      </UtilityHelpDialog>
     </section>
   );
 };

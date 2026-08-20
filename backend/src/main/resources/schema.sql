@@ -255,3 +255,54 @@ CREATE TABLE IF NOT EXISTS portfolio_section_files (
     CONSTRAINT fk_portfolio_section_files_section FOREIGN KEY (portfolio_section_id) REFERENCES portfolio_sections(portfolio_section_id),
     CONSTRAINT fk_portfolio_section_files_file FOREIGN KEY (file_id) REFERENCES file_resources(file_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='포트폴리오 섹션 파일 연결';
+
+-- ============================================================================
+-- 다이어그램 (ERD / UML / Flowchart / 시스템 구성도)
+--
+-- 설계 메모:
+--  1) diagram_model 을 JSON 한 칸에 담는다.
+--     노드·엣지를 별도 테이블로 정규화하면 조회 시 JOIN이 늘고, 저장할 때마다
+--     delete-insert 가 필요하다. 다이어그램은 "통째로 읽고 통째로 저장"하는
+--     사용 패턴이라 문서(documents.content_json)와 같은 방식이 더 단순하고 빠르다.
+--     대신 "노드 단위 검색" 같은 쿼리는 못 한다 — 현재 요구사항에 없으므로 감수한다.
+--  2) documents / document_histories 와 동일한 낙관적 잠금(version_number) 규약을 따른다.
+--  3) soft delete(deleted_at)로 실수 삭제를 복구할 수 있게 한다.
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS diagrams (
+    diagram_id BIGINT NOT NULL AUTO_INCREMENT COMMENT '다이어그램 식별자',
+    member_id BIGINT NOT NULL COMMENT '소유 회원 식별자',
+    diagram_title VARCHAR(200) NOT NULL COMMENT '다이어그램 제목',
+    diagram_description VARCHAR(1000) NOT NULL DEFAULT '' COMMENT '설명',
+    diagram_type VARCHAR(30) NOT NULL DEFAULT 'ERD' COMMENT 'ERD, FLOWCHART, UML, SYSTEM, GENERAL',
+    diagram_model JSON NOT NULL COMMENT '노드와 엣지를 담은 편집기 모델 JSON',
+    version_number BIGINT NOT NULL DEFAULT 1 COMMENT '낙관적 잠금 버전',
+    use_yn CHAR(1) NOT NULL DEFAULT 'Y' COMMENT '사용 여부',
+    deleted_at DATETIME(6) NULL COMMENT '휴지통 이동 일시',
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '생성 일시',
+    updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '수정 일시',
+    PRIMARY KEY (diagram_id),
+    KEY idx_diagrams_member_updated (member_id, use_yn, updated_at, diagram_id),
+    KEY idx_diagrams_member_type (member_id, diagram_type, use_yn),
+    CONSTRAINT fk_diagrams_member FOREIGN KEY (member_id) REFERENCES members(member_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='다이어그램';
+
+-- 다이어그램 수정 이력.
+-- 저사양 서버를 고려해 "저장할 때마다 무조건 한 행"이 아니라
+-- 직전 버전과 내용이 다를 때만 남기고, 다이어그램당 최대 보관 개수를 제한한다.
+-- (보관 개수 제한은 DiagramServiceImpl 에서 수행한다)
+CREATE TABLE IF NOT EXISTS diagram_versions (
+    diagram_version_id BIGINT NOT NULL AUTO_INCREMENT COMMENT '다이어그램 이력 식별자',
+    diagram_id BIGINT NOT NULL COMMENT '다이어그램 식별자',
+    version_number BIGINT NOT NULL COMMENT '저장 당시 버전',
+    diagram_title VARCHAR(200) NOT NULL COMMENT '저장 당시 제목',
+    diagram_type VARCHAR(30) NOT NULL COMMENT '저장 당시 종류',
+    diagram_model JSON NOT NULL COMMENT '저장 당시 모델 JSON',
+    change_summary VARCHAR(500) NULL COMMENT '변경 요약',
+    changed_by BIGINT NOT NULL COMMENT '변경 회원 식별자',
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '생성 일시',
+    PRIMARY KEY (diagram_version_id),
+    UNIQUE KEY uk_diagram_versions_version (diagram_id, version_number),
+    KEY idx_diagram_versions_diagram_created (diagram_id, created_at, diagram_version_id),
+    CONSTRAINT fk_diagram_versions_diagram FOREIGN KEY (diagram_id) REFERENCES diagrams(diagram_id),
+    CONSTRAINT fk_diagram_versions_member FOREIGN KEY (changed_by) REFERENCES members(member_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='다이어그램 변경 이력';

@@ -19,6 +19,10 @@ frontend/public/mockServiceWorker.js
 
 # Environment and logs
 .env
+# 배포용 비밀 파일 — 서버에만 두고 저장소에는 절대 올리지 않는다
+.env.db
+.env.app
+.env.*.local
 *.log
 
 # OS

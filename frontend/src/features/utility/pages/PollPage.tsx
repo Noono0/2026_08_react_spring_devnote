@@ -4,6 +4,7 @@ import { DocumentPagination } from "@/features/document/components/DocumentPagin
 import { PollCard } from "@/features/utility/components/PollCard";
 import { PollEditor } from "@/features/utility/components/PollEditor";
 import { PollListView } from "@/features/utility/components/PollListView";
+import { UtilityHelpDialog } from "@/features/utility/components/UtilityHelpDialog";
 import {
   useCreatePollMutation,
   useDeletePollMutation,
@@ -29,6 +30,7 @@ export const PollPage = () => {
   const deleteMutation = useDeletePollMutation();
   const [selectedOptions, setSelectedOptions] = useState<Record<number, number[]>>({});
   const [editorMode, setEditorMode] = useState<"CLOSED" | "CREATE">("CLOSED");
+  const [helpOpen, setHelpOpen] = useState(false);
   const [editingPoll, setEditingPoll] = useState<Poll>();
   const [deleteTargetPoll, setDeleteTargetPoll] = useState<Poll>();
   const [selectedDetailPollId, setSelectedDetailPollId] = useState<number>();
@@ -118,6 +120,7 @@ export const PollPage = () => {
       <div className="page-hero poll-page-hero">
         <div><span className="page-kicker">Topic Poll</span><h1>토픽 투표</h1><p>질문과 문항을 자유롭게 만들고, 단일·복수 선택과 결과 공개 시점을 직접 설정합니다.</p></div>
         {sessionQuery.data?.authenticated ? <button type="button" onClick={() => { setEditingPoll(undefined); setEditorMode("CREATE"); }}>+ 새 토픽 만들기</button> : <div className="poll-login-note"><strong>투표 생성은 로그인 후 가능</strong><span>참여는 비회원도 할 수 있습니다.</span></div>}
+        <button type="button" className="learning-guide-icon-button" aria-label="토픽 투표 도움말" onClick={() => setHelpOpen(true)}>?</button>
       </div>
 
       {editorMode === "CREATE" ? <PollEditor pending={createMutation.isPending} onCancel={() => setEditorMode("CLOSED")} onSubmit={create} /> : null}
@@ -173,6 +176,47 @@ export const PollPage = () => {
         onConfirm={() => void deleteSelectedPoll()}
         onCancel={() => setDeleteTargetPoll(undefined)}
       />
+
+      <UtilityHelpDialog
+        isOpen={helpOpen}
+        title="토픽 투표"
+        description="질문과 선택지를 만들고 참여 결과를 비교합니다."
+        onClose={() => setHelpOpen(false)}
+      >
+        <article>
+          <h3>투표에 참여하기</h3>
+          <ul>
+            <li>로그인하지 않아도 참여할 수 있습니다. 같은 브라우저에서 중복 참여만 막습니다.</li>
+            <li>단일 선택 투표는 하나만, 복수 선택 투표는 정해진 개수까지 고를 수 있습니다.</li>
+            <li>한 번 참여하면 같은 투표에 다시 참여할 수 없습니다.</li>
+          </ul>
+        </article>
+        <article>
+          <h3>투표 만들기 (로그인 필요)</h3>
+          <ol>
+            <li>“+ 새 토픽 만들기”를 누릅니다.</li>
+            <li>질문과 선택지를 입력합니다.</li>
+            <li>단일·복수 선택과 결과 공개 시점을 정합니다.</li>
+            <li>종료 시간은 현재부터 60분 이내로만 설정할 수 있습니다.</li>
+          </ol>
+        </article>
+        <article>
+          <h3>결과 공개 시점</h3>
+          <p>
+            투표 직후 결과를 보여줄지, 종료 후에 보여줄지 고를 수 있습니다.
+            바로 공개하면 앞선 결과가 뒤에 참여하는 사람의 선택에 영향을 줄 수 있으니
+            의견을 있는 그대로 모으고 싶다면 종료 후 공개를 권합니다.
+          </p>
+        </article>
+        <article>
+          <h3>알아둘 점</h3>
+          <ul>
+            <li>참여자가 있는 투표의 <strong>문항은 변경할 수 없습니다</strong>. 이미 던져진 표의 의미가 바뀌기 때문입니다.</li>
+            <li>투표는 만든 사람만 수정·삭제할 수 있습니다.</li>
+            <li>이 도구는 다른 유틸리티와 달리 <strong>서버에 저장</strong>됩니다. 공유가 목적인 기능이기 때문입니다.</li>
+          </ul>
+        </article>
+      </UtilityHelpDialog>
     </section>
   );
 };

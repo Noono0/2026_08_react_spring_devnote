@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.devnote.diagram.DiagramMapper">
+
+    <!--
+        목록/카운트가 공유하는 조건절.
+        member_id 를 항상 조건에 넣어 다른 회원의 다이어그램이 섞이지 않게 한다.
+    -->
+    <sql id="diagramFilters">
+        WHERE member_id = #{memberId}
+          AND use_yn = 'Y'
+        <if test="searchKeyword != null and searchKeyword != ''">
+            AND (diagram_title LIKE CONCAT('%', #{searchKeyword}, '%')
+              OR diagram_description LIKE CONCAT('%', #{searchKeyword}, '%'))
+        </if>
+        <if test="diagramType != null">
+            AND diagram_type = #{diagramType}
+        </if>
+    </sql>
+
+    <!--
+        목록에서는 diagram_model 을 선택하지 않는다.
+        모델 JSON은 건당 수십 KB가 될 수 있어, 12건만 조회해도 응답이 급격히 커진다.
+    -->
+    <select id="selectDiagrams" resultType="com.example.devnote.diagram.dao.row.DiagramRow">
+        SELECT diagram_id,
+               member_id,
+               diagram_title,
+               diagram_description,
+               diagram_type,
+               version_number,
+               use_yn,
+               created_at,
+               updated_at
+          FROM diagrams
+        <include refid="diagramFilters"/>
+         ORDER BY updated_at DESC, diagram_id DESC
+         LIMIT #{pageSize} OFFSET #{offset}
+    </select>
+
+    <select id="countDiagrams" resultType="long">
+        SELECT COUNT(*)
+          FROM diagrams
+        <include refid="diagramFilters"/>
+    </select>
+
+    <!-- 상세 조회에서만 모델 JSON을 포함한다. -->
+    <select id="selectDiagram" resultType="com.example.devnote.diagram.dao.row.DiagramRow">
+        SELECT diagram_id,
+               member_id,
+               diagram_title,
+               diagram_description,
+               diagram_type,
+               diagram_model,
+               version_number,
+               use_yn,
+               deleted_at,
+               created_at,
+               updated_at
+          FROM diagrams
+         WHERE diagram_id = #{diagramId}
+           AND member_id = #{memberId}
+           AND use_yn = 'Y'
+    </select>
+
+    <insert id="insertDiagram" useGeneratedKeys="true" keyProperty="diagramId">
+        INSERT INTO diagrams (member_id, diagram_title, diagram_description, diagram_type, diagram_model, version_number)
+        VALUES (#{memberId}, #{diagramTitle}, #{diagramDescription}, #{diagramType}, #{diagramModel}, 1)
+    </insert>
+
+    <!--
+        낙관적 잠금의 핵심.
+        WHERE 절에 version_number = #{expectedVersionNumber} 를 넣었기 때문에
+        그 사이 다른 요청이 먼저 저장했다면 갱신 건수가 0이 되고,
+        서비스 계층이 이를 버전 충돌로 처리한다.
+    -->
+    <update id="updateDiagram">
+        UPDATE diagrams
+           SET diagram_title = #{diagramTitle},
+               diagram_description = #{diagramDescription},
+               diagram_type = #{diagramType},
+               diagram_model = #{diagramModel},
+               version_number = version_number + 1
+         WHERE diagram_id = #{diagramId}
+           AND member_id = #{memberId}
+           AND use_yn = 'Y'
+           AND version_number = #{expectedVersionNumber}
+    </update>
+
+    <update id="softDeleteDiagram">
+        UPDATE diagrams
+           SET use_yn = 'N',
+               deleted_at = NOW(6)
+         WHERE diagram_id = #{diagramId}
+           AND member_id = #{memberId}
+           AND use_yn = 'Y'
+    </update>
+
+    <insert id="insertDiagramVersion">
+        INSERT INTO diagram_versions
+            (diagram_id, version_number, diagram_title, diagram_type, diagram_model, change_summary, changed_by)
+        VALUES
+            (#{diagramId}, #{versionNumber}, #{diagramTitle}, #{diagramType}, #{diagramModel}, #{changeSummary}, #{changedBy})
+    </insert>
+
+    <!-- 버전 목록에서도 모델 JSON은 제외한다. (목록 응답 크기 절감) -->
+    <select id="selectDiagramVersions" resultType="com.example.devnote.diagram.dao.row.DiagramVersionRow">
+        SELECT diagram_version_id,
+               diagram_id,
+               version_number,
+               diagram_title,
+               diagram_type,
+               change_summary,
+               changed_by,
+               created_at
+          FROM diagram_versions
+         WHERE diagram_id = #{value}
+         ORDER BY version_number DESC
+    </select>
+
+    <select id="selectDiagramVersion" resultType="com.example.devnote.diagram.dao.row.DiagramVersionRow">
+        SELECT diagram_version_id,
+               diagram_id,
+               version_number,
+               diagram_title,
+               diagram_type,
+               diagram_model,
+               change_summary,
+               changed_by,
+               created_at
+          FROM diagram_versions
+         WHERE diagram_id = #{diagramId}
+           AND version_number = #{versionNumber}
+    </select>
+
+    <!--
+        보관 개수를 넘어선 오래된 이력 정리.
+
+        MySQL 은 DELETE 대상 테이블을 서브쿼리에서 직접 다시 조회하는 것을 막기 때문에
+        (ERROR 1093) 파생 테이블로 한 번 감싸는 우회가 필요하다.
+        최신 keepCount 개의 version_number 를 구한 뒤 그보다 오래된 행을 지운다.
+    -->
+    <delete id="deleteOldDiagramVersions">
+        DELETE FROM diagram_versions
+         WHERE diagram_id = #{diagramId}
+           AND version_number &lt; (
+               SELECT min_kept_version FROM (
+                   SELECT MIN(version_number) AS min_kept_version FROM (
+                       SELECT version_number
+                         FROM diagram_versions
+                        WHERE diagram_id = #{diagramId}
+                        ORDER BY version_number DESC
+                        LIMIT #{keepCount}
+                   ) AS recent_versions
+               ) AS kept_boundary
+           )
+    </delete>
+</mapper>

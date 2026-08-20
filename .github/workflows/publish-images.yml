@@ -1,0 +1,95 @@
+# ============================================================================
+# 운영 이미지 빌드 · 푸시
+#
+# ★ 왜 필요한가
+#   배포 대상인 Oracle Always Free 인스턴스는 1GB / 1-8 OCPU 라
+#   서버에서 Gradle·Vite 빌드를 돌리면 메모리 부족으로 실패한다.
+#   빌드는 GitHub Actions 에서 하고, 서버는 이미지를 받아 실행만 한다.
+#
+#   부수 효과로 클라우드를 갈아탈 때도 유리하다.
+#   새 서버에는 Docker 만 있으면 되고 소스를 클론할 필요조차 없다.
+#
+# ★ 인증
+#   GITHUB_TOKEN 은 Actions 가 자동으로 넣어 주므로 별도 시크릿이 필요 없다.
+#   저장소 Settings > Actions > Workflow permissions 에서
+#   "Read and write permissions" 가 켜져 있어야 push 가 된다.
+# ============================================================================
+
+name: Publish Images
+
+on:
+  push:
+    branches: [main]
+  # 수동 실행도 가능하게 둔다. 재배포만 하고 싶을 때 유용하다.
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # 이미지 이름은 소문자만 허용된다.
+      # GitHub 사용자명에 대문자가 있으면 그대로 쓰면 실패하므로 변환해 둔다.
+      - name: Resolve image owner (lowercase)
+        id: owner
+        run: echo "value=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── 백엔드 ────────────────────────────────────────────────
+      - name: Build and push backend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ steps.owner.outputs.value }}/devnote-backend:main
+            ${{ env.REGISTRY }}/${{ steps.owner.outputs.value }}/devnote-backend:${{ github.sha }}
+          # 캐시를 써서 두 번째 빌드부터 시간을 크게 줄인다.
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,scope=backend,mode=max
+
+      # ── 프론트엔드 ─────────────────────────────────────────────
+      # ★ Vite 환경변수는 "빌드 시점"에 코드에 박힌다.
+      #   런타임 환경변수로는 바꿀 수 없으므로 여기서 운영 값을 넣어야 한다.
+      - name: Build and push frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: true
+          build-args: |
+            VITE_API_BASE_URL=/api/v1
+            VITE_HTTP_CLIENT=axios
+            VITE_DATA_SOURCE=backend
+            VITE_MOCK_SCENARIO=success
+            VITE_DEVELOPMENT_MEMBER_ID=1
+            VITE_ENABLE_DEVELOPMENT_MENU=false
+          tags: |
+            ${{ env.REGISTRY }}/${{ steps.owner.outputs.value }}/devnote-frontend:main
+            ${{ env.REGISTRY }}/${{ steps.owner.outputs.value }}/devnote-frontend:${{ github.sha }}
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,scope=frontend,mode=max
+
+      - name: Summary
+        run: |
+          echo "### 이미지 푸시 완료" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- \`${{ env.REGISTRY }}/${{ steps.owner.outputs.value }}/devnote-backend:main\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- \`${{ env.REGISTRY }}/${{ steps.owner.outputs.value }}/devnote-frontend:main\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "서버에서 \`docker compose -f compose.app.yml pull && up -d\` 로 반영합니다." >> "$GITHUB_STEP_SUMMARY"

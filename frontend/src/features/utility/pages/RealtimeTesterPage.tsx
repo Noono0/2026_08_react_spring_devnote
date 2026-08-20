@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { UtilityHelpDialog, UtilityPageTitle } from "@/features/utility/components/UtilityHelpDialog";
+import { ApiToolGuide } from "@/features/utility/components/ApiToolGuide";
 import { ApiWorkspaceModuleNav } from "@/features/utility/components/ApiWorkspaceModuleNav";
 import { copyText, downloadText } from "@/features/utility/utils/browserFileUtils";
 import { filterRealtimeLogs, formatRealtimePayload, serializeRealtimeLogs, validateRealtimeUrl, type RealtimeLogDirection, type RealtimeLogEntry, type RealtimeProtocol } from "@/features/utility/utils/realtimeStreamUtils";
@@ -108,7 +109,42 @@ export const RealtimeTesterPage = () => {
         <section className="advanced-panel realtime-message-panel"><header><h2>메시지 보내기</h2><span>{protocol === "SSE" ? "SSE는 수신 전용입니다." : "Text·JSON"}</span></header><textarea aria-label="WebSocket 전송 메시지" value={message} disabled={protocol === "SSE"} spellCheck={false} onChange={(event) => setMessage(event.target.value)} /><div className="button-row"><button type="button" disabled={protocol === "SSE" || status !== "CONNECTED"} onClick={sendMessage}>메시지 전송</button><button type="button" className="ghost-button" disabled={protocol === "SSE"} onClick={() => { try { setMessage(JSON.stringify(JSON.parse(message), null, 2)); } catch { applicationNotification.warning("JSON 문법을 확인해 주세요."); } }}>JSON 정리</button></div><p className="utility-warning">브라우저 WebSocket은 임의 Authorization Header를 직접 설정할 수 없습니다. 쿠키·Query 또는 서버가 지원하는 Subprotocol을 사용해야 합니다.</p></section>
         <section className="advanced-panel realtime-log-panel"><header><div><h2>실시간 로그</h2><span>{visibleLogs.length}/{logs.length}개</span></div><div><button type="button" className="ghost-button" disabled={logs.length === 0} onClick={() => void copyText(serializeRealtimeLogs(logs)).then(() => applicationNotification.success("로그를 복사했습니다."))}>복사</button><button type="button" className="ghost-button" disabled={logs.length === 0} onClick={() => downloadText("realtime-log.txt", serializeRealtimeLogs(logs))}>내보내기</button><button type="button" className="ghost-button" disabled={logs.length === 0} onClick={() => setLogs([])}>비우기</button></div></header><div className="advanced-filter-row"><input aria-label="실시간 로그 검색" value={query} placeholder="메시지 검색" onChange={(event) => setQuery(event.target.value)} /><select aria-label="실시간 로그 방향" value={direction} onChange={(event) => setDirection(event.target.value as "ALL" | RealtimeLogDirection)}><option value="ALL">전체</option><option value="RECEIVED">수신</option><option value="SENT">전송</option><option value="SYSTEM">시스템</option><option value="ERROR">오류</option></select></div><div className="realtime-log-list">{visibleLogs.map((entry) => <article className={`log-${entry.direction.toLowerCase()}`} key={entry.id}><header><time>{entry.timestamp}</time><strong>{entry.direction}</strong><span>{entry.eventName}</span></header><pre>{entry.data}</pre></article>)}{visibleLogs.length === 0 ? <div className="portfolio-state-panel">연결하거나 메시지를 보내면 시간순으로 표시됩니다.</div> : null}</div></section>
       </div>
-      <UtilityHelpDialog isOpen={helpOpen} title="WebSocket · SSE Tester" description="일반 HTTP 요청과 다른 지속 연결의 생명주기를 관찰합니다." onClose={() => setHelpOpen(false)}><article><h3>WebSocket</h3><p>한 연결에서 브라우저와 서버가 양방향으로 메시지를 주고받습니다. 채팅·협업·게임 상태에 사용합니다.</p></article><article><h3>SSE</h3><p>서버가 브라우저로 이벤트를 계속 보내는 단방향 연결입니다. 알림·진행률·로그 스트림에 적합합니다.</p></article><article><h3>확인할 부분</h3><p>컴포넌트가 사라질 때 연결과 재연결 타이머를 정리하고, 오류·종료·재연결 상태를 분리합니다.</p></article></UtilityHelpDialog>
+      <UtilityHelpDialog isOpen={helpOpen} title="WebSocket · SSE Tester" description="끊기지 않고 유지되는 연결에서 메시지가 오가는 것을 관찰합니다." onClose={() => setHelpOpen(false)}>
+        <ApiToolGuide currentTool="REALTIME" />
+        <article>
+          <h3>WebSocket과 SSE 중 무엇을 고르나요?</h3>
+          <ul>
+            <li><strong>WebSocket</strong> — 브라우저와 서버가 <strong>서로</strong> 메시지를 보냅니다. 채팅, 협업 편집, 게임처럼 양쪽이 말해야 할 때.</li>
+            <li><strong>SSE</strong> — <strong>서버만</strong> 보냅니다. 알림, 진행률, 로그 스트림처럼 받기만 하면 될 때.</li>
+          </ul>
+          <p>
+            받기만 하면 되는데 WebSocket을 쓰면 불필요하게 복잡해집니다.
+            SSE는 일반 HTTP 위에서 동작해 프록시·방화벽 문제도 적습니다.
+          </p>
+        </article>
+        <article>
+          <h3>사용 절차</h3>
+          <ol>
+            <li><strong>방식 선택</strong> — WebSocket 또는 SSE를 고릅니다.</li>
+            <li><strong>주소 입력</strong> — WebSocket은 <code>ws://</code> 또는 <code>wss://</code>, SSE는 <code>http(s)://</code> 로 시작합니다.</li>
+            <li><strong>연결</strong> — 연결 상태가 표시됩니다.</li>
+            <li><strong>메시지 확인</strong> — 주고받은 메시지가 시간순으로 쌓입니다.</li>
+            <li><strong>보내기</strong> — WebSocket만 가능합니다. SSE는 받기 전용이라 보내기 칸이 없습니다.</li>
+          </ol>
+        </article>
+        <article>
+          <h3>연결이 안 될 때</h3>
+          <ul>
+            <li>HTTPS 페이지에서는 <code>ws://</code> 를 쓸 수 없습니다. <code>wss://</code> 를 사용하세요.</li>
+            <li>서버가 실시간 연결을 허용하는지, CORS 설정이 되어 있는지 확인하세요.</li>
+            <li>연결이 바로 끊긴다면 인증이 필요한 엔드포인트일 수 있습니다.</li>
+          </ul>
+        </article>
+        <article>
+          <h3>코드로 만들 때 확인할 부분</h3>
+          <p>컴포넌트가 사라질 때 연결과 재연결 타이머를 정리하고, 오류·종료·재연결 상태를 분리해야 합니다. 정리를 빠뜨리면 화면을 떠난 뒤에도 연결이 남아 메모리가 샙니다.</p>
+        </article>
+      </UtilityHelpDialog>
     </section>
   );
 };
