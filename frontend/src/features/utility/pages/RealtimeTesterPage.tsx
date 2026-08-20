@@ -5,6 +5,7 @@ import { ApiWorkspaceModuleNav } from "@/features/utility/components/ApiWorkspac
 import { copyText, downloadText } from "@/features/utility/utils/browserFileUtils";
 import { filterRealtimeLogs, formatRealtimePayload, serializeRealtimeLogs, validateRealtimeUrl, type RealtimeLogDirection, type RealtimeLogEntry, type RealtimeProtocol } from "@/features/utility/utils/realtimeStreamUtils";
 import { applicationNotification } from "@/shared/notification/applicationNotification";
+import { createUuid } from "@/shared/lib/createUuid";
 
 type ConnectionStatus = "DISCONNECTED" | "CONNECTING" | "CONNECTED" | "ERROR";
 
@@ -28,7 +29,7 @@ export const RealtimeTesterPage = () => {
   settingsReference.current = { protocol, url, subprotocols, withCredentials, autoReconnect, reconnectDelay };
 
   const appendLog = (directionValue: RealtimeLogDirection, eventName: string, data: unknown): void => {
-    const entry: RealtimeLogEntry = { id: crypto.randomUUID(), timestamp: new Date().toLocaleTimeString("ko-KR", { hour12: false }), direction: directionValue, eventName, data: formatRealtimePayload(data) };
+    const entry: RealtimeLogEntry = { id: createUuid(), timestamp: new Date().toLocaleTimeString("ko-KR", { hour12: false }), direction: directionValue, eventName, data: formatRealtimePayload(data) };
     setLogs((currentLogs) => [...currentLogs, entry].slice(-500));
   };
 

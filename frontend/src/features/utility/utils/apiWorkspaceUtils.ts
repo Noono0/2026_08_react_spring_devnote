@@ -12,13 +12,14 @@ import type {
   ApiWorkspaceSavedRequest,
   ApiWorkspaceTab,
 } from "@/features/utility/types/apiWorkspaceTypes";
+import { createUuid } from "@/shared/lib/createUuid";
 
 export const API_WORKSPACE_MAX_RESPONSE_BYTES = 1024 * 1024;
 export const API_WORKSPACE_MAX_HISTORY_ITEMS = 100;
 
 const sensitiveKeyPattern = /(authorization|cookie|set-cookie|api[-_]?key|password|passwd|access[-_]?token|refresh[-_]?token|client[-_]?secret|secret)/i;
 
-export const createWorkspaceId = (): string => crypto.randomUUID();
+export const createWorkspaceId = (): string => createUuid();
 
 export const createEmptyKeyValue = (): ApiWorkspaceKeyValue => ({
   id: createWorkspaceId(),

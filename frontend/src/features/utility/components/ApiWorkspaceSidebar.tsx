@@ -9,6 +9,7 @@ import type {
   ApiWorkspaceSavedRequest,
 } from "@/features/utility/types/apiWorkspaceTypes";
 import { filterApiWorkspaceCollectionTree } from "@/features/utility/utils/apiWorkspaceUtils";
+import { createUuid } from "@/shared/lib/createUuid";
 
 interface ApiWorkspaceSidebarProps {
   activePanel: ApiWorkspacePanel;
@@ -243,7 +244,7 @@ export const ApiWorkspaceSidebar = ({
                 <button type="button" className="api-icon-button" aria-label={`${variableIndex + 1}번째 환경변수 삭제`} onClick={() => onEnvironmentChange({ ...activeEnvironment, variables: activeEnvironment.variables.filter((currentVariable) => currentVariable.id !== variable.id) })}>×</button>
               </div>
             ))}
-            <button type="button" className="ghost-button api-add-row-button" onClick={() => onEnvironmentChange({ ...activeEnvironment, variables: [...activeEnvironment.variables, { id: crypto.randomUUID(), key: "", value: "", secret: false, enabled: true }] })}>+ 변수 추가</button>
+            <button type="button" className="ghost-button api-add-row-button" onClick={() => onEnvironmentChange({ ...activeEnvironment, variables: [...activeEnvironment.variables, { id: createUuid(), key: "", value: "", secret: false, enabled: true }] })}>+ 변수 추가</button>
             <p>요청에 <code>{"{{baseUrl}}"}</code>처럼 입력합니다. Secret 값은 새로고침 후 비워집니다.</p>
           </div>
         ) : <div className="api-sidebar-empty"><strong>선택한 환경이 없습니다.</strong><p>Local·Development처럼 실행 환경을 만들 수 있습니다.</p></div>}

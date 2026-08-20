@@ -10,6 +10,7 @@ import { executeApiWorkspaceRequest } from "@/features/utility/utils/apiWorkspac
 import { createApiWorkspaceTab, createEmptyApiRequest, parseStoredTabs, serializeTabsForStorage } from "@/features/utility/utils/apiWorkspaceUtils";
 import { createMockApiScenario, createMockApiStep, MOCK_API_SCENARIOS_STORAGE_KEY, parseStoredMockScenarios, resetMockApiCounters } from "@/features/utility/utils/mockApiEngine";
 import { applicationNotification } from "@/shared/notification/applicationNotification";
+import { createUuid } from "@/shared/lib/createUuid";
 
 const methods: ApiWorkspaceMethod[] = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"];
 
@@ -42,7 +43,7 @@ export const MockApiScenarioPage = () => {
   };
   const duplicateScenario = (scenario: MockApiScenario): void => {
     const now = new Date().toISOString();
-    const duplicate: MockApiScenario = { ...scenario, id: crypto.randomUUID(), name: `${scenario.name} 복사본`, steps: scenario.steps.map((step) => ({ ...step, id: crypto.randomUUID() })), createdAt: now, updatedAt: now };
+    const duplicate: MockApiScenario = { ...scenario, id: createUuid(), name: `${scenario.name} 복사본`, steps: scenario.steps.map((step) => ({ ...step, id: createUuid() })), createdAt: now, updatedAt: now };
     setScenarios((currentScenarios) => [...currentScenarios, duplicate]); setActiveScenarioId(duplicate.id);
   };
   const deleteScenario = (scenarioId: string): void => {
