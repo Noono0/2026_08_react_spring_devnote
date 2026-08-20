@@ -485,12 +485,52 @@ docker compose -f compose.app.yml --env-file .env.app up -d
 
 ## 9. 배포 반영 (이후 코드 수정 시)
 
+**절반만 자동입니다.** Actions 는 이미지를 만들기만 하고,
+서버가 그걸 받아 가는 것은 별개의 단계입니다.
+
+```
+코드 수정 → commit → push(main) → Actions 이미지 빌드 → 서버 반영
+                                  └── 자동 (1~4분) ──┘   └─ 수동 ─┘
+```
+
+### 한 줄로 반영하기
+
 ```bash
-# 로컬에서 main 에 푸시 → Actions 가 이미지 빌드
-# 인스턴스 B 에서:
+# 서버 정보는 셸에 한 번만 등록해 둔다
+export APP_HOST=ubuntu@<공인IP>
+export APP_KEY=~/Downloads/<키파일>
+
+./scripts/deploy.sh
+```
+
+`deploy.sh` 는 pull → 컨테이너 교체 → healthy 대기 → 옛 이미지 정리까지 한다.
+5분 안에 healthy 가 안 되면 백엔드 로그를 출력하고 실패로 끝난다.
+
+빌드가 끝났는지는 이렇게 확인한다.
+
+```bash
+gh run list --limit 3
+```
+
+### 직접 하려면
+
+```bash
+# 인스턴스 B 에 접속해서
 docker compose -f compose.app.yml --env-file .env.app pull
 docker compose -f compose.app.yml --env-file .env.app up -d
 ```
+
+> ⚠️ 워크플로는 **`main` 에 푸시될 때만** 동작한다.
+> 다른 브랜치에 푸시하면 이미지가 만들어지지 않는다.
+
+### 완전 자동 배포를 하지 않은 이유
+
+Actions 에 SSH 배포 단계를 붙이면 push 만으로 서버까지 반영할 수 있다. 하지만
+- SSH 개인키를 GitHub Secrets 에 넣어야 한다. **이 저장소는 공개**라 위험이 크다
+- 테스트를 통과해도 실제로 깨지는 경우가 있는데, 자동 배포면 사이트가 그대로 죽는다
+- 지금은 명령 한 줄이라 수동이어도 부담이 없다
+
+혼자 쓰는 규모에서는 "원할 때 반영"이 더 안전하다.
 
 ---
 
