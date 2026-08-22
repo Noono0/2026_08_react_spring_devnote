@@ -23,7 +23,7 @@ public record DocumentUpdateRequest(
     @NotBlank(message = "문서 HTML은 필수입니다.")
     String contentHtml,
 
-    @NotBlank(message = "검색용 텍스트는 필수입니다.")
+    @NotNull(message = "검색용 텍스트 값은 필수입니다.")
     String contentText,
 
     @NotNull(message = "문서 상태는 필수입니다.")

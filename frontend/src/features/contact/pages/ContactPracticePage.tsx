@@ -29,6 +29,7 @@
  */
 
 import { useEffect, useMemo, useReducer, useState } from "react";
+import { LearningGuideTitle } from "@/features/learning/components/LearningGuideTitle";
 import { applicationNotification } from "@/shared/notification/applicationNotification";
 
 /** 연락처 하나의 모양. */
@@ -282,7 +283,7 @@ export const ContactPracticePage = () => {
       <div className="page-heading-row">
         <div>
           <span className="level-badge level-초급">초급+</span>
-          <h1>연락처 Reducer CRUD</h1>
+          <LearningGuideTitle guideId="contact">연락처 Reducer CRUD</LearningGuideTitle>
           <p>여러 상태 변경 규칙을 Reducer에 모으고 새로고침 후에도 localStorage에서 복원합니다.</p>
         </div>
       </div>

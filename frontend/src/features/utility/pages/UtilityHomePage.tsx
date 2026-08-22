@@ -226,7 +226,7 @@ export const UtilityHomePage = () => (
       <span className="page-kicker">Developer Utility Board</span>
       <h1>개발할 때 반복해서 찾는 도구 모음</h1>
       <p>
-        각 도구 화면 오른쪽 위의 <strong>?</strong> 버튼을 누르면 사용법과 주의사항을 볼 수 있습니다.
+        각 도구 화면의 큰 제목 옆 <strong>?</strong> 버튼을 누르면 사용법과 주의사항을 볼 수 있습니다.
       </p>
     </div>
 

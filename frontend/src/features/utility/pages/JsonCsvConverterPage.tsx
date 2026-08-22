@@ -125,10 +125,12 @@ export const JsonCsvConverterPage = () => {
       <div className="page-heading-row utility-tool-heading">
         <div>
           <span className="page-kicker">Data · Browser Only</span>
-          <h1>JSON ↔ CSV Converter</h1>
+          <div className="page-title-with-guide">
+            <h1>JSON ↔ CSV Converter</h1>
+            <button type="button" className="learning-guide-icon-button" aria-label="JSON CSV Converter 도움말" onClick={() => setHelpOpen(true)}>?</button>
+          </div>
           <p>JSON 객체 배열과 CSV 표 데이터를 브라우저 안에서 안전하게 양방향 변환합니다.</p>
         </div>
-        <button type="button" className="learning-guide-icon-button" aria-label="JSON CSV Converter 도움말" onClick={() => setHelpOpen(true)}>?</button>
       </div>
 
       <div className="data-converter-direction" role="tablist" aria-label="변환 방향">
@@ -178,7 +180,7 @@ export const JsonCsvConverterPage = () => {
         )}
       </article>
 
-      <ModalDialog isOpen={helpOpen} title="JSON ↔ CSV Converter 도움말" description="JSON과 CSV의 구조 차이와 안전한 변환 규칙을 확인합니다." size="large" onRequestClose={() => setHelpOpen(false)}>
+      <ModalDialog isOpen={helpOpen} title="JSON ↔ CSV Converter 도움말" description="JSON과 CSV의 구조 차이와 안전한 변환 규칙을 확인합니다." size="large" resizable resizeStorageKey="json-csv-help" onRequestClose={() => setHelpOpen(false)}>
         <div className="converter-help-grid">
           <article><h3>JSON → CSV</h3><ol><li>최상위 값이 객체 배열인 JSON을 입력합니다.</li><li>구분자를 선택하고 변환합니다.</li><li>CSV 결과와 표 미리보기를 확인합니다.</li></ol></article>
           <article><h3>CSV → JSON</h3><ol><li>CSV를 붙여넣거나 파일을 불러옵니다.</li><li>Header·타입 추론 옵션을 선택합니다.</li><li>JSON 결과를 복사하거나 다운로드합니다.</li></ol></article>

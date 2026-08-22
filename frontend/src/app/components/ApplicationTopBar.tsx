@@ -15,8 +15,6 @@
 
 import { useLocation } from "react-router-dom";
 import { useApplicationUiStore } from "@/app/state/applicationUiStore";
-import { LearningGuideButton } from "@/features/learning/components/LearningGuideButton";
-import { findLearningGuideByPathname } from "@/features/learning/data/learningGuides";
 
 /**
  * 주소를 받아서 화면에 띄울 제목 문자열을 돌려준다.
@@ -68,8 +66,6 @@ const getCurrentPageTitle = (pathname: string): string => {
 
 export const ApplicationTopBar = () => {
   const location = useLocation();
-  // 현재 페이지에 딸린 학습 가이드가 있으면 가져온다. 없으면 undefined.
-  const learningGuide = findLearningGuideByPathname(location.pathname);
 
   // 여기서는 selector 없이 스토어 전체를 가져와 구조 분해로 필요한 것만 꺼냈다.
   // 짧고 읽기 편하지만, 스토어의 아무 값이나 바뀌어도 이 컴포넌트가 다시 그려진다.
@@ -111,9 +107,6 @@ export const ApplicationTopBar = () => {
       </div>
 
       <div className="top-bar-actions">
-        {/* 학습 가이드가 있는 페이지에서만 가이드 버튼을 보여준다.
-            learningGuide가 undefined면 null → 아무것도 안 그림. */}
-        {learningGuide ? <LearningGuideButton learningGuide={learningGuide} /> : null}
         <span className="top-bar-mode-description">
           {applicationTheme === "dark" ? "다크 모드" : "라이트 모드"}
         </span>

@@ -11,10 +11,15 @@
         section.use_yn, section.created_at, section.updated_at
     </sql>
 
+    <sql id="supportedSectionTypes">
+        section.section_type IN ('PROFILE', 'RICH_TEXT', 'IMAGE', 'SKILL', 'EXPERIENCE', 'PROJECT', 'EDUCATION', 'CERTIFICATE', 'CONTACT')
+    </sql>
+
     <select id="selectPublicSections" resultType="com.example.devnote.portfolio.dao.row.PortfolioSectionRow">
         SELECT <include refid="sectionColumns"/>
         FROM portfolio_sections section
         WHERE section.use_yn = 'Y' AND section.visibility = 'PUBLIC'
+          AND <include refid="supportedSectionTypes"/>
         ORDER BY section.sort_order, section.portfolio_section_id
     </select>
 
@@ -22,6 +27,7 @@
         SELECT <include refid="sectionColumns"/>
         FROM portfolio_sections section
         WHERE section.use_yn = 'Y'
+          AND <include refid="supportedSectionTypes"/>
         ORDER BY section.sort_order, section.portfolio_section_id
     </select>
 
@@ -29,17 +35,18 @@
         SELECT <include refid="sectionColumns"/>
         FROM portfolio_sections section
         WHERE section.portfolio_section_id = #{portfolioSectionId}
+          AND <include refid="supportedSectionTypes"/>
     </select>
 
     <insert id="insertSection" parameterType="com.example.devnote.portfolio.dao.parameter.PortfolioSectionSaveParameter" useGeneratedKeys="true" keyProperty="portfolioSectionId">
         INSERT INTO portfolio_sections (
             section_type, content_mode, section_title, section_subtitle, start_date, end_date,
             current_yn, external_url, thumbnail_file_id, content_json, content_html, content_text,
-            layout_type, sort_order, visibility
+            layout_type, sort_order, visibility, use_yn
         ) VALUES (
             #{sectionType}, #{contentMode}, #{sectionTitle}, #{sectionSubtitle}, #{startDate}, #{endDate},
             #{currentYn}, #{externalUrl}, #{thumbnailFileId}, CAST(#{contentJson} AS JSON), #{contentHtml}, #{contentText},
-            #{layoutType}, #{sortOrder}, #{visibility}
+            #{layoutType}, #{sortOrder}, #{visibility}, 'Y'
         )
     </insert>
 
@@ -80,4 +87,3 @@
         ORDER BY sort_order, portfolio_section_file_id
     </select>
 </mapper>
-

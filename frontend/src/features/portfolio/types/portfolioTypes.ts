@@ -1,6 +1,15 @@
 import type { JSONContent } from "@tiptap/core";
 
-export type PortfolioSectionType = "PROFILE" | "RICH_TEXT" | "EXPERIENCE" | "PROJECT" | "SKILL";
+export type PortfolioSectionType =
+  | "PROFILE"
+  | "RICH_TEXT"
+  | "IMAGE"
+  | "SKILL"
+  | "EXPERIENCE"
+  | "PROJECT"
+  | "EDUCATION"
+  | "CERTIFICATE"
+  | "CONTACT";
 export type PortfolioContentMode = "STRUCTURED" | "RICH_TEXT" | "HYBRID";
 export type PortfolioVisibility = "PUBLIC" | "HIDDEN";
 
@@ -47,4 +56,3 @@ export interface PortfolioSectionSaveRequest {
   editorImageFileIds: number[];
   versionNumber?: number;
 }
-

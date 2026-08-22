@@ -40,6 +40,8 @@ export const LearningGuideButton = ({ learningGuide }: LearningGuideButtonProps)
         isOpen={isGuideOpen}
         title={`${learningGuide.stageNumber > 0 ? `${learningGuide.stageNumber}단계 · ` : ""}${learningGuide.title}`}
         description={`${learningGuide.level} · 난이도 ${learningGuide.difficultyScore}/10 · ${learningGuide.description}`}
+        resizable
+        resizeStorageKey={`learning-guide:${learningGuide.title}`}
         onRequestClose={() => setGuideOpen(false)}
         footer={<button type="button" onClick={() => setGuideOpen(false)}>확인하고 닫기</button>}
       >

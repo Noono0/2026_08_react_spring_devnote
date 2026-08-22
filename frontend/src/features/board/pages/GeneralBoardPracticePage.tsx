@@ -26,6 +26,7 @@
  */
 
 import { useMemo, useState } from "react";
+import { LearningGuideTitle } from "@/features/learning/components/LearningGuideTitle";
 import { applicationNotification } from "@/shared/notification/applicationNotification";
 import { ConfirmDialog } from "@/shared/ui/ConfirmDialog";
 
@@ -294,7 +295,7 @@ export const GeneralBoardPracticePage = () => {
     return (
       <section>
         <div className="page-heading-row">
-          <div><span className="level-badge level-중급">중급 · 난이도 5/10</span><h1>{editingPostId ? "게시글 수정" : "게시글 작성"}</h1><p>목록과 분리된 작성 화면에서 폼 상태와 저장 흐름을 연습합니다.</p></div>
+        <div><span className="level-badge level-중급">중급 · 난이도 5/10</span><LearningGuideTitle guideId="board">{editingPostId ? "게시글 수정" : "게시글 작성"}</LearningGuideTitle><p>목록과 분리된 작성 화면에서 폼 상태와 저장 흐름을 연습합니다.</p></div>
           <button type="button" className="secondary-button" onClick={() => { resetForm(); setBoardScreen("LIST"); }}>목록으로</button>
         </div>
         <article className="practice-card board-editor-card">
@@ -323,7 +324,7 @@ export const GeneralBoardPracticePage = () => {
     return (
       <section>
         <div className="page-heading-row">
-          <div><span className="level-badge level-중급">중급 · 상세 조회</span><h1>{selectedBoardPost.title}</h1><p>{selectedBoardPost.authorName} · 조회 {selectedBoardPost.viewCount.toLocaleString("ko-KR")} · {selectedBoardPost.updatedAt}</p></div>
+        <div><span className="level-badge level-중급">중급 · 상세 조회</span><LearningGuideTitle guideId="board">{selectedBoardPost.title}</LearningGuideTitle><p>{selectedBoardPost.authorName} · 조회 {selectedBoardPost.viewCount.toLocaleString("ko-KR")} · {selectedBoardPost.updatedAt}</p></div>
           <div className="button-row"><button type="button" className="secondary-button" onClick={() => setBoardScreen("LIST")}>목록</button><button type="button" onClick={() => openUpdateScreen(selectedBoardPost)}>수정</button><button type="button" className="danger-button" onClick={() => setDeleteTargetPost(selectedBoardPost)}>삭제</button></div>
         </div>
         <article className="rendered-document-content board-detail-content"><span className={`visibility-badge visibility-${selectedBoardPost.visibility.toLowerCase()}`}>{selectedBoardPost.visibility === "PUBLIC" ? "공개" : "비공개"}</span><p>{selectedBoardPost.content}</p></article>
@@ -341,7 +342,7 @@ export const GeneralBoardPracticePage = () => {
   return (
     <section>
       <div className="page-heading-row">
-        <div><span className="level-badge level-중급">중급 · 난이도 5/10</span><h1>일반 페이지형 게시판</h1><p>목록 → 작성 → 상세 → 수정 화면을 전환하고 검색·페이지네이션을 연습합니다.</p></div>
+        <div><span className="level-badge level-중급">중급 · 난이도 5/10</span><LearningGuideTitle guideId="board">일반 페이지형 게시판</LearningGuideTitle><p>목록 → 작성 → 상세 → 수정 화면을 전환하고 검색·페이지네이션을 연습합니다.</p></div>
         <button type="button" onClick={openCreateScreen}>새 글 작성</button>
       </div>
       {/* ★ 검색어를 바꿀 때 페이지 번호도 1로 되돌린다.

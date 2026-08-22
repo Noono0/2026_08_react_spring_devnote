@@ -103,7 +103,7 @@ export const ApiWorkspaceInterchangeDialog = ({
   };
 
   return (
-    <ModalDialog isOpen={isOpen} title="다른 API 도구와 공유" description="Postman Collection v2.1·Environment JSON과 cURL을 사용해 요청 설정을 주고받습니다." size="large" onRequestClose={onRequestClose}>
+    <ModalDialog isOpen={isOpen} title="다른 API 도구와 공유" description="Postman Collection v2.1·Environment JSON과 cURL을 사용해 요청 설정을 주고받습니다." size="large" resizable resizeStorageKey="api-workspace-interchange" onRequestClose={onRequestClose}>
       <div className="api-interchange-dialog">
         {!authenticated ? <div className="api-interchange-login-notice"><strong>로그인이 필요합니다.</strong><p>Collection과 Environment는 회원별 저장 데이터이므로 로그인 후 가져오거나 내보낼 수 있습니다. 단일 요청 cURL은 로그인 없이 사용할 수 있습니다.</p></div> : null}
 

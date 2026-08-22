@@ -21,6 +21,7 @@
  */
 
 import { useMemo, useState } from "react";
+import { LearningGuideTitle } from "@/features/learning/components/LearningGuideTitle";
 import { applicationNotification } from "@/shared/notification/applicationNotification";
 import { ConfirmDialog } from "@/shared/ui/ConfirmDialog";
 import { ModalDialog } from "@/shared/ui/ModalDialog";
@@ -220,7 +221,7 @@ export const ReservationPracticePage = () => {
 
   return (
     <section>
-      <div className="page-heading-row"><div><span className="level-badge level-중급">중급 · 난이도 7/10</span><h1>회의실·상담 예약 CRUD</h1><p>시간 중복, 상태 전이, 취소 확인처럼 실제 업무 규칙이 있는 CRUD를 연습합니다.</p></div><button type="button" onClick={openCreateModal}>예약 추가</button></div>
+      <div className="page-heading-row"><div><span className="level-badge level-중급">중급 · 난이도 7/10</span><LearningGuideTitle guideId="reservation">회의실·상담 예약 CRUD</LearningGuideTitle><p>시간 중복, 상태 전이, 취소 확인처럼 실제 업무 규칙이 있는 CRUD를 연습합니다.</p></div><button type="button" onClick={openCreateModal}>예약 추가</button></div>
       {/* type="date": 브라우저가 달력 UI를 공짜로 그려 준다.
           값은 항상 "2026-08-07" 형식의 문자열로 들어온다.
           ★ 직접 달력을 만들면 수백 줄이 든다. 기본 기능으로 되는 건 그걸 쓰자.
@@ -242,7 +243,7 @@ export const ReservationPracticePage = () => {
       <div className="reservation-grid">{visibleReservationItems.map((reservationItem) => <article className="reservation-card" key={reservationItem.reservationId}><div className="reservation-card-heading"><div><strong>{reservationItem.resourceName}</strong><span>{reservationItem.reservationDate} · {reservationItem.startTime}~{reservationItem.endTime}</span></div><span className={`reservation-status status-${reservationItem.status.toLowerCase()}`}>{reservationStatusLabelMap[reservationItem.status]}</span></div><dl><dt>예약자</dt><dd>{reservationItem.reserverName}</dd><dt>메모</dt><dd>{reservationItem.note || "없음"}</dd></dl><div className="button-row compact-button-row"><button type="button" className="secondary-button" onClick={() => openUpdateModal(reservationItem)} disabled={reservationItem.status === "CANCELLED" || reservationItem.status === "COMPLETED"}>수정</button><button type="button" className="danger-button" onClick={() => setCancelTargetReservation(reservationItem)} disabled={reservationItem.status === "CANCELLED" || reservationItem.status === "COMPLETED"}>예약 취소</button></div></article>)}</div>
       {visibleReservationItems.length === 0 ? <div className="state-panel">선택한 날짜에 예약이 없습니다.</div> : null}
 
-      <ModalDialog isOpen={isFormModalOpen} title={editingReservationId ? "예약 수정" : "예약 추가"} description="같은 자원과 시간이 겹치면 저장할 수 없습니다." onRequestClose={() => setFormModalOpen(false)} footer={<><button type="button" className="ghost-button" onClick={() => setFormModalOpen(false)}>취소</button><button type="button" onClick={saveReservation}>{editingReservationId ? "수정 저장" : "예약 등록"}</button></>}>
+      <ModalDialog isOpen={isFormModalOpen} title={editingReservationId ? "예약 수정" : "예약 추가"} description="같은 자원과 시간이 겹치면 저장할 수 없습니다." resizable resizeStorageKey="reservation-form" onRequestClose={() => setFormModalOpen(false)} footer={<><button type="button" className="ghost-button" onClick={() => setFormModalOpen(false)}>취소</button><button type="button" onClick={saveReservation}>{editingReservationId ? "수정 저장" : "예약 등록"}</button></>}>
         {/* ★★ 폼 State를 객체로 관리할 때의 갱신 패턴이 여기 반복해서 나온다.
                 setFormValues((prev) => ({ ...prev, 바꿀항목: 새값 }))
 

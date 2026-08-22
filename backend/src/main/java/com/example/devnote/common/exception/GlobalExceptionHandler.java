@@ -20,6 +20,7 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 import java.net.URI;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RestControllerAdvice
@@ -49,8 +50,11 @@ public class GlobalExceptionHandler {
             ))
             .toList();
 
-        log.warn("[ValidationException] method={}, uri={}, fieldErrorCount={}",
-            request.getMethod(), request.getRequestURI(), fieldErrors.size());
+        log.warn("[ValidationException] method={}, uri={}, fieldErrorCount={}, fieldErrors={}",
+            request.getMethod(),
+            request.getRequestURI(),
+            fieldErrors.size(),
+            summarizeFieldErrors(fieldErrors));
 
         return createProblemDetail(
             ErrorCode.COMMON_INVALID_REQUEST,
@@ -72,6 +76,13 @@ public class GlobalExceptionHandler {
                 violation.getMessage()
             ))
             .toList();
+
+        log.warn("[ConstraintViolationException] method={}, uri={}, fieldErrorCount={}, fieldErrors={}",
+            request.getMethod(),
+            request.getRequestURI(),
+            fieldErrors.size(),
+            summarizeFieldErrors(fieldErrors));
+
         return createProblemDetail(
             ErrorCode.COMMON_INVALID_REQUEST,
             ErrorCode.COMMON_INVALID_REQUEST.getDefaultMessage(),
@@ -181,5 +192,15 @@ public class GlobalExceptionHandler {
     private boolean isSensitiveField(String fieldName) {
         String normalizedFieldName = fieldName.toLowerCase();
         return normalizedFieldName.contains("password") || normalizedFieldName.contains("token");
+    }
+
+    /**
+     * 검증 실패 원인은 운영 로그에서 바로 확인할 수 있게 하되, 거부된 실제 입력값은 기록하지 않습니다.
+     * 비밀번호뿐 아니라 본문·토큰처럼 크거나 민감할 수 있는 값이 로그에 남는 사고를 방지합니다.
+     */
+    private String summarizeFieldErrors(List<FieldErrorResponse> fieldErrors) {
+        return fieldErrors.stream()
+            .map(fieldError -> fieldError.fieldName() + "=" + fieldError.message())
+            .collect(Collectors.joining(", ", "[", "]"));
     }
 }

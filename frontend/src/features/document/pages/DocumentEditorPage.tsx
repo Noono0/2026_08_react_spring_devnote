@@ -30,6 +30,7 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { LearningGuideTitle } from "@/features/learning/components/LearningGuideTitle";
 import { z } from "zod";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import type { JSONContent } from "@tiptap/core";
@@ -327,7 +328,7 @@ export const DocumentEditorPage = () => {
 
   return (
     <section>
-      <h1>{isHistory ? (isEditMode ? "업무 History 수정" : "업무 History 작성") : (isEditMode ? "문서 수정" : "새 문서 작성")}</h1>
+      <LearningGuideTitle guideId={isHistory ? undefined : "document"}>{isHistory ? (isEditMode ? "업무 History 수정" : "업무 History 작성") : (isEditMode ? "문서 수정" : "새 문서 작성")}</LearningGuideTitle>
       <form className="document-form" onSubmit={(submitEvent) => void handleSubmit(submitDocument)(submitEvent)}>
         <label>
           문서 제목

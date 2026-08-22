@@ -31,6 +31,7 @@
  */
 
 import { Link, useLocation, useSearchParams } from "react-router-dom";
+import { LearningGuideTitle } from "@/features/learning/components/LearningGuideTitle";
 import { useDocumentListQuery } from "../hooks/useDocumentQueries";
 import type { DocumentSearchCondition } from "../types/documentTypes";
 import { DocumentSearchForm } from "../components/DocumentSearchForm";
@@ -281,7 +282,7 @@ export const DocumentListPage = () => {
       <div className="page-heading-row">
         <div>
           <span className="level-badge level-고급">{isHistory ? "Developer Blog" : "고급"}</span>
-          <h1>{isHistory ? "나의 업무 History" : "문서·이미지 게시판"}</h1>
+          <LearningGuideTitle guideId={isHistory ? undefined : "document"}>{isHistory ? "나의 업무 History" : "문서·이미지 게시판"}</LearningGuideTitle>
           <p>{isHistory ? "트러블슈팅, 개발 내용과 배운 점을 기록하는 개발 블로그입니다." : "같은 API 응답을 표 목록과 썸네일 카드형으로 각각 렌더링합니다."}</p>
         </div>
         {!isHistory || authSessionQuery.data?.superAdministrator ? <Link className="primary-link" to={`${basePath}/new`}>{isHistory ? "History 작성" : "새 문서 작성"}</Link> : null}

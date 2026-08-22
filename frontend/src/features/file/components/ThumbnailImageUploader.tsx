@@ -17,7 +17,7 @@
  *   - 부모가 값을 소유하는 제어 컴포넌트 구조
  */
 
-import { useRef, useState } from "react";
+import { useRef, useState, type ClipboardEvent, type DragEvent } from "react";
 import { uploadEditorImage } from "../api/fileApi";
 import { applicationNotification } from "@/shared/notification/applicationNotification";
 import { convertRequestErrorToProblemDetails } from "@/shared/api/error/apiErrorHelpers";
@@ -83,8 +83,29 @@ export const ThumbnailImageUploader = ({
     }
   };
 
+  const handlePaste = (pasteEvent: ClipboardEvent<HTMLElement>): void => {
+    const imageFile = Array.from(pasteEvent.clipboardData.files).find((file) => file.type.startsWith("image/"));
+    if (!imageFile) return;
+    pasteEvent.preventDefault();
+    void uploadThumbnailImage(imageFile);
+  };
+
+  const handleDrop = (dropEvent: DragEvent<HTMLElement>): void => {
+    const imageFile = Array.from(dropEvent.dataTransfer.files).find((file) => file.type.startsWith("image/"));
+    if (!imageFile) return;
+    dropEvent.preventDefault();
+    void uploadThumbnailImage(imageFile);
+  };
+
   return (
-    <section className="thumbnail-uploader">
+    <section
+      className="thumbnail-uploader"
+      tabIndex={0}
+      aria-label={`${title} 업로드 영역`}
+      onPaste={handlePaste}
+      onDragOver={(dragEvent) => dragEvent.preventDefault()}
+      onDrop={handleDrop}
+    >
       <div className="thumbnail-uploader-heading">
         <div>
           <h2>{title}</h2>
@@ -139,6 +160,7 @@ export const ThumbnailImageUploader = ({
           </div>
         )}
       </div>
+      <p className="editor-help-text">이 영역을 선택한 뒤 Ctrl+V로 붙여넣거나 이미지 파일을 끌어 놓을 수 있습니다.</p>
     </section>
   );
 };

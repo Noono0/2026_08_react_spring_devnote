@@ -1,5 +1,6 @@
 import { DataSourceToggle } from "../components/DataSourceToggle";
 import { useDevelopmentSettingsStore } from "../state/developmentSettingsStore";
+import { LearningGuideTitle } from "@/features/learning/components/LearningGuideTitle";
 
 const mockScenarios = [
   "success",
@@ -20,7 +21,7 @@ export const DevelopmentScenarioPage = () => {
 
   return (
     <section>
-      <h1>API·더미 데이터 실습</h1>
+      <LearningGuideTitle guideId="development">API·더미 데이터 실습</LearningGuideTitle>
       <p>
         실제 Spring Boot 통신과 MSW 더미 응답을 화면에서 전환하고, 다양한 오류 상황을
         재현합니다.

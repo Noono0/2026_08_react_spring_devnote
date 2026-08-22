@@ -20,6 +20,7 @@
  */
 
 import { useMemo, useRef, useState, type ChangeEvent } from "react";
+import { LearningGuideTitle } from "@/features/learning/components/LearningGuideTitle";
 import { applicationNotification } from "@/shared/notification/applicationNotification";
 import { ConfirmDialog } from "@/shared/ui/ConfirmDialog";
 import { ModalDialog } from "@/shared/ui/ModalDialog";
@@ -226,7 +227,7 @@ export const GalleryPracticePage = () => {
 
   return (
     <section>
-      <div className="page-heading-row"><div><span className="level-badge level-중급">중급 · 난이도 6/10</span><h1>이미지 갤러리 게시판</h1><p>업로드한 이미지를 카드 썸네일과 표 목록으로 전환하고 미리보기·수정·삭제합니다.</p></div><div className="segmented-control"><button type="button" className={viewMode === "CARD" ? "active" : ""} onClick={() => setViewMode("CARD")}>썸네일</button><button type="button" className={viewMode === "TABLE" ? "active" : ""} onClick={() => setViewMode("TABLE")}>표</button></div></div>
+      <div className="page-heading-row"><div><span className="level-badge level-중급">중급 · 난이도 6/10</span><LearningGuideTitle guideId="gallery">이미지 갤러리 게시판</LearningGuideTitle><p>업로드한 이미지를 카드 썸네일과 표 목록으로 전환하고 미리보기·수정·삭제합니다.</p></div><div className="segmented-control"><button type="button" className={viewMode === "CARD" ? "active" : ""} onClick={() => setViewMode("CARD")}>썸네일</button><button type="button" className={viewMode === "TABLE" ? "active" : ""} onClick={() => setViewMode("TABLE")}>표</button></div></div>
 
       <div className="split-practice-layout gallery-practice-layout">
         <article className="practice-card sticky-form-card">
@@ -269,7 +270,7 @@ export const GalleryPracticePage = () => {
         </div>
       </div>
 
-      <ModalDialog isOpen={previewGalleryItem !== null} title={previewGalleryItem?.title ?? "이미지 미리보기"} description={previewGalleryItem?.description} onRequestClose={() => setPreviewGalleryItem(null)} footer={<button type="button" onClick={() => setPreviewGalleryItem(null)}>닫기</button>}><div className="gallery-preview-modal">{previewGalleryItem ? <img src={previewGalleryItem.imageDataUrl} alt={previewGalleryItem.title} /> : null}</div></ModalDialog>
+      <ModalDialog isOpen={previewGalleryItem !== null} title={previewGalleryItem?.title ?? "이미지 미리보기"} description={previewGalleryItem?.description} resizable resizeStorageKey="gallery-preview" onRequestClose={() => setPreviewGalleryItem(null)} footer={<button type="button" onClick={() => setPreviewGalleryItem(null)}>닫기</button>}><div className="gallery-preview-modal">{previewGalleryItem ? <img src={previewGalleryItem.imageDataUrl} alt={previewGalleryItem.title} /> : null}</div></ModalDialog>
       <ConfirmDialog isOpen={deleteTargetGalleryItem !== null} title="이미지 게시글 삭제" description={`“${deleteTargetGalleryItem?.title ?? ""}”을 삭제할까요?`} confirmButtonLabel="삭제" onConfirm={deleteGalleryItem} onCancel={() => setDeleteTargetGalleryItem(null)} />
     </section>
   );

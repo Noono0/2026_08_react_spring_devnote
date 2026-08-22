@@ -11,7 +11,6 @@ interface ApiWorkspaceToolbarProps {
   onNewRequest: () => void;
   onInterchangeOpen: () => void;
   onCollectionRunnerOpen: () => void;
-  onHelpOpen: () => void;
 }
 
 export const ApiWorkspaceToolbar = ({
@@ -23,7 +22,6 @@ export const ApiWorkspaceToolbar = ({
   onNewRequest,
   onInterchangeOpen,
   onCollectionRunnerOpen,
-  onHelpOpen,
 }: ApiWorkspaceToolbarProps) => (
   <header className="api-workbench-toolbar">
     <div className="api-workbench-project">
@@ -51,7 +49,6 @@ export const ApiWorkspaceToolbar = ({
       </div>
       <button type="button" className="api-workbench-tool-button" onClick={onInterchangeOpen}>가져오기 · 내보내기</button>
       <button type="button" className="api-workbench-new-button" onClick={onNewRequest}>+ 새 요청</button>
-      <button type="button" className="api-workbench-help-button" aria-label="API Workspace 도움말" onClick={onHelpOpen}>?</button>
     </div>
   </header>
 );

@@ -31,6 +31,7 @@
  */
 
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
+import { LearningGuideTitle } from "@/features/learning/components/LearningGuideTitle";
 import { searchLearningTopics } from "@/features/search/api/localSearchApi";
 import type {
   LearningTopicSearchResult,
@@ -279,7 +280,7 @@ export const SearchAutocompletePracticePage = () => {
     <section className="autocomplete-practice-page">
       <div className="page-hero">
         <span className="page-kicker">Effect · Debounce · Request Cancellation</span>
-        <h1>실시간 검색 자동완성</h1>
+        <LearningGuideTitle guideId="search">실시간 검색 자동완성</LearningGuideTitle>
         <p>
           입력할 때마다 바로 요청하지 않고 잠시 기다린 뒤 검색합니다. 검색어가 바뀌면 이전 요청을
           취소하고, 가장 최근 요청만 화면에 반영하는 흐름을 확인하세요.
