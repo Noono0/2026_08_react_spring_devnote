@@ -29,6 +29,7 @@
  */
 
 import { useMemo, useState, type ReactNode } from "react";
+import { LearningGuideTitle } from "@/features/learning/components/LearningGuideTitle";
 import { applicationNotification } from "@/shared/notification/applicationNotification";
 import { ConfirmDialog } from "@/shared/ui/ConfirmDialog";
 
@@ -209,7 +210,7 @@ export const CommentPracticePage = () => {
 
   return (
     <section>
-      <div className="page-heading-row"><div><span className="level-badge level-중급">중급 · 난이도 6.5/10</span><h1>댓글·대댓글 계층형 CRUD</h1><p>parentCommentId로 부모와 자식을 연결하고 삭제된 부모의 위치를 유지합니다.</p></div></div>
+      <div className="page-heading-row"><div><span className="level-badge level-중급">중급 · 난이도 6.5/10</span><LearningGuideTitle guideId="comment">댓글·대댓글 계층형 CRUD</LearningGuideTitle><p>parentCommentId로 부모와 자식을 연결하고 삭제된 부모의 위치를 유지합니다.</p></div></div>
       <article className="practice-card comment-create-card"><label>새 댓글<textarea value={newCommentContent} onChange={(event) => setNewCommentContent(event.target.value)} rows={4} placeholder="댓글을 입력하세요." /></label><button type="button" onClick={createComment}>댓글 등록</button></article>
       {/* 최상위 댓글만 map으로 돌린다.
           대댓글은 각 부모가 재귀로 알아서 그리므로 여기서 신경 쓸 필요가 없다.

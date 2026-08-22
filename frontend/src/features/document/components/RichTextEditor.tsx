@@ -4,7 +4,7 @@
  * ============================================================================
  *
  * [리치 텍스트 에디터란?]
- *   굵게, 기울임, 목록, 이미지 삽입이 되는 글쓰기 창이다.
+ *   제목, 글자 스타일, 목록, 인용문, 코드, 링크, 이미지 삽입이 되는 글쓰기 창이다.
  *   네이버 블로그나 노션의 편집기를 떠올리면 된다.
  *
  * ★ 절대 직접 만들지 말자.
@@ -28,13 +28,34 @@ import { useEffect, useRef, useState } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import type { JSONContent } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
+import CharacterCount from "@tiptap/extension-character-count";
+import Color from "@tiptap/extension-color";
+import FontFamily from "@tiptap/extension-font-family";
+import Highlight from "@tiptap/extension-highlight";
 import Image from "@tiptap/extension-image";
 import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
+import Subscript from "@tiptap/extension-subscript";
+import Superscript from "@tiptap/extension-superscript";
+import Table from "@tiptap/extension-table";
+import TaskItem from "@tiptap/extension-task-item";
+import TaskList from "@tiptap/extension-task-list";
+import TextAlign from "@tiptap/extension-text-align";
+import TextStyle from "@tiptap/extension-text-style";
+import Typography from "@tiptap/extension-typography";
+import Underline from "@tiptap/extension-underline";
 import { uploadEditorImage } from "@/features/file/api/fileApi";
 import { applicationNotification } from "@/shared/notification/applicationNotification";
 import { convertRequestErrorToProblemDetails } from "@/shared/api/error/apiErrorHelpers";
 import type { FileUploadResponse } from "@/features/file/types/fileTypes";
+import { normalizeSafeEditorLink } from "@/features/document/utils/editorLink";
+import { RichTextEditorToolbar } from "@/features/document/components/RichTextEditorToolbar";
+import { FontSizeExtension } from "@/features/document/extensions/fontSize";
+import {
+  TableCellWithBackground,
+  TableHeaderWithBackground,
+} from "@/features/document/extensions/tableCellBackground";
+import { TableRowWithHeight } from "@/features/document/extensions/tableRowHeight";
 
 interface RichTextEditorProperties {
   initialContent?: JSONContent;
@@ -72,6 +93,7 @@ export const RichTextEditor = ({
 }: RichTextEditorProperties) => {
   const imageInputReference = useRef<HTMLInputElement>(null);
   const [isImageUploading, setImageUploading] = useState(false);
+  const [editorZoomPercentage, setEditorZoomPercentage] = useState(100);
   // ── Tiptap 에디터 만들기 ────────────────────────────────────────
   const editor = useEditor({
     // extensions: 에디터에 어떤 기능을 넣을지 고르는 부분.
@@ -79,9 +101,34 @@ export const RichTextEditor = ({
     extensions: [
       // StarterKit: 굵게/기울임/목록/제목/실행취소 등 기본 세트 묶음.
       StarterKit,
+      CharacterCount,
+      Color,
+      FontFamily.configure({ types: ["textStyle"] }),
+      FontSizeExtension,
+      Highlight.configure({ multicolor: true }),
+      Subscript,
+      Superscript,
+      Table.configure({ resizable: true }),
+      TableCellWithBackground,
+      TableHeaderWithBackground,
+      TableRowWithHeight,
+      TaskList,
+      TaskItem.configure({ nested: true }),
+      TextAlign.configure({ types: ["heading", "paragraph"] }),
+      TextStyle,
+      Typography,
+      Underline,
       // openOnClick: false → 편집 중에 링크를 클릭해도 페이지가 이동하지 않는다.
       // 이게 true면 링크 글자를 수정하려고 클릭했다가 딴 데로 날아간다.
-      Link.configure({ openOnClick: false }),
+      Link.configure({
+        openOnClick: false,
+        autolink: true,
+        linkOnPaste: true,
+        HTMLAttributes: {
+          rel: "noopener noreferrer nofollow",
+          target: "_blank",
+        },
+      }),
       Image,
       // 내용이 비었을 때 흐리게 보여줄 안내 문구.
       Placeholder.configure({ placeholder: "문서 내용을 입력하세요." }),
@@ -226,13 +273,40 @@ export const RichTextEditor = ({
     return <div className="editor-loading">에디터를 준비하고 있습니다.</div>;
   }
 
+  const handleLinkSetting = (): void => {
+    const currentLink = String(editor.getAttributes("link").href ?? "");
+    const enteredLink = window.prompt(
+      "링크 주소를 입력하세요. 비우면 기존 링크가 제거됩니다.",
+      currentLink || "https://",
+    );
+
+    if (enteredLink === null) {
+      return;
+    }
+
+    if (!enteredLink.trim()) {
+      editor.chain().focus().extendMarkRange("link").unsetLink().run();
+      return;
+    }
+
+    try {
+      const safeLink = normalizeSafeEditorLink(enteredLink);
+      editor.chain().focus().extendMarkRange("link").setLink({ href: safeLink }).run();
+    } catch {
+      applicationNotification.warning(
+        "http(s), mailto, tel, 내부 경로(/...) 링크만 사용할 수 있습니다.",
+      );
+    }
+  };
+
+  const plainEditorText = editor.getText();
+  const editorCharacterCount = Array.from(plainEditorText).length;
+  const editorWordCount = plainEditorText.trim() ? plainEditorText.trim().split(/\s+/).length : 0;
+
   return (
     <div className="editor-container">
       <div className="editor-heading-row">
         <strong>{editorLabel}</strong>
-        <button type="button" className="ghost-button" onClick={() => imageInputReference.current?.click()} disabled={isImageUploading}>
-          {isImageUploading ? "이미지 업로드 중..." : "이미지 넣기"}
-        </button>
         {/* ★ 숨겨진 파일 입력창. 실무에서 아주 자주 쓰는 요령이다.
               브라우저 기본 파일 선택 UI("파일 선택" 회색 버튼)는 디자인을 바꿀 수 없다.
               그래서 진짜 input은 CSS로 감춰 두고,
@@ -260,29 +334,28 @@ export const RichTextEditor = ({
           그대로 두면 서식이 어디에 적용될지 몰라 명령이 먹지 않는다.
 
           role="toolbar" → 화면 낭독기에 "이건 도구 모음"이라고 알린다. */}
-      <div className="editor-toolbar" role="toolbar" aria-label={`${editorLabel} 서식`}>
-        {/* toggle~ 이라는 이름대로, 이미 굵으면 해제하고 아니면 적용한다. */}
-        <button type="button" onClick={() => editor.chain().focus().toggleBold().run()}>
-          굵게
-        </button>
-        <button type="button" onClick={() => editor.chain().focus().toggleItalic().run()}>
-          기울임
-        </button>
-        <button type="button" onClick={() => editor.chain().focus().toggleBulletList().run()}>
-          목록
-        </button>
-        <button type="button" onClick={() => editor.chain().focus().toggleCodeBlock().run()}>
-          코드
-        </button>
-      </div>
+      <RichTextEditorToolbar
+        editor={editor}
+        editorLabel={editorLabel}
+        editorZoomPercentage={editorZoomPercentage}
+        isImageUploading={isImageUploading}
+        handleEditorZoomChange={setEditorZoomPercentage}
+        handleImageButtonClick={() => imageInputReference.current?.click()}
+        handleLinkSetting={handleLinkSetting}
+      />
       {/* ★ 실제 편집 영역이 그려지는 곳.
             Tiptap이 이 자리에 편집 가능한 DOM을 직접 만들어 관리한다.
             즉 이 안쪽은 React가 아니라 Tiptap의 영역이다.
             그래서 여기 내용을 React State로 직접 조작하려 하면 안 되고,
             반드시 editor.commands 같은 Tiptap의 명령을 통해야 한다. */}
-      <EditorContent editor={editor} className="editor-content" />
+      <EditorContent
+        editor={editor}
+        className="editor-content"
+        style={{ fontSize: `${editorZoomPercentage}%` }}
+      />
       <p className="editor-help-text">
-        이미지 선택, Ctrl+V 붙여넣기 또는 드래그로 이미지를 추가할 수 있습니다.
+        이미지 선택, Ctrl+V 붙여넣기 또는 드래그로 이미지를 추가할 수 있습니다. Ctrl+Z와 Ctrl+Y도
+        지원합니다. 현재 {editorCharacterCount}자 · {editorWordCount}단어
       </p>
     </div>
   );

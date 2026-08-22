@@ -37,6 +37,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { LearningGuideTitle } from "@/features/learning/components/LearningGuideTitle";
 import { localTaskApi } from "../api/localTaskApi";
 import type { TaskItem, TaskPriority, TaskSaveRequest, TaskStatus } from "../types/taskTypes";
 import { applicationNotification } from "@/shared/notification/applicationNotification";
@@ -259,7 +260,7 @@ export const TaskManagementPage = () => {
       <div className="page-heading-row">
         <div>
           <span className="level-badge level-중급">중급</span>
-          <h1>비동기 업무 관리 CRUD</h1>
+          <LearningGuideTitle guideId="task">비동기 업무 관리 CRUD</LearningGuideTitle>
           <p>가짜 비동기 API로 로딩, Mutation, 캐시 무효화, 낙관적 업데이트와 롤백을 연습합니다.</p>
         </div>
       </div>

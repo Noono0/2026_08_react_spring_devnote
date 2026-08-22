@@ -23,6 +23,7 @@
  */
 
 import { useMemo, useState } from "react";
+import { LearningGuideTitle } from "@/features/learning/components/LearningGuideTitle";
 import { applicationNotification } from "@/shared/notification/applicationNotification";
 import { ConfirmDialog } from "@/shared/ui/ConfirmDialog";
 import { ModalDialog } from "@/shared/ui/ModalDialog";
@@ -226,7 +227,7 @@ export const AdminUserPracticePage = () => {
 
   return (
     <section>
-      <div className="page-heading-row"><div><span className="level-badge level-고급">고급 · 난이도 9.5/10</span><h1>관리자 사용자·일괄 처리 CRUD</h1><p>다중 선택, 역할·상태 일괄 변경, Soft Delete와 복구, 감사 로그를 연습합니다.</p></div><button type="button" className="secondary-button" onClick={() => setShowDeletedUsers((previousShowDeletedUsers) => !previousShowDeletedUsers)}>{showDeletedUsers ? "활성 사용자 보기" : "삭제 사용자 보기"}</button></div>
+      <div className="page-heading-row"><div><span className="level-badge level-고급">고급 · 난이도 9.5/10</span><LearningGuideTitle guideId="admin">관리자 사용자·일괄 처리 CRUD</LearningGuideTitle><p>다중 선택, 역할·상태 일괄 변경, Soft Delete와 복구, 감사 로그를 연습합니다.</p></div><button type="button" className="secondary-button" onClick={() => setShowDeletedUsers((previousShowDeletedUsers) => !previousShowDeletedUsers)}>{showDeletedUsers ? "활성 사용자 보기" : "삭제 사용자 보기"}</button></div>
 
       <div className="admin-filter-panel"><label>사용자 검색<input value={searchKeyword} onChange={(event) => setSearchKeyword(event.target.value)} placeholder="이름 또는 이메일" /></label>{!showDeletedUsers ? <><label>일괄 역할<select value={batchRole} onChange={(event) => setBatchRole(event.target.value as AdminUserRole)}>{(Object.keys(userRoleLabelMap) as AdminUserRole[]).map((userRole) => <option key={userRole} value={userRole}>{userRoleLabelMap[userRole]}</option>)}</select></label><button type="button" onClick={changeBatchRole}>선택 역할 변경</button><button type="button" className="secondary-button" onClick={() => changeBatchStatus("LOCKED")}>선택 잠금</button><button type="button" className="secondary-button" onClick={() => changeBatchStatus("ACTIVE")}>선택 잠금 해제</button><button type="button" className="ghost-button" onClick={() => changeBatchStatus("DORMANT")}>선택 휴면</button></> : null}</div>
 

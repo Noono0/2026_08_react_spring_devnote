@@ -443,7 +443,7 @@ export const ApiCollectionRunnerDialog = ({
   };
 
   return (
-    <ModalDialog isOpen={isOpen} title="Collection Runner" description="Collection의 저장 요청을 순서대로 실행하고, 매일 지정 시각의 예약 실행을 관리합니다." size="large" closeOnBackdropClick={!runnerBusyReference.current} onRequestClose={onRequestClose}>
+    <ModalDialog isOpen={isOpen} title="Collection Runner" description="Collection의 저장 요청을 순서대로 실행하고, 매일 지정 시각의 예약 실행을 관리합니다." size="large" resizable resizeStorageKey="api-collection-runner" closeOnBackdropClick={!runnerBusyReference.current} onRequestClose={onRequestClose}>
       {!authenticated ? <div className="api-runner-login-required"><strong>로그인이 필요합니다.</strong><p>Collection, 예약 설정, 실행 이력은 회원별 브라우저 저장소에 보관됩니다.</p></div> : (
         <div className="api-collection-runner">
           <div className="api-runner-mode-tabs" role="tablist" aria-label="Collection Runner 메뉴">

@@ -21,6 +21,7 @@
  */
 
 import { useMemo, useState, type ReactNode } from "react";
+import { LearningGuideTitle } from "@/features/learning/components/LearningGuideTitle";
 import { applicationNotification } from "@/shared/notification/applicationNotification";
 import { ConfirmDialog } from "@/shared/ui/ConfirmDialog";
 import { ModalDialog } from "@/shared/ui/ModalDialog";
@@ -219,7 +220,7 @@ export const CategoryTreePracticePage = () => {
 
   return (
     <section>
-      <div className="page-heading-row"><div><span className="level-badge level-고급">고급 · 난이도 8.5/10</span><h1>카테고리 트리 CRUD</h1><p>parentCategoryId와 재귀 렌더링으로 메뉴·조직도·카테고리 구조를 연습합니다.</p></div><button type="button" onClick={() => openAddModal(null)}>최상위 추가</button></div>
+      <div className="page-heading-row"><div><span className="level-badge level-고급">고급 · 난이도 8.5/10</span><LearningGuideTitle guideId="category">카테고리 트리 CRUD</LearningGuideTitle><p>parentCategoryId와 재귀 렌더링으로 메뉴·조직도·카테고리 구조를 연습합니다.</p></div><button type="button" onClick={() => openAddModal(null)}>최상위 추가</button></div>
       {/* 최상위 노드만 그린다. depth는 0에서 시작.
           그 아래 모든 자손은 재귀가 알아서 처리한다. */}
       <article className="category-tree-panel">{rootCategoryItems.map((rootCategoryItem) => renderCategoryNode(rootCategoryItem, 0))}</article>

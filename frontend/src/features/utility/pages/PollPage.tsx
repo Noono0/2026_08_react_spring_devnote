@@ -118,9 +118,8 @@ export const PollPage = () => {
   return (
     <section className="site-page poll-page">
       <div className="page-hero poll-page-hero">
-        <div><span className="page-kicker">Topic Poll</span><h1>토픽 투표</h1><p>질문과 문항을 자유롭게 만들고, 단일·복수 선택과 결과 공개 시점을 직접 설정합니다.</p></div>
+        <div><span className="page-kicker">Topic Poll</span><div className="page-title-with-guide"><h1>토픽 투표</h1><button type="button" className="learning-guide-icon-button" aria-label="토픽 투표 도움말" onClick={() => setHelpOpen(true)}>?</button></div><p>질문과 문항을 자유롭게 만들고, 단일·복수 선택과 결과 공개 시점을 직접 설정합니다.</p></div>
         {sessionQuery.data?.authenticated ? <button type="button" onClick={() => { setEditingPoll(undefined); setEditorMode("CREATE"); }}>+ 새 토픽 만들기</button> : <div className="poll-login-note"><strong>투표 생성은 로그인 후 가능</strong><span>참여는 비회원도 할 수 있습니다.</span></div>}
-        <button type="button" className="learning-guide-icon-button" aria-label="토픽 투표 도움말" onClick={() => setHelpOpen(true)}>?</button>
       </div>
 
       {editorMode === "CREATE" ? <PollEditor pending={createMutation.isPending} onCancel={() => setEditorMode("CLOSED")} onSubmit={create} /> : null}

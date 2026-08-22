@@ -27,6 +27,7 @@
  */
 
 import { useMemo, useState } from "react";
+import { LearningGuideTitle } from "@/features/learning/components/LearningGuideTitle";
 import { applicationNotification } from "@/shared/notification/applicationNotification";
 import { ConfirmDialog } from "@/shared/ui/ConfirmDialog";
 import { ModalDialog } from "@/shared/ui/ModalDialog";
@@ -198,7 +199,7 @@ export const InquiryPracticePage = () => {
 
   return (
     <section>
-      <div className="page-heading-row"><div><span className="level-badge level-고급">고급 · 난이도 8/10</span><h1>문의·답변 권한 CRUD</h1><p>현재 역할을 바꾸면서 작성자·담당자·관리자 권한과 상태 전이를 확인합니다.</p></div>{/* ── 권한 처리 방식 (2): 버튼을 비활성화한다 ──
+      <div className="page-heading-row"><div><span className="level-badge level-고급">고급 · 난이도 8/10</span><LearningGuideTitle guideId="inquiry">문의·답변 권한 CRUD</LearningGuideTitle><p>현재 역할을 바꾸면서 작성자·담당자·관리자 권한과 상태 전이를 확인합니다.</p></div>{/* ── 권한 처리 방식 (2): 버튼을 비활성화한다 ──
           관리자는 문의를 "등록"할 일이 없으므로 잠근다.
           숨기지 않고 비활성화해서 "있긴 한데 내 역할로는 안 되는" 것임을 알린다. */}
 <button type="button" onClick={() => setCreateModalOpen(true)} disabled={currentRole !== "USER"}>문의 등록</button></div>
@@ -218,7 +219,7 @@ export const InquiryPracticePage = () => {
         <article className="practice-card inquiry-detail-card">{selectedInquiry ? <><div className="inquiry-detail-heading"><div><h2>{selectedInquiry.title}</h2><p>{selectedInquiry.writerName} · 담당자 {selectedInquiry.assignedManagerName ?? "미배정"}</p></div><span className={`inquiry-status status-${selectedInquiry.status.toLowerCase()}`}>{inquiryStatusLabelMap[selectedInquiry.status]}</span></div><div className="inquiry-content-box"><strong>문의 내용</strong><p>{selectedInquiry.content}</p></div><div className="inquiry-content-box"><strong>답변</strong><p>{selectedInquiry.answerContent ?? "아직 등록된 답변이 없습니다."}</p></div>{currentRole !== "USER" && selectedInquiry.status !== "CLOSED" ? <><label>관리자 답변<textarea value={answerContent} onChange={(event) => setAnswerContent(event.target.value)} rows={5} /></label><div className="button-row"><button type="button" className="secondary-button" onClick={() => assignInquiry(selectedInquiry)}>내게 배정</button><button type="button" onClick={saveAnswer}>답변 저장</button><button type="button" className="danger-button" onClick={() => setCloseTargetInquiry(selectedInquiry)}>문의 종료</button></div></> : <div className="button-row">{selectedInquiry.status !== "CLOSED" ? <button type="button" className="danger-button" onClick={() => setCloseTargetInquiry(selectedInquiry)}>내 문의 종료</button> : null}</div>}</> : <div className="state-panel">왼쪽 목록에서 문의를 선택하세요.</div>}</article>
       </div>
 
-      <ModalDialog isOpen={isCreateModalOpen} title="새 문의 등록" description="USER 역할에서 작성자 권한을 연습합니다." onRequestClose={() => setCreateModalOpen(false)} footer={<><button type="button" className="ghost-button" onClick={() => setCreateModalOpen(false)}>취소</button><button type="button" onClick={createInquiry}>문의 등록</button></>}><div className="modal-form-grid"><label>제목<input value={title} onChange={(event) => setTitle(event.target.value)} /></label><label>내용<textarea rows={8} value={content} onChange={(event) => setContent(event.target.value)} /></label><label className="checkbox-label"><input type="checkbox" checked={isSecret} onChange={(event) => setSecret(event.target.checked)} />비밀 문의로 등록</label></div></ModalDialog>
+      <ModalDialog isOpen={isCreateModalOpen} title="새 문의 등록" description="USER 역할에서 작성자 권한을 연습합니다." resizable resizeStorageKey="inquiry-form" onRequestClose={() => setCreateModalOpen(false)} footer={<><button type="button" className="ghost-button" onClick={() => setCreateModalOpen(false)}>취소</button><button type="button" onClick={createInquiry}>문의 등록</button></>}><div className="modal-form-grid"><label>제목<input value={title} onChange={(event) => setTitle(event.target.value)} /></label><label>내용<textarea rows={8} value={content} onChange={(event) => setContent(event.target.value)} /></label><label className="checkbox-label"><input type="checkbox" checked={isSecret} onChange={(event) => setSecret(event.target.checked)} />비밀 문의로 등록</label></div></ModalDialog>
       <ConfirmDialog isOpen={closeTargetInquiry !== null} title="문의 종료" description="종료된 문의는 더 이상 답변이나 상태를 변경할 수 없습니다." confirmButtonLabel="종료" onConfirm={closeInquiry} onCancel={() => setCloseTargetInquiry(null)} />
     </section>
   );

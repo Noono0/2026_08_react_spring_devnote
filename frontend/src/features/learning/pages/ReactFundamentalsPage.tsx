@@ -32,6 +32,7 @@
  */
 
 import { useState } from "react";
+import { LearningGuideTitle } from "@/features/learning/components/LearningGuideTitle";
 import { applicationLogger } from "@/shared/logging/applicationLogger";
 
 export const ReactFundamentalsPage = () => {
@@ -92,7 +93,7 @@ export const ReactFundamentalsPage = () => {
       <div className="page-heading-row">
         <div>
           <span className="level-badge level-왕초보">왕초보</span>
-          <h1>React 기초 실습</h1>
+          <LearningGuideTitle guideId="fundamentals">React 기초 실습</LearningGuideTitle>
           <p>버튼과 입력값이 State를 바꾸고 화면이 다시 렌더링되는 과정을 확인합니다.</p>
         </div>
       </div>

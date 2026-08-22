@@ -12,4 +12,3 @@ public interface PortfolioSectionService {
     PortfolioSectionResponse updateSection(Long portfolioSectionId, PortfolioSectionSaveRequest request);
     void deleteSection(Long portfolioSectionId, Long versionNumber);
 }
-

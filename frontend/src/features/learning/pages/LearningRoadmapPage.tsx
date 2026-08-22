@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { LearningGuideTitle } from "@/features/learning/components/LearningGuideTitle";
 import { learningGuideList, type LearningGuide } from "@/features/learning/data/learningGuides";
 
 const learningRouteMap: Record<string, string> = {
@@ -30,7 +31,7 @@ export const LearningRoadmapPage = () => (
   <section className="learning-page">
     <div className="page-hero">
       <span className="page-kicker">React Beginner → Advanced CRUD Lab</span>
-      <h1>React 기초부터 실무 문제 해결까지 배우는 로드맵</h1>
+      <LearningGuideTitle guideId="roadmap">React 기초부터 실무 문제 해결까지 배우는 로드맵</LearningGuideTitle>
       <p>
         같은 CRUD라도 데이터 구조와 업무 규칙, 화면 패턴이 다르면 구현 방법도 달라집니다.
         상태 → Reducer → 폼 → Effect·비동기 → CRUD → 권한 → 트리 → 실제 백엔드 순서로 학습합니다.
@@ -76,7 +77,7 @@ export const LearningRoadmapPage = () => (
       <h2>각 단계를 배우는 방법</h2>
       <ol>
         <li>화면에서 생성·조회·수정·삭제를 모두 실행합니다.</li>
-        <li>오른쪽 위 <strong>?</strong> 아이콘을 눌러 사용 방법과 핵심 개념을 확인합니다.</li>
+        <li>큰 제목 옆의 <strong>?</strong> 아이콘을 눌러 사용 방법과 핵심 개념을 확인합니다.</li>
         <li>학습 가이드의 소스 흐름 순서대로 파일을 찾아갑니다.</li>
         <li>실습 과제 중 가장 쉬운 항목 하나를 직접 수정합니다.</li>
         <li>고급 문서 단계에서는 더미 데이터 OFF로 실제 Spring Boot·MySQL 흐름을 확인합니다.</li>

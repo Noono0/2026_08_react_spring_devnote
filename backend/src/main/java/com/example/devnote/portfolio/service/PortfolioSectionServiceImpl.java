@@ -131,10 +131,12 @@ public class PortfolioSectionServiceImpl implements PortfolioSectionService {
 
     private PortfolioSectionResponse toResponse(PortfolioSectionRow row) {
         try {
-            return new PortfolioSectionResponse(row.getPortfolioSectionId(), PortfolioSectionType.valueOf(row.getSectionType()),
+            PortfolioSectionType sectionType = PortfolioSectionType.valueOf(row.getSectionType());
+            com.fasterxml.jackson.databind.JsonNode contentJson = objectMapper.readTree(row.getContentJson());
+            return new PortfolioSectionResponse(row.getPortfolioSectionId(), sectionType,
                 PortfolioContentMode.valueOf(row.getContentMode()), row.getSectionTitle(), row.getSectionSubtitle(), row.getStartDate(),
                 row.getEndDate(), "Y".equals(row.getCurrentYn()), row.getExternalUrl(), row.getThumbnailFileId(), row.getThumbnailImageUrl(),
-                objectMapper.readTree(row.getContentJson()), row.getContentHtml(), row.getContentText(), row.getLayoutType(), row.getSortOrder(),
+                contentJson, row.getContentHtml(), row.getContentText(), row.getLayoutType(), row.getSortOrder(),
                 PortfolioVisibility.valueOf(row.getVisibility()), row.getVersionNumber(), portfolioSectionDao.selectEditorImageFileIds(row.getPortfolioSectionId()),
                 row.getCreatedAt(), row.getUpdatedAt());
         } catch (JsonProcessingException exception) {

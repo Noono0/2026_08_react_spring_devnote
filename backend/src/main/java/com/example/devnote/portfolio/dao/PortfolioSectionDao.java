@@ -16,4 +16,3 @@ public interface PortfolioSectionDao {
     void insertSectionFile(Long portfolioSectionId, Long fileId, String fileRole, int sortOrder);
     List<Long> selectEditorImageFileIds(Long portfolioSectionId);
 }
-

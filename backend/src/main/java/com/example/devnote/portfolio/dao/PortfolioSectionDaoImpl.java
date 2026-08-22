@@ -25,4 +25,3 @@ public class PortfolioSectionDaoImpl implements PortfolioSectionDao {
     @Override public void insertSectionFile(Long id, Long fileId, String role, int order) { sqlSessionTemplate.insert(NAMESPACE + "insertSectionFile", Map.of("portfolioSectionId", id, "fileId", fileId, "fileRole", role, "sortOrder", order)); }
     @Override public List<Long> selectEditorImageFileIds(Long id) { return sqlSessionTemplate.selectList(NAMESPACE + "selectEditorImageFileIds", id); }
 }
-

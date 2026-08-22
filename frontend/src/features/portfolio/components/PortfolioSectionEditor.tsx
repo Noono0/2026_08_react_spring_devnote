@@ -16,6 +16,7 @@ import { collectEditorImageFileIds } from "@/features/portfolio/utils/portfolioE
 interface PortfolioSectionEditorProperties {
   isOpen: boolean;
   section?: PortfolioSection;
+  initialSectionType?: PortfolioSectionType;
   nextSortOrder: number;
   isSaving: boolean;
   onSave: (request: PortfolioSectionSaveRequest) => Promise<void>;
@@ -35,40 +36,71 @@ const emptyEditorValue: EditorValue = {
 };
 
 const typeLabelMap: Record<PortfolioSectionType, string> = {
-  PROFILE: "내 정보",
+  PROFILE: "소개",
   RICH_TEXT: "자유 글",
+  IMAGE: "이미지",
+  SKILL: "기술",
   EXPERIENCE: "경력",
   PROJECT: "프로젝트",
-  SKILL: "기술 스택",
+  EDUCATION: "교육",
+  CERTIFICATE: "자격·인증",
+  CONTACT: "연락처",
 };
 
 const recommendedModeMap: Record<PortfolioSectionType, PortfolioContentMode> = {
   PROFILE: "HYBRID",
   RICH_TEXT: "RICH_TEXT",
+  IMAGE: "STRUCTURED",
+  SKILL: "STRUCTURED",
   EXPERIENCE: "HYBRID",
   PROJECT: "HYBRID",
-  SKILL: "STRUCTURED",
+  EDUCATION: "HYBRID",
+  CERTIFICATE: "HYBRID",
+  CONTACT: "HYBRID",
 };
 
 const titleLabelMap: Record<PortfolioSectionType, string> = {
   PROFILE: "대표 문구",
   RICH_TEXT: "글 제목",
+  IMAGE: "이미지 제목",
+  SKILL: "기술명",
   EXPERIENCE: "회사명",
   PROJECT: "프로젝트명",
-  SKILL: "기술명",
+  EDUCATION: "학교·교육기관",
+  CERTIFICATE: "자격·인증명",
+  CONTACT: "연락 채널",
 };
 
 const subtitleLabelMap: Record<PortfolioSectionType, string> = {
   PROFILE: "직무·기술 요약",
   RICH_TEXT: "짧은 설명",
+  IMAGE: "이미지 설명",
+  SKILL: "기술 분류",
   EXPERIENCE: "직무·직책",
   PROJECT: "한 줄 소개",
-  SKILL: "기술 분류",
+  EDUCATION: "전공·교육 과정",
+  CERTIFICATE: "발급 기관",
+  CONTACT: "주소·계정명",
 };
+
+const periodSectionTypes = new Set<PortfolioSectionType>([
+  "EXPERIENCE",
+  "PROJECT",
+  "EDUCATION",
+  "CERTIFICATE",
+]);
+
+const externalLinkSectionTypes = new Set<PortfolioSectionType>([
+  "PROFILE",
+  "PROJECT",
+  "CERTIFICATE",
+  "CONTACT",
+]);
 
 export const PortfolioSectionEditor = ({
   isOpen,
   section,
+  initialSectionType = "RICH_TEXT",
   nextSortOrder,
   isSaving,
   onSave,
@@ -85,13 +117,15 @@ export const PortfolioSectionEditor = ({
   const [thumbnailFileId, setThumbnailFileId] = useState<number>();
   const [thumbnailImageUrl, setThumbnailImageUrl] = useState<string>();
   const [visibility, setVisibility] = useState<PortfolioVisibility>("PUBLIC");
+  const [sortOrder, setSortOrder] = useState(nextSortOrder);
   const [editorValue, setEditorValue] = useState<EditorValue>(emptyEditorValue);
   const [validationMessage, setValidationMessage] = useState("");
 
   useEffect(() => {
     if (!isOpen) return;
-    setSectionType(section?.sectionType ?? "RICH_TEXT");
-    setContentMode(section?.contentMode ?? "RICH_TEXT");
+    const nextSectionType = section?.sectionType ?? initialSectionType;
+    setSectionType(nextSectionType);
+    setContentMode(section?.contentMode ?? recommendedModeMap[nextSectionType]);
     setSectionTitle(section?.sectionTitle ?? "");
     setSectionSubtitle(section?.sectionSubtitle ?? "");
     setStartDate(section?.startDate ?? "");
@@ -101,17 +135,20 @@ export const PortfolioSectionEditor = ({
     setThumbnailFileId(section?.thumbnailFileId);
     setThumbnailImageUrl(section?.thumbnailImageUrl);
     setVisibility(section?.visibility ?? "PUBLIC");
+    setSortOrder(section?.sortOrder ?? nextSortOrder);
     setEditorValue(section ? {
       contentJson: section.contentJson,
       contentHtml: section.contentHtml,
       contentText: section.contentText,
     } : emptyEditorValue);
     setValidationMessage("");
-  }, [isOpen, section]);
+  }, [initialSectionType, isOpen, nextSortOrder, section]);
 
   const showStructuredFields = contentMode !== "RICH_TEXT";
   const showEditor = contentMode !== "STRUCTURED";
-  const showPeriod = showStructuredFields && (sectionType === "EXPERIENCE" || sectionType === "PROJECT");
+  const showPeriod = showStructuredFields && periodSectionTypes.has(sectionType);
+  const showExternalLink = showStructuredFields && externalLinkSectionTypes.has(sectionType);
+  const showThumbnail = showStructuredFields && sectionType !== "SKILL" && sectionType !== "CONTACT";
 
   const submitSection = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
@@ -119,7 +156,11 @@ export const PortfolioSectionEditor = ({
       setValidationMessage(`${titleLabelMap[sectionType]}을 입력해 주세요.`);
       return;
     }
-    if (startDate && endDate && endDate < startDate) {
+    if (sectionType === "IMAGE" && !thumbnailFileId) {
+      setValidationMessage("표시할 이미지를 선택하거나 붙여넣어 주세요.");
+      return;
+    }
+    if (showPeriod && startDate && endDate && endDate < startDate) {
       setValidationMessage("종료일은 시작일보다 빠를 수 없습니다.");
       return;
     }
@@ -132,11 +173,11 @@ export const PortfolioSectionEditor = ({
       startDate: showPeriod && startDate ? startDate : undefined,
       endDate: showPeriod && !current && endDate ? endDate : undefined,
       current: showPeriod && current,
-      externalUrl: showStructuredFields && externalUrl.trim() ? externalUrl.trim() : undefined,
-      thumbnailFileId,
+      externalUrl: showExternalLink && externalUrl.trim() ? externalUrl.trim() : undefined,
+      thumbnailFileId: showThumbnail ? thumbnailFileId : undefined,
       ...(showEditor ? editorValue : emptyEditorValue),
       layoutType: section?.layoutType ?? "DEFAULT",
-      sortOrder: section?.sortOrder ?? nextSortOrder,
+      sortOrder,
       visibility,
       editorImageFileIds: showEditor ? collectEditorImageFileIds(editorValue.contentJson) : [],
       versionNumber: section?.versionNumber,
@@ -147,8 +188,10 @@ export const PortfolioSectionEditor = ({
     <ModalDialog
       isOpen={isOpen}
       size="large"
+      resizable
+      resizeStorageKey="portfolio-section-editor"
       title={section ? `${typeLabelMap[section.sectionType]} 수정` : "포트폴리오 섹션 추가"}
-      description="정해진 양식과 자유 편집을 섹션마다 선택할 수 있습니다."
+      description="블록 종류를 고르고 내용을 작성하세요. 저장한 블록은 화면에서 자유롭게 정렬할 수 있습니다."
       onRequestClose={onClose}
       closeOnBackdropClick={!isSaving}
     >
@@ -165,12 +208,13 @@ export const PortfolioSectionEditor = ({
                 setContentMode(recommendedModeMap[nextType]);
               }}
             >
-              {(Object.keys(typeLabelMap) as PortfolioSectionType[]).map((type) => <option key={type} value={type}>{typeLabelMap[type]}</option>)}
+              {(Object.keys(typeLabelMap) as PortfolioSectionType[])
+                .map((type) => <option key={type} value={type}>{typeLabelMap[type]}</option>)}
             </select>
           </label>
           <label>
             작성 방식
-            <select value={contentMode} onChange={(event) => setContentMode(event.target.value as PortfolioContentMode)}>
+            <select disabled={sectionType === "IMAGE"} value={contentMode} onChange={(event) => setContentMode(event.target.value as PortfolioContentMode)}>
               <option value="STRUCTURED">정해진 양식</option>
               <option value="RICH_TEXT">자유 편집</option>
               <option value="HYBRID">양식 + 자유 편집</option>
@@ -196,22 +240,33 @@ export const PortfolioSectionEditor = ({
               </label>
             </>
           ) : null}
-          {showStructuredFields && (sectionType === "PROJECT" || sectionType === "PROFILE") ? (
+          {showExternalLink ? (
             <label className="portfolio-wide-field">외부 링크<input type="url" value={externalUrl} onChange={(event) => setExternalUrl(event.target.value)} placeholder="https://github.com/..." /></label>
           ) : null}
           <label>
             공개 상태
-            <select value={visibility} onChange={(event) => setVisibility(event.target.value as PortfolioVisibility)}>
-              <option value="PUBLIC">공개</option>
-              <option value="HIDDEN">나만 보기</option>
-            </select>
+            <span className="portfolio-form-switch-row">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={visibility === "PUBLIC"}
+                className={`portfolio-visibility-toggle portfolio-visibility-toggle-${visibility === "PUBLIC" ? "on" : "off"}`}
+                onClick={() => setVisibility((currentVisibility) => currentVisibility === "PUBLIC" ? "HIDDEN" : "PUBLIC")}
+              >
+                <span className="portfolio-visibility-track" aria-hidden="true"><span className="portfolio-visibility-thumb" /></span>
+                <strong>{visibility === "PUBLIC" ? "ON" : "OFF"}</strong>
+              </button>
+              <span>{visibility === "PUBLIC" ? "방문자에게 공개" : "슈퍼관리자만 보기"}</span>
+            </span>
           </label>
         </div>
 
-        {showStructuredFields && sectionType !== "SKILL" ? (
+        {showThumbnail ? (
           <ThumbnailImageUploader
-            title={sectionType === "PROFILE" ? "프로필 이미지" : "대표 이미지"}
-            description="파일을 선택하면 미리 업로드되고, 섹션을 저장할 때 연결됩니다."
+            title={sectionType === "PROFILE" ? "프로필 이미지" : sectionType === "IMAGE" ? "이미지 블록" : "대표 이미지"}
+            description={sectionType === "IMAGE"
+              ? "파일을 선택하거나 클립보드 이미지를 붙여넣어 블록에 표시할 이미지를 올려 주세요."
+              : "파일을 선택하면 미리 업로드되고, 블록을 저장할 때 연결됩니다."}
             thumbnailImageUrl={thumbnailImageUrl}
             imageUploadFunction={uploadPortfolioEditorImage}
             handleThumbnailChange={(fileId, imageUrl) => { setThumbnailFileId(fileId); setThumbnailImageUrl(imageUrl); }}
@@ -230,7 +285,7 @@ export const PortfolioSectionEditor = ({
 
         {validationMessage ? <p className="field-error" role="alert">{validationMessage}</p> : null}
         <div className="button-row portfolio-form-actions">
-          <button type="submit" disabled={isSaving}>{isSaving ? "저장 중..." : section ? "수정 저장" : "섹션 추가"}</button>
+          <button type="submit" disabled={isSaving}>{isSaving ? "저장 중..." : section ? "수정 저장" : "블록 추가"}</button>
           <button type="button" className="ghost-button" onClick={onClose} disabled={isSaving}>취소</button>
         </div>
       </form>

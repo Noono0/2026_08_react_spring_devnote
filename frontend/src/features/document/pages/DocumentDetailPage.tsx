@@ -23,13 +23,13 @@
  */
 
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
-// DOMPurify: HTML에서 위험한 부분만 제거해 주는 라이브러리.
-import DOMPurify from "dompurify";
+import { LearningGuideTitle } from "@/features/learning/components/LearningGuideTitle";
 import { useDeleteDocumentMutation, useDocumentDetailQuery } from "../hooks/useDocumentQueries";
 import { applicationNotification } from "@/shared/notification/applicationNotification";
 import { convertRequestErrorToProblemDetails } from "@/shared/api/error/apiErrorHelpers";
 import { apiErrorMessageMap } from "@/shared/api/error/apiErrorMessageMap";
 import { useAuthSessionQuery } from "@/features/auth/hooks/useAuthSession";
+import { sanitizeRichTextHtml } from "@/shared/lib/sanitizeRichTextHtml";
 
 /**
  * ★ URL의 문서 번호를 숫자로 바꾼다. 이상하면 undefined를 돌려준다.
@@ -163,7 +163,7 @@ export const DocumentDetailPage = () => {
     <article className="document-detail">
       <div className="page-heading-row">
         <div>
-          <h1>{document.documentTitle}</h1>
+          <LearningGuideTitle guideId={isHistory ? undefined : "document"}>{document.documentTitle}</LearningGuideTitle>
           <p>
             {document.authorName} · 버전 {document.versionNumber} · {document.documentStatus}
           </p>
@@ -219,7 +219,7 @@ export const DocumentDetailPage = () => {
         className="rendered-document-content"
         // `__html` 이라는 어색한 키 이름도 의도적이다.
         // 실수로 쓸 수 없게, 반드시 찾아보고 쓰게 만들려는 것이다.
-        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(document.contentHtml) }}
+        dangerouslySetInnerHTML={{ __html: sanitizeRichTextHtml(document.contentHtml) }}
       />
       {document.attachmentFiles.length > 0 ? (
         <section className="document-attachment-section">

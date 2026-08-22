@@ -27,6 +27,7 @@
  */
 
 import { useMemo, useState } from "react";
+import { LearningGuideTitle } from "@/features/learning/components/LearningGuideTitle";
 import { applicationLogger } from "@/shared/logging/applicationLogger";
 import { applicationNotification } from "@/shared/notification/applicationNotification";
 
@@ -224,7 +225,7 @@ export const TodoPracticePage = () => {
       <div className="page-heading-row">
         <div>
           <span className="level-badge level-초급">초급</span>
-          <h1>할 일 로컬 CRUD</h1>
+          <LearningGuideTitle guideId="todo">할 일 로컬 CRUD</LearningGuideTitle>
           <p>서버 없이 React State 배열을 생성·조회·수정·삭제합니다.</p>
         </div>
       </div>

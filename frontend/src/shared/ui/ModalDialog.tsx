@@ -22,7 +22,94 @@
  *   "직접 만들 수 있다"와 "직접 만드는 게 낫다"는 전혀 다른 이야기다.
  */
 
-import { useEffect, useId, useRef, type MouseEvent, type ReactNode } from "react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  type KeyboardEvent,
+  type MouseEvent,
+  type PointerEvent,
+  type ReactNode,
+} from "react";
+
+interface StoredModalSize {
+  width: number;
+  height: number;
+}
+
+interface ModalResizePointerState extends StoredModalSize {
+  pointerId: number;
+  pointerX: number;
+  pointerY: number;
+}
+
+const MODAL_SIZE_STORAGE_PREFIX = "devnote:modal-size:";
+const MODAL_MINIMUM_WIDTH = 420;
+const MODAL_MINIMUM_HEIGHT = 300;
+const MODAL_VIEWPORT_GAP = 32;
+const MODAL_MOBILE_BREAKPOINT = 600;
+const MODAL_KEYBOARD_RESIZE_STEP = 16;
+
+const getModalSizeBounds = (): StoredModalSize => ({
+  width: Math.max(1, window.innerWidth - MODAL_VIEWPORT_GAP),
+  height: Math.max(1, window.innerHeight - MODAL_VIEWPORT_GAP),
+});
+
+const clampModalSize = (width: number, height: number): StoredModalSize => {
+  const maximumSize = getModalSizeBounds();
+  const minimumWidth = Math.min(MODAL_MINIMUM_WIDTH, maximumSize.width);
+  const minimumHeight = Math.min(MODAL_MINIMUM_HEIGHT, maximumSize.height);
+
+  return {
+    width: Math.min(Math.max(width, minimumWidth), maximumSize.width),
+    height: Math.min(Math.max(height, minimumHeight), maximumSize.height),
+  };
+};
+
+const applyModalSize = (dialogElement: HTMLDialogElement, width: number, height: number): void => {
+  const nextSize = clampModalSize(width, height);
+  dialogElement.style.width = `${nextSize.width}px`;
+  dialogElement.style.height = `${nextSize.height}px`;
+};
+
+const readStoredModalSize = (storageKey: string): StoredModalSize | undefined => {
+  const storedValue = localStorage.getItem(storageKey);
+  if (!storedValue) return undefined;
+
+  try {
+    const parsedValue: unknown = JSON.parse(storedValue);
+    if (
+      typeof parsedValue === "object"
+      && parsedValue !== null
+      && "width" in parsedValue
+      && "height" in parsedValue
+      && typeof parsedValue.width === "number"
+      && Number.isFinite(parsedValue.width)
+      && typeof parsedValue.height === "number"
+      && Number.isFinite(parsedValue.height)
+    ) {
+      return clampModalSize(parsedValue.width, parsedValue.height);
+    }
+  } catch (error: unknown) {
+    console.warn("[ModalDialog] 저장된 모달 크기를 해석하지 못했습니다.", { storageKey, error });
+  }
+
+  localStorage.removeItem(storageKey);
+  return undefined;
+};
+
+const storeModalSize = (storageKey: string, dialogElement: HTMLDialogElement): void => {
+  const dialogRectangle = dialogElement.getBoundingClientRect();
+  const width = dialogRectangle.width || Number.parseFloat(dialogElement.style.width);
+  const height = dialogRectangle.height || Number.parseFloat(dialogElement.style.height);
+  if (!Number.isFinite(width) || !Number.isFinite(height)) return;
+
+  try {
+    localStorage.setItem(storageKey, JSON.stringify(clampModalSize(width, height)));
+  } catch (error: unknown) {
+    console.warn("[ModalDialog] 사용자가 조절한 모달 크기를 저장하지 못했습니다.", { storageKey, error });
+  }
+};
 
 /**
  * 이 컴포넌트가 받는 props 목록.
@@ -58,6 +145,8 @@ interface ModalDialogProps {
 
   closeOnBackdropClick?: boolean;  // 배경 클릭으로 닫히게 할지
   size?: "default" | "large";      // 모달 크기
+  resizable?: boolean;             // 사용자가 가로·세로 크기를 조절할 수 있게 할지
+  resizeStorageKey?: string;       // 조절한 크기를 다시 열 때 복원할 저장 키
 }
 
 /**
@@ -80,6 +169,8 @@ export const ModalDialog = ({
   // "대부분의 경우 이렇게 동작하고, 예외적으로 바꿀 수 있다"를 표현하는 좋은 방법이다.
   closeOnBackdropClick = true,
   size = "default",
+  resizable = false,
+  resizeStorageKey,
 }: ModalDialogProps) => {
   // ── useRef: 실제 DOM 요소를 손에 쥐기 ────────────────────────────
   // React는 보통 "상태를 바꾸면 화면이 알아서 바뀐다"는 방식이라
@@ -91,6 +182,10 @@ export const ModalDialog = ({
   //
   // 처음 값이 null인 이유: 화면에 그려지기 전에는 요소가 아직 없기 때문이다.
   const dialogReference = useRef<HTMLDialogElement>(null);
+  const resizePointerStateReference = useRef<ModalResizePointerState | undefined>(undefined);
+  const resolvedResizeStorageKey = resizeStorageKey
+    ? `${MODAL_SIZE_STORAGE_PREFIX}${resizeStorageKey}`
+    : undefined;
 
   // ── useId: 충돌하지 않는 고유 id 만들기 ──────────────────────────
   // 아래에서 aria-labelledby로 "제목이 어디 있는지" 연결하려면 id가 필요하다.
@@ -130,6 +225,107 @@ export const ModalDialog = ({
     // isOpen이 바뀔 때만 열고 닫기를 다시 판단하면 되기 때문이다.
   }, [isOpen]);
 
+  // 긴 도움말이나 에디터 모달은 사용자가 조절한 크기를 다음 실행에서도 복원한다.
+  // 모바일에서는 화면 너비에 맞춘 반응형 크기가 우선이므로 저장 크기를 적용하지 않는다.
+  useEffect(() => {
+    const dialogElement = dialogReference.current;
+    if (
+      !isOpen
+      || !resizable
+      || !resolvedResizeStorageKey
+      || !dialogElement
+      || window.innerWidth <= MODAL_MOBILE_BREAKPOINT
+    ) {
+      return;
+    }
+
+    const storedSize = readStoredModalSize(resolvedResizeStorageKey);
+    if (storedSize) applyModalSize(dialogElement, storedSize.width, storedSize.height);
+  }, [isOpen, resizable, resolvedResizeStorageKey]);
+
+  const getCurrentModalSize = (): StoredModalSize => {
+    const dialogElement = dialogReference.current;
+    const fallbackWidth = size === "large" ? 980 : 620;
+    const fallbackHeight = Math.min(680, window.innerHeight - MODAL_VIEWPORT_GAP);
+    if (!dialogElement) return clampModalSize(fallbackWidth, fallbackHeight);
+
+    const dialogRectangle = dialogElement.getBoundingClientRect();
+    return clampModalSize(
+      dialogRectangle.width || Number.parseFloat(dialogElement.style.width) || fallbackWidth,
+      dialogRectangle.height || Number.parseFloat(dialogElement.style.height) || fallbackHeight,
+    );
+  };
+
+  const saveCurrentModalSize = (): void => {
+    const dialogElement = dialogReference.current;
+    if (dialogElement && resolvedResizeStorageKey) storeModalSize(resolvedResizeStorageKey, dialogElement);
+  };
+
+  const handleResizePointerDown = (pointerEvent: PointerEvent<HTMLButtonElement>): void => {
+    if (window.innerWidth <= MODAL_MOBILE_BREAKPOINT) return;
+
+    const currentSize = getCurrentModalSize();
+    resizePointerStateReference.current = {
+      pointerId: pointerEvent.pointerId,
+      pointerX: pointerEvent.clientX,
+      pointerY: pointerEvent.clientY,
+      ...currentSize,
+    };
+    pointerEvent.currentTarget.setPointerCapture(pointerEvent.pointerId);
+    pointerEvent.preventDefault();
+  };
+
+  const handleResizePointerMove = (pointerEvent: PointerEvent<HTMLButtonElement>): void => {
+    const resizeState = resizePointerStateReference.current;
+    const dialogElement = dialogReference.current;
+    if (!resizeState || resizeState.pointerId !== pointerEvent.pointerId || !dialogElement) return;
+
+    applyModalSize(
+      dialogElement,
+      resizeState.width + pointerEvent.clientX - resizeState.pointerX,
+      resizeState.height + pointerEvent.clientY - resizeState.pointerY,
+    );
+  };
+
+  const finishPointerResize = (pointerEvent: PointerEvent<HTMLButtonElement>): void => {
+    const resizeState = resizePointerStateReference.current;
+    if (!resizeState || resizeState.pointerId !== pointerEvent.pointerId) return;
+
+    resizePointerStateReference.current = undefined;
+    if (pointerEvent.currentTarget.hasPointerCapture(pointerEvent.pointerId)) {
+      pointerEvent.currentTarget.releasePointerCapture(pointerEvent.pointerId);
+    }
+    saveCurrentModalSize();
+  };
+
+  const handleResizeKeyDown = (keyboardEvent: KeyboardEvent<HTMLButtonElement>): void => {
+    const horizontalDirection = keyboardEvent.key === "ArrowRight" ? 1 : keyboardEvent.key === "ArrowLeft" ? -1 : 0;
+    const verticalDirection = keyboardEvent.key === "ArrowDown" ? 1 : keyboardEvent.key === "ArrowUp" ? -1 : 0;
+    if (horizontalDirection === 0 && verticalDirection === 0) return;
+
+    const dialogElement = dialogReference.current;
+    if (!dialogElement) return;
+
+    keyboardEvent.preventDefault();
+    const resizeStep = keyboardEvent.shiftKey ? MODAL_KEYBOARD_RESIZE_STEP * 3 : MODAL_KEYBOARD_RESIZE_STEP;
+    const currentSize = getCurrentModalSize();
+    applyModalSize(
+      dialogElement,
+      currentSize.width + horizontalDirection * resizeStep,
+      currentSize.height + verticalDirection * resizeStep,
+    );
+    saveCurrentModalSize();
+  };
+
+  const resetModalSize = (): void => {
+    const dialogElement = dialogReference.current;
+    if (!dialogElement) return;
+
+    dialogElement.style.removeProperty("width");
+    dialogElement.style.removeProperty("height");
+    if (resolvedResizeStorageKey) localStorage.removeItem(resolvedResizeStorageKey);
+  };
+
   /**
    * 모달 바깥(어두운 배경)을 클릭했을 때 닫는 처리.
    *
@@ -162,7 +358,7 @@ export const ModalDialog = ({
     <dialog
       // ref로 위에서 만든 상자와 실제 DOM 요소를 연결한다.
       ref={dialogReference}
-      className={`modal-dialog${size === "large" ? " modal-dialog-large" : ""}`}
+      className={`modal-dialog${size === "large" ? " modal-dialog-large" : ""}${resizable ? " modal-dialog-resizable" : ""}`}
 
       // aria-labelledby: "이 모달의 이름은 저 id를 가진 요소의 글자다"라는 연결.
       // 화면 낭독기가 모달이 열릴 때 제목을 먼저 읽어 준다.
@@ -220,6 +416,23 @@ export const ModalDialog = ({
             빈 <footer>가 남아 있으면 CSS 여백 때문에 어색한 공백이 생긴다. */}
         {footer ? <footer className="modal-dialog-footer">{footer}</footer> : null}
       </section>
+
+      {resizable ? (
+        <button
+          type="button"
+          className="modal-resize-handle"
+          aria-label={`${title} 모달 크기 조절`}
+          title="드래그 또는 방향키로 크기 조절 · 더블클릭으로 초기화"
+          onPointerDown={handleResizePointerDown}
+          onPointerMove={handleResizePointerMove}
+          onPointerUp={finishPointerResize}
+          onPointerCancel={finishPointerResize}
+          onKeyDown={handleResizeKeyDown}
+          onDoubleClick={resetModalSize}
+        >
+          <span aria-hidden="true">◢</span>
+        </button>
+      ) : null}
     </dialog>
   );
 };

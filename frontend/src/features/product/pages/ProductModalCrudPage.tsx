@@ -29,6 +29,7 @@
 import { useMemo, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
+import { LearningGuideTitle } from "@/features/learning/components/LearningGuideTitle";
 import { z } from "zod";
 import { applicationLogger } from "@/shared/logging/applicationLogger";
 import { applicationNotification } from "@/shared/notification/applicationNotification";
@@ -429,7 +430,7 @@ export const ProductModalCrudPage = () => {
       <div className="page-heading-row">
         <div>
           <span className="level-badge level-중급">중급</span>
-          <h1>상품 관리 모달 CRUD</h1>
+          <LearningGuideTitle guideId="product">상품 관리 모달 CRUD</LearningGuideTitle>
           <p>추가·수정 폼과 삭제 확인을 별도의 모달로 열어 인라인 CRUD와 차이를 비교합니다.</p>
         </div>
         <button type="button" onClick={openCreateModal}>상품 추가 모달</button>
@@ -519,6 +520,8 @@ export const ProductModalCrudPage = () => {
         // 제목과 설명도 모드에 따라 바꿔서 사용자가 뭘 하는 중인지 분명히 알린다.
         title={productFormMode === "UPDATE" ? "상품 수정" : "상품 추가"}
         description={productFormMode === "UPDATE" ? "선택한 상품 정보를 변경합니다." : "새 상품 정보를 입력합니다."}
+        resizable
+        resizeStorageKey="product-form"
         onRequestClose={closeProductFormModal}
         closeOnBackdropClick={!isSubmitting}
         footer={(
