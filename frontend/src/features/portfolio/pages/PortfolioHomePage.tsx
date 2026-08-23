@@ -232,8 +232,7 @@ export const PortfolioHomePage = () => {
       <header className="portfolio-document-heading">
         <div>
           <span className="portfolio-section-kicker">My portfolio · Custom blocks</span>
-          <h1>필요한 내용을 블록으로 쌓는 포트폴리오</h1>
-          <p>소개, 글, 이미지, 기술, 경력과 프로젝트를 원하는 순서로 추가해 하나의 페이지를 만듭니다.</p>
+          <h1>포트폴리오</h1>
         </div>
         {isEditMode ? (
           <div className="portfolio-owner-toolbar">
