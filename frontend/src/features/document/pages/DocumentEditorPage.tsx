@@ -30,7 +30,7 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { LearningGuideTitle } from "@/features/learning/components/LearningGuideTitle";
+import { LearningGuideTitle } from "@/features/curriculum/components/LearningGuideTitle";
 import { z } from "zod";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import type { JSONContent } from "@tiptap/core";

@@ -26,28 +26,28 @@ import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { ApplicationProviders } from "@/app/ApplicationProviders";
 import { ApplicationLayout } from "@/app/ApplicationLayout";
-import { AdminUserPracticePage } from "@/features/admin/pages/AdminUserPracticePage";
-import { GeneralBoardPracticePage } from "@/features/board/pages/GeneralBoardPracticePage";
-import { CategoryTreePracticePage } from "@/features/category/pages/CategoryTreePracticePage";
-import { CommentPracticePage } from "@/features/comment/pages/CommentPracticePage";
-import { ContactPracticePage } from "@/features/contact/pages/ContactPracticePage";
+import { AdminUserPracticePage } from "@/features/practice/14-admin-users/pages/AdminUserPracticePage";
+import { GeneralBoardPracticePage } from "@/features/practice/06-board/pages/GeneralBoardPracticePage";
+import { CategoryTreePracticePage } from "@/features/practice/12-category/pages/CategoryTreePracticePage";
+import { CommentPracticePage } from "@/features/practice/08-comment/pages/CommentPracticePage";
+import { ContactPracticePage } from "@/features/practice/03-contact/pages/ContactPracticePage";
 import { DevelopmentScenarioPage } from "@/features/development/pages/DevelopmentScenarioPage";
 import { DocumentDetailPage } from "@/features/document/pages/DocumentDetailPage";
 import { DocumentEditorPage } from "@/features/document/pages/DocumentEditorPage";
 import { DocumentListPage } from "@/features/document/pages/DocumentListPage";
-import { GalleryPracticePage } from "@/features/gallery/pages/GalleryPracticePage";
-import { InquiryPracticePage } from "@/features/inquiry/pages/InquiryPracticePage";
-import { LearningRoadmapPage } from "@/features/learning/pages/LearningRoadmapPage";
-import { ReactFundamentalsPage } from "@/features/learning/pages/ReactFundamentalsPage";
-import { ProductModalCrudPage } from "@/features/product/pages/ProductModalCrudPage";
-import { ReservationPracticePage } from "@/features/reservation/pages/ReservationPracticePage";
-import { SearchAutocompletePracticePage } from "@/features/search/pages/SearchAutocompletePracticePage";
-import { TaskManagementPage } from "@/features/task/pages/TaskManagementPage";
-import { TodoPracticePage } from "@/features/todo/pages/TodoPracticePage";
+import { GalleryPracticePage } from "@/features/practice/07-gallery/pages/GalleryPracticePage";
+import { InquiryPracticePage } from "@/features/practice/11-inquiry/pages/InquiryPracticePage";
+import { LearningRoadmapPage } from "@/features/practice/00-roadmap/pages/LearningRoadmapPage";
+import { ReactFundamentalsPage } from "@/features/practice/01-fundamentals/pages/ReactFundamentalsPage";
+import { ProductModalCrudPage } from "@/features/practice/04-product/pages/ProductModalCrudPage";
+import { ReservationPracticePage } from "@/features/practice/09-reservation/pages/ReservationPracticePage";
+import { SearchAutocompletePracticePage } from "@/features/practice/05-search/pages/SearchAutocompletePracticePage";
+import { TaskManagementPage } from "@/features/practice/10-task/pages/TaskManagementPage";
+import { TodoPracticePage } from "@/features/practice/02-todo/pages/TodoPracticePage";
 import { PortfolioHomePage } from "@/features/portfolio/pages/PortfolioHomePage";
 import { PortfolioLayout } from "@/features/portfolio/layouts/PortfolioLayout";
 import { VisitTracker } from "@/app/components/VisitTracker";
-import { LearningLevelPage } from "@/features/learning/pages/LearningLevelPage";
+import { LearningLevelPage } from "@/features/practice/00-roadmap/pages/LearningLevelPage";
 import { UtilityHomePage } from "@/features/utility/pages/UtilityHomePage";
 import { DeveloperToolsPage } from "@/features/utility/pages/DeveloperToolsPage";
 import { PollPage } from "@/features/utility/pages/PollPage";
@@ -109,8 +109,8 @@ const LogAnalyzerPage = lazy(async () => ({ default: (await import("@/features/u
 const CorsHeaderInspectorPage = lazy(async () => ({ default: (await import("@/features/utility/pages/CorsHeaderInspectorPage")).CorsHeaderInspectorPage }));
 // 다이어그램 화면은 React Flow를 포함해 무겁다.
 // lazy로 분리해 다이어그램을 쓰지 않는 사용자는 내려받지 않게 한다.
-const DiagramListPage = lazy(async () => ({ default: (await import("@/features/diagram/pages/DiagramListPage")).DiagramListPage }));
-const DiagramEditorPage = lazy(async () => ({ default: (await import("@/features/diagram/pages/DiagramEditorPage")).DiagramEditorPage }));
+const DiagramListPage = lazy(async () => ({ default: (await import("@/features/utility/diagrams/pages/DiagramListPage")).DiagramListPage }));
+const DiagramEditorPage = lazy(async () => ({ default: (await import("@/features/utility/diagrams/pages/DiagramEditorPage")).DiagramEditorPage }));
 const DependencyAnalyzerPage = lazy(async () => ({ default: (await import("@/features/utility/pages/DependencyAnalyzerPage")).DependencyAnalyzerPage }));
 
 // ----------------------------------------------------------------------------

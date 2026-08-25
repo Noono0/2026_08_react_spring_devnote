@@ -9,8 +9,8 @@ ERD·순서도·시스템 구성도를 브라우저에서 그리고, 저장하�
 
 | 라이브러리 | 버전 | 라이선스 | 사용 목적 | 프로젝트 내 위치 |
 |---|---|---|---|---|
-| [@xyflow/react](https://reactflow.dev) (React Flow) | 12.11.3 | MIT | 노드·엣지 캔버스, 드래그 편집, 미니맵·줌 컨트롤 | `features/diagram/components/DiagramCanvas.tsx`, `TableNode.tsx` |
-| [html-to-image](https://github.com/bubkoo/html-to-image) | 1.11.13 | MIT | 캔버스 DOM을 PNG·SVG로 변환해 내려받기 | `features/diagram/pages/DiagramEditorPage.tsx` |
+| [@xyflow/react](https://reactflow.dev) (React Flow) | 12.11.3 | MIT | 노드·엣지 캔버스, 드래그 편집, 미니맵·줌 컨트롤 | `features/utility/diagrams/components/DiagramCanvas.tsx`, `TableNode.tsx` |
+| [html-to-image](https://github.com/bubkoo/html-to-image) | 1.11.13 | MIT | 캔버스 DOM을 PNG·SVG로 변환해 내려받기 | `features/utility/diagrams/pages/DiagramEditorPage.tsx` |
 
 라이선스는 설치 전 npm 레지스트리 메타데이터로 직접 확인했습니다. 둘 다 MIT입니다.
 

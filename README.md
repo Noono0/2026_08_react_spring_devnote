@@ -92,8 +92,8 @@ Docker 실행 후 `/react`에서 아래 단계를 확인할 수 있습니다. �
 공통 구현 파일:
 
 ```text
-frontend/src/features/learning/components/LearningGuideButton.tsx
-frontend/src/features/learning/data/learningGuides.ts
+frontend/src/features/curriculum/components/LearningGuideButton.tsx
+frontend/src/features/curriculum/data/learningGuides.ts
 frontend/src/app/components/ApplicationTopBar.tsx
 ```
 

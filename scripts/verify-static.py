@@ -246,13 +246,13 @@ def check_feature_contracts() -> None:
             'selectedDataSource !== "mock"',
             "setupWorker",
         ],
-        "frontend/src/features/learning/components/LearningGuideButton.tsx": [
+        "frontend/src/features/curriculum/components/LearningGuideButton.tsx": [
             "사용 방법",
             "학습 내용",
             "소스 흐름",
             "실습 과제",
         ],
-        "frontend/src/features/learning/data/learningGuides.ts": [
+        "frontend/src/features/curriculum/data/learningGuides.ts": [
             'guideId: "gallery"',
             'guideId: "reservation"',
             'guideId: "category"',
