@@ -1,6 +1,6 @@
 import { DataSourceToggle } from "../components/DataSourceToggle";
 import { useDevelopmentSettingsStore } from "../state/developmentSettingsStore";
-import { LearningGuideTitle } from "@/features/learning/components/LearningGuideTitle";
+import { LearningGuideTitle } from "@/features/curriculum/components/LearningGuideTitle";
 
 const mockScenarios = [
   "success",

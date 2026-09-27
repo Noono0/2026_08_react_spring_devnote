@@ -23,7 +23,7 @@
  */
 
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
-import { LearningGuideTitle } from "@/features/learning/components/LearningGuideTitle";
+import { LearningGuideTitle } from "@/features/curriculum/components/LearningGuideTitle";
 import { useDeleteDocumentMutation, useDocumentDetailQuery } from "../hooks/useDocumentQueries";
 import { applicationNotification } from "@/shared/notification/applicationNotification";
 import { convertRequestErrorToProblemDetails } from "@/shared/api/error/apiErrorHelpers";

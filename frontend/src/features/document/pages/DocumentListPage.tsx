@@ -31,7 +31,7 @@
  */
 
 import { Link, useLocation, useSearchParams } from "react-router-dom";
-import { LearningGuideTitle } from "@/features/learning/components/LearningGuideTitle";
+import { LearningGuideTitle } from "@/features/curriculum/components/LearningGuideTitle";
 import { useDocumentListQuery } from "../hooks/useDocumentQueries";
 import type { DocumentSearchCondition } from "../types/documentTypes";
 import { DocumentSearchForm } from "../components/DocumentSearchForm";
