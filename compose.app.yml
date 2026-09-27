@@ -17,6 +17,8 @@ services:
     # IMAGE_OWNER 는 GitHub 사용자명(소문자), IMAGE_TAG 는 보통 main 또는 커밋 SHA.
     image: ghcr.io/${IMAGE_OWNER}/devnote-backend:${IMAGE_TAG:-main}
     container_name: devnote-backend
+    init: true
+    ipc: host
     environment:
       SPRING_PROFILES_ACTIVE: prod
 
@@ -45,6 +47,7 @@ services:
 
       # HTTPS(Cloudflare) 적용 후 true. HTTP 로만 테스트하는 동안에는 false 로 둔다.
       SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-true}
+
 
       # ★ JVM 힙 제한. 이게 없으면 JVM 이 컨테이너 메모리의 1/4 을 기본 힙으로 잡고
       #   메타스페이스·스레드 스택까지 더해져 1GB 를 넘긴다.

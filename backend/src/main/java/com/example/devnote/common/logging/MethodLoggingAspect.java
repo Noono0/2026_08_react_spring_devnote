@@ -75,6 +75,10 @@ public class MethodLoggingAspect {
                 + ", contentType=" + multipartFile.getContentType() + "}";
         }
         String rawValue = String.valueOf(argument);
+        // 브라우저 로그인 세션(Playwright storageState JSON)에는 로그인 쿠키가 들어 있으므로 로그에 남기지 않는다.
+        if (rawValue.startsWith("{\"cookies\"")) {
+            return "<browser-session omitted, length=" + rawValue.length() + ">";
+        }
         String maskedSensitiveValue = SENSITIVE_VALUE_PATTERN.matcher(rawValue)
             .replaceAll("$1=********");
         return LARGE_CONTENT_PATTERN.matcher(maskedSensitiveValue)

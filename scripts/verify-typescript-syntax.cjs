@@ -6,7 +6,6 @@ const frontendRoot = path.join(projectRoot, 'frontend');
 const candidates = [
   path.join(frontendRoot, 'node_modules', 'typescript'),
   process.env.TYPESCRIPT_MODULE_PATH,
-  '/opt/nvm/versions/node/v22.16.0/lib/node_modules/typescript',
 ].filter(Boolean);
 
 let typescript;

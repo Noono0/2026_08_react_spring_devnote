@@ -24,6 +24,11 @@ frontend/public/mockServiceWorker.js
 .env.app
 .env.*.local
 *.log
+.local/
+
+# Python verification tools
+__pycache__/
+.venv/
 
 # OS
 .DS_Store

@@ -42,6 +42,11 @@ export interface HttpRequestOptions {
   //   또 사용자가 페이지를 떠났는데 응답이 도착하면 없는 화면을 갱신하려다 경고가 뜬다.
   //   이럴 때 "이 요청 취소해!"라고 알려 주는 게 AbortSignal이다.
   abortSignal?: AbortSignal;
+
+  // 이 요청만 기본값보다 오래 기다려야 할 때 사용하는 제한 시간(ms).
+  // 브라우저 자동화처럼 서버에서 실제 작업이 진행되는 요청에 필요하다.
+  // 0이면 시간 제한 없이 기다리며 abortSignal을 통한 취소는 계속 지원한다.
+  timeoutMilliseconds?: number;
 }
 
 /** 파일 업로드 전용 옵션. 일반 요청과 달리 진행률 표시가 필요하다. */

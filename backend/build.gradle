@@ -24,6 +24,7 @@ ext {
     springdocOpenapiVersion = '2.8.17'
     p6spyVersion = '3.9.1'
     testcontainersVersion = '1.21.3'
+    playwrightVersion = '1.63.0'
 }
 
 dependencyManagement {
@@ -42,6 +43,7 @@ dependencies {
     implementation "org.mybatis.spring.boot:mybatis-spring-boot-starter:${mybatisSpringBootVersion}"
     implementation "p6spy:p6spy:${p6spyVersion}"
     implementation "org.springdoc:springdoc-openapi-starter-webmvc-ui:${springdocOpenapiVersion}"
+    implementation "com.microsoft.playwright:playwright:${playwrightVersion}"
 
     runtimeOnly 'com.mysql:mysql-connector-j'
 
@@ -63,4 +65,21 @@ tasks.withType(JavaCompile).configureEach {
 
 tasks.named('test') {
     useJUnitPlatform()
+}
+
+// 로컬 bootRun과 최초 로그인 도우미가 같은 세션 파일을 사용한다.
+tasks.named('bootRun') {
+    environment 'CRAWLER_SESSION_ROOT', System.getenv('CRAWLER_SESSION_ROOT') ?: '../.local'
+}
+
+tasks.register('crawlerSessionLogin', JavaExec) {
+    group = 'application'
+    description = '화면이 보이는 Playwright Chromium에서 네이버 최초 로그인을 완료하고 세션을 저장합니다.'
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.example.devnote.crawler.CrawlerSessionLoginApplication'
+    workingDir projectDir
+    javaLauncher = javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
 }

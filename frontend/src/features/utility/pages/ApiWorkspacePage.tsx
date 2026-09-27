@@ -1,3 +1,4 @@
+import { parseStoredCollections, parseStoredFolders, parseStoredSavedRequests, parseStoredEnvironments } from "@/features/utility/utils/apiWorkspaceStorage";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useAuthSessionQuery } from "@/features/auth/hooks/useAuthSession";
@@ -46,16 +47,6 @@ import { ModalDialog } from "@/shared/ui/ModalDialog";
 import { ApiToolGuide } from "@/features/utility/components/ApiToolGuide";
 
 const methods: ApiWorkspaceMethod[] = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"];
-
-const parseStoredArray = <Value,>(storedValue: string | null): Value[] => {
-  if (!storedValue) return [];
-  try {
-    const parsedValue = JSON.parse(storedValue) as Value[];
-    return Array.isArray(parsedValue) ? parsedValue : [];
-  } catch {
-    return [];
-  }
-};
 
 export const ApiWorkspacePage = () => {
   const sessionQuery = useAuthSessionQuery();
@@ -136,10 +127,10 @@ export const ApiWorkspacePage = () => {
     setActiveTabId(nextTabs[0]?.id ?? "");
     if (authenticatedMemberId) {
       setHistoryItems(parseStoredHistory(localStorage.getItem(`${storagePrefix}:history`)));
-      setCollections(parseStoredArray<ApiWorkspaceCollection>(localStorage.getItem(`${storagePrefix}:collections`)));
-      setFolders(parseStoredArray<ApiWorkspaceFolder>(localStorage.getItem(`${storagePrefix}:folders`)));
-      setSavedRequests(parseStoredArray<ApiWorkspaceSavedRequest>(localStorage.getItem(`${storagePrefix}:saved-requests`)));
-      const storedEnvironments = parseStoredArray<ApiWorkspaceEnvironment>(localStorage.getItem(`${storagePrefix}:environments`));
+      setCollections(parseStoredCollections(localStorage.getItem(`${storagePrefix}:collections`)));
+      setFolders(parseStoredFolders(localStorage.getItem(`${storagePrefix}:folders`)));
+      setSavedRequests(parseStoredSavedRequests(localStorage.getItem(`${storagePrefix}:saved-requests`)));
+      const storedEnvironments = parseStoredEnvironments(localStorage.getItem(`${storagePrefix}:environments`));
       const storedActiveEnvironmentId = localStorage.getItem(`${storagePrefix}:active-environment-id`) || undefined;
       setEnvironments(storedEnvironments);
       setActiveEnvironmentId(storedEnvironments.some((environment) => environment.id === storedActiveEnvironmentId) ? storedActiveEnvironmentId : undefined);

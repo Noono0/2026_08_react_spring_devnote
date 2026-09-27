@@ -26,37 +26,10 @@ import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { ApplicationProviders } from "@/app/ApplicationProviders";
 import { ApplicationLayout } from "@/app/ApplicationLayout";
-import { AdminUserPracticePage } from "@/features/admin/pages/AdminUserPracticePage";
-import { GeneralBoardPracticePage } from "@/features/board/pages/GeneralBoardPracticePage";
-import { CategoryTreePracticePage } from "@/features/category/pages/CategoryTreePracticePage";
-import { CommentPracticePage } from "@/features/comment/pages/CommentPracticePage";
-import { ContactPracticePage } from "@/features/contact/pages/ContactPracticePage";
-import { DevelopmentScenarioPage } from "@/features/development/pages/DevelopmentScenarioPage";
-import { DocumentDetailPage } from "@/features/document/pages/DocumentDetailPage";
-import { DocumentEditorPage } from "@/features/document/pages/DocumentEditorPage";
-import { DocumentListPage } from "@/features/document/pages/DocumentListPage";
-import { GalleryPracticePage } from "@/features/gallery/pages/GalleryPracticePage";
-import { InquiryPracticePage } from "@/features/inquiry/pages/InquiryPracticePage";
-import { LearningRoadmapPage } from "@/features/learning/pages/LearningRoadmapPage";
-import { ReactFundamentalsPage } from "@/features/learning/pages/ReactFundamentalsPage";
-import { ProductModalCrudPage } from "@/features/product/pages/ProductModalCrudPage";
-import { ReservationPracticePage } from "@/features/reservation/pages/ReservationPracticePage";
-import { SearchAutocompletePracticePage } from "@/features/search/pages/SearchAutocompletePracticePage";
-import { TaskManagementPage } from "@/features/task/pages/TaskManagementPage";
-import { TodoPracticePage } from "@/features/todo/pages/TodoPracticePage";
 import { PortfolioHomePage } from "@/features/portfolio/pages/PortfolioHomePage";
 import { PortfolioLayout } from "@/features/portfolio/layouts/PortfolioLayout";
 import { VisitTracker } from "@/app/components/VisitTracker";
-import { LearningLevelPage } from "@/features/learning/pages/LearningLevelPage";
-import { UtilityHomePage } from "@/features/utility/pages/UtilityHomePage";
-import { DeveloperToolsPage } from "@/features/utility/pages/DeveloperToolsPage";
-import { PollPage } from "@/features/utility/pages/PollPage";
 import { UtilityLayout } from "@/features/utility/layouts/UtilityLayout";
-import { AdminHomePage } from "@/features/admin/pages/AdminHomePage";
-import { MemberManagementPage } from "@/features/admin/pages/MemberManagementPage";
-import { GradeManagementPage } from "@/features/admin/pages/GradeManagementPage";
-import { PermissionManagementPage } from "@/features/admin/pages/PermissionManagementPage";
-import { VisitAnalyticsPage } from "@/features/admin/pages/VisitAnalyticsPage";
 import { RoleProtectedRoute } from "@/features/auth/components/RoleProtectedRoute";
 
 // ----------------------------------------------------------------------------
@@ -70,17 +43,45 @@ const developmentScenarioEnabled = import.meta.env.VITE_ENABLE_DEVELOPMENT_MENU 
 // ----------------------------------------------------------------------------
 // 2. 코드 스플리팅(Code Splitting) — 무거운 페이지는 "필요할 때" 내려받기
 // ----------------------------------------------------------------------------
-// 위쪽 import들은 앱이 켜질 때 전부 한꺼번에 다운로드된다.
-// 반면 `lazy(...)`로 감싼 페이지는 사용자가 그 주소로 실제 들어갔을 때 비로소 다운로드된다.
+// 홈과 공통 레이아웃만 처음에 불러온다. 나머지 페이지는 해당 주소로 이동할 때 받는다.
+// 각 레이아웃의 PageOutlet이 공통 로딩 상태를 표시하므로 메뉴는 그대로 유지된다.
 //
 // 왜 이렇게 하나?
 //   아래 유틸리티 페이지들(JWT 디코더, SQL ERD 등)은 무거운 라이브러리를 쓴다.
 //   이걸 전부 처음부터 받으면 첫 화면이 뜨는 데 한참 걸린다.
-//   그래서 "잘 안 들어가는 무거운 페이지"만 따로 떼어 두는 것이다.
+//   그래서 편집기·연습·관리자 화면을 첫 방문 다운로드에서 분리한다.
 //
 // 규칙: lazy는 반드시 `default` 키를 가진 객체를 돌려줘야 한다.
 //       이 프로젝트는 `export const XxxPage` (named export) 방식이라
 //       아래처럼 직접 `{ default: ... }` 모양으로 바꿔서 넘겨 준다.
+const AdminUserPracticePage = lazy(async () => ({ default: (await import("@/features/admin/pages/AdminUserPracticePage")).AdminUserPracticePage }));
+const GeneralBoardPracticePage = lazy(async () => ({ default: (await import("@/features/board/pages/GeneralBoardPracticePage")).GeneralBoardPracticePage }));
+const CategoryTreePracticePage = lazy(async () => ({ default: (await import("@/features/category/pages/CategoryTreePracticePage")).CategoryTreePracticePage }));
+const CommentPracticePage = lazy(async () => ({ default: (await import("@/features/comment/pages/CommentPracticePage")).CommentPracticePage }));
+const ContactPracticePage = lazy(async () => ({ default: (await import("@/features/contact/pages/ContactPracticePage")).ContactPracticePage }));
+const DevelopmentScenarioPage = lazy(async () => ({ default: (await import("@/features/development/pages/DevelopmentScenarioPage")).DevelopmentScenarioPage }));
+const DocumentDetailPage = lazy(async () => ({ default: (await import("@/features/document/pages/DocumentDetailPage")).DocumentDetailPage }));
+const DocumentEditorPage = lazy(async () => ({ default: (await import("@/features/document/pages/DocumentEditorPage")).DocumentEditorPage }));
+const DocumentListPage = lazy(async () => ({ default: (await import("@/features/document/pages/DocumentListPage")).DocumentListPage }));
+const GalleryPracticePage = lazy(async () => ({ default: (await import("@/features/gallery/pages/GalleryPracticePage")).GalleryPracticePage }));
+const InquiryPracticePage = lazy(async () => ({ default: (await import("@/features/inquiry/pages/InquiryPracticePage")).InquiryPracticePage }));
+const LearningRoadmapPage = lazy(async () => ({ default: (await import("@/features/learning/pages/LearningRoadmapPage")).LearningRoadmapPage }));
+const ReactFundamentalsPage = lazy(async () => ({ default: (await import("@/features/learning/pages/ReactFundamentalsPage")).ReactFundamentalsPage }));
+const ProductModalCrudPage = lazy(async () => ({ default: (await import("@/features/product/pages/ProductModalCrudPage")).ProductModalCrudPage }));
+const ReservationPracticePage = lazy(async () => ({ default: (await import("@/features/reservation/pages/ReservationPracticePage")).ReservationPracticePage }));
+const SearchAutocompletePracticePage = lazy(async () => ({ default: (await import("@/features/search/pages/SearchAutocompletePracticePage")).SearchAutocompletePracticePage }));
+const TaskManagementPage = lazy(async () => ({ default: (await import("@/features/task/pages/TaskManagementPage")).TaskManagementPage }));
+const TodoPracticePage = lazy(async () => ({ default: (await import("@/features/todo/pages/TodoPracticePage")).TodoPracticePage }));
+const LearningLevelPage = lazy(async () => ({ default: (await import("@/features/learning/pages/LearningLevelPage")).LearningLevelPage }));
+const UtilityHomePage = lazy(async () => ({ default: (await import("@/features/utility/pages/UtilityHomePage")).UtilityHomePage }));
+const DeveloperToolsPage = lazy(async () => ({ default: (await import("@/features/utility/pages/DeveloperToolsPage")).DeveloperToolsPage }));
+const PollPage = lazy(async () => ({ default: (await import("@/features/utility/pages/PollPage")).PollPage }));
+const AdminHomePage = lazy(async () => ({ default: (await import("@/features/admin/pages/AdminHomePage")).AdminHomePage }));
+const MemberManagementPage = lazy(async () => ({ default: (await import("@/features/admin/pages/MemberManagementPage")).MemberManagementPage }));
+const GradeManagementPage = lazy(async () => ({ default: (await import("@/features/admin/pages/GradeManagementPage")).GradeManagementPage }));
+const PermissionManagementPage = lazy(async () => ({ default: (await import("@/features/admin/pages/PermissionManagementPage")).PermissionManagementPage }));
+const VisitAnalyticsPage = lazy(async () => ({ default: (await import("@/features/admin/pages/VisitAnalyticsPage")).VisitAnalyticsPage }));
+
 const ApiWorkspacePage = lazy(async () => {
   const pageModule = await import("@/features/utility/pages/ApiWorkspacePage");
   return { default: pageModule.ApiWorkspacePage };
@@ -112,6 +113,7 @@ const CorsHeaderInspectorPage = lazy(async () => ({ default: (await import("@/fe
 const DiagramListPage = lazy(async () => ({ default: (await import("@/features/diagram/pages/DiagramListPage")).DiagramListPage }));
 const DiagramEditorPage = lazy(async () => ({ default: (await import("@/features/diagram/pages/DiagramEditorPage")).DiagramEditorPage }));
 const DependencyAnalyzerPage = lazy(async () => ({ default: (await import("@/features/utility/pages/DependencyAnalyzerPage")).DependencyAnalyzerPage }));
+const WebCrawlerPage = lazy(async () => ({ default: (await import("@/features/crawler/pages/WebCrawlerPage")).WebCrawlerPage }));
 
 // ----------------------------------------------------------------------------
 // 3. lazy 페이지를 기다리는 동안 보여줄 임시 화면
@@ -205,6 +207,7 @@ export const App = () => (
             <Route path="diagrams" element={<Suspense fallback={<UtilityLazyFallback name="Diagram Designer" />}><DiagramListPage /></Suspense>} />
             <Route path="diagrams/:diagramId" element={<Suspense fallback={<UtilityLazyFallback name="Diagram Designer" />}><DiagramEditorPage /></Suspense>} />
             <Route path="dependencies" element={<Suspense fallback={<UtilityLazyFallback name="Dependency Analyzer" />}><DependencyAnalyzerPage /></Suspense>} />
+            <Route path="crawler" element={<Suspense fallback={<UtilityLazyFallback name="웹 크롤링 도구" />}><WebCrawlerPage /></Suspense>} />
           </Route>
           {/* 관리자 화면 묶음. 전부 RoleProtectedRoute로 감싸서 비관리자는 못 들어간다. */}
           <Route path="admin" element={<RoleProtectedRoute><AdminHomePage /></RoleProtectedRoute>} />

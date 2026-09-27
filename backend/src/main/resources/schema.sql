@@ -306,3 +306,34 @@ CREATE TABLE IF NOT EXISTS diagram_versions (
     CONSTRAINT fk_diagram_versions_diagram FOREIGN KEY (diagram_id) REFERENCES diagrams(diagram_id),
     CONSTRAINT fk_diagram_versions_member FOREIGN KEY (changed_by) REFERENCES members(member_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='다이어그램 변경 이력';
+
+-- 재사용 가능한 크롤링 설정 게시글. 로그인 아이디와 비밀번호는 request_json에 저장하지 않는다.
+CREATE TABLE IF NOT EXISTS crawler_configurations (
+    crawler_configuration_id BIGINT NOT NULL AUTO_INCREMENT COMMENT '크롤링 설정 식별자',
+    configuration_title VARCHAR(120) NOT NULL COMMENT '설정 제목',
+    configuration_description VARCHAR(1000) NOT NULL DEFAULT '' COMMENT '설정 설명',
+    site_preset VARCHAR(30) NOT NULL DEFAULT 'GENERIC' COMMENT 'GENERIC 또는 NAVER_CAFE',
+    request_json JSON NOT NULL COMMENT '계정정보를 제거한 크롤링 요청 JSON',
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '생성 일시',
+    updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '수정 일시',
+    PRIMARY KEY (crawler_configuration_id),
+    KEY idx_crawler_configurations_updated (updated_at, crawler_configuration_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='재사용 가능한 크롤링 설정';
+
+CREATE TABLE IF NOT EXISTS crawler_run_histories (
+    crawler_run_history_id BIGINT NOT NULL AUTO_INCREMENT COMMENT '크롤링 실행 이력 식별자',
+    crawler_configuration_id BIGINT NOT NULL COMMENT '크롤링 설정 식별자',
+    run_status VARCHAR(20) NOT NULL COMMENT 'RUNNING, SUCCESS, FAILURE',
+    request_json JSON NOT NULL COMMENT '계정정보를 제거한 실행 요청 JSON',
+    result_json JSON NULL COMMENT '성공한 실행 결과 JSON',
+    failure_stage VARCHAR(200) NULL COMMENT '실패 단계',
+    failure_message VARCHAR(2000) NULL COMMENT '실패 원인',
+    duration_millis BIGINT NOT NULL DEFAULT 0 COMMENT '실행 시간(ms)',
+    item_count INT NOT NULL DEFAULT 0 COMMENT '수집 결과 수',
+    started_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '실행 시작 일시',
+    completed_at DATETIME(6) NULL COMMENT '실행 종료 일시',
+    PRIMARY KEY (crawler_run_history_id),
+    KEY idx_crawler_run_histories_configuration (crawler_configuration_id, started_at, crawler_run_history_id),
+    CONSTRAINT fk_crawler_run_histories_configuration FOREIGN KEY (crawler_configuration_id)
+        REFERENCES crawler_configurations(crawler_configuration_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='크롤링 실행 성공·실패 이력';

@@ -21,6 +21,7 @@ import type { FileUploadOptions, HttpClient, HttpRequestOptions } from "./HttpCl
 import { createCommonRequestHeaders } from "./requestHelpers";
 import { applicationEnvironment } from "@/shared/config/applicationEnvironment";
 import { applicationLogger } from "@/shared/logging/applicationLogger";
+import { convertRequestErrorToProblemDetails } from "@/shared/api/error/apiErrorHelpers";
 
 // 10초 안에 응답이 안 오면 포기하고 에러 처리한다.
 //
@@ -77,7 +78,8 @@ export class AxiosHttpClient implements HttpClient {
       // 공통 헤더(요청 ID, 회원 ID)를 만들어서 하나씩 붙인다.
       const commonRequestHeaders = createCommonRequestHeaders();
       Object.entries(commonRequestHeaders).forEach(([headerName, headerValue]) => {
-        requestConfiguration.headers.set(headerName, headerValue);
+        // 호출자가 지정한 추적 ID나 학습용 회원 헤더는 덮어쓰지 않는다.
+        requestConfiguration.headers.set(headerName, headerValue, false);
       });
 
       // 개발자도구 콘솔에 "어떤 요청이 나갔는지" 남긴다.
@@ -114,7 +116,10 @@ export class AxiosHttpClient implements HttpClient {
       //   그래서 "무엇인지 모른다(unknown)"고 두고, 쓰기 전에 확인하도록 강제한다.
       //   any로 두면 편하지만 타입 검사가 통째로 꺼져서 위험하다.
       (requestError: unknown) => {
-        applicationLogger.error("[AxiosHttpClient] 응답 실패", requestError);
+        const problem = convertRequestErrorToProblemDetails(requestError);
+        applicationLogger.error("[AxiosHttpClient] 응답 실패", {
+          status: problem.status, errorCode: problem.errorCode, traceId: problem.traceId,
+        });
 
         // ★ Promise.reject(...)로 에러를 "다시 던지는" 것이 핵심이다.
         //   여기서 그냥 return 해 버리면 호출한 쪽은 성공한 줄 알게 된다.
@@ -147,6 +152,7 @@ export class AxiosHttpClient implements HttpClient {
       headers: requestOptions?.requestHeaders,
       // signal: 요청 취소 신호. axios는 `signal`이라는 이름으로 받는다.
       signal: requestOptions?.abortSignal,
+      timeout: requestOptions?.timeoutMilliseconds ?? REQUEST_TIMEOUT_MILLISECONDS,
     });
 
     // ★ `response.data`를 반환하는 것에 주목.
@@ -171,8 +177,10 @@ export class AxiosHttpClient implements HttpClient {
     // axios가 객체를 자동으로 JSON 문자열로 바꾸고
     // Content-Type: application/json 헤더까지 붙여 준다. (fetch는 이걸 직접 해야 한다)
     const response = await this.axiosInstance.post<ResponseData>(requestUrl, requestData, {
+      params: requestOptions?.queryParameters,
       headers: requestOptions?.requestHeaders,
       signal: requestOptions?.abortSignal,
+      timeout: requestOptions?.timeoutMilliseconds ?? REQUEST_TIMEOUT_MILLISECONDS,
     });
     return response.data;
   }
@@ -183,8 +191,10 @@ export class AxiosHttpClient implements HttpClient {
     requestOptions?: HttpRequestOptions,
   ): Promise<ResponseData> {
     const response = await this.axiosInstance.put<ResponseData>(requestUrl, requestData, {
+      params: requestOptions?.queryParameters,
       headers: requestOptions?.requestHeaders,
       signal: requestOptions?.abortSignal,
+      timeout: requestOptions?.timeoutMilliseconds ?? REQUEST_TIMEOUT_MILLISECONDS,
     });
     return response.data;
   }
@@ -197,6 +207,7 @@ export class AxiosHttpClient implements HttpClient {
       params: requestOptions?.queryParameters,
       headers: requestOptions?.requestHeaders,
       signal: requestOptions?.abortSignal,
+      timeout: requestOptions?.timeoutMilliseconds ?? REQUEST_TIMEOUT_MILLISECONDS,
     });
     return response.data;
   }

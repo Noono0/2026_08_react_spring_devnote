@@ -64,11 +64,14 @@ export const convertRequestErrorToProblemDetails = (requestError: unknown): ApiP
   // isAxiosError<T>(...)는 "타입 가드"다.
   // 이 if 블록 안에서는 TypeScript가 requestError를 axios 에러로 확정해 주므로
   // requestError.response 같은 속성에 안전하게 접근할 수 있다.
-  if (axios.isAxiosError<ApiProblemDetails>(requestError)) {
+  if (axios.isAxiosError<unknown>(requestError)) {
     // 2-1) 서버가 응답을 보냈다 = 서버까지 잘 도착했고, 서버가 오류라고 답한 것.
     //      우리 백엔드는 오류도 ApiProblemDetails 모양으로 보내므로 그대로 쓰면 된다.
-    if (requestError.response?.data) {
-      return requestError.response.data;
+    if (requestError.response) {
+      return normalizeHttpProblem(requestError.response.status, requestError.response.data);
+    }
+    if (requestError.code === "ECONNABORTED" || requestError.code === "ETIMEDOUT") {
+      return { status: 0, errorCode: "REQUEST_TIMEOUT", detail: "응답 대기 시간을 초과했습니다. 서버에서 작업이 계속 진행 중일 수 있습니다.", fieldErrors: [] };
     }
 
     // 2-2) axios 에러인데 응답이 없다 = 서버에 닿지 못했다.
@@ -87,7 +90,13 @@ export const convertRequestErrorToProblemDetails = (requestError: unknown): ApiP
   // 이 프로젝트는 axios/fetch 두 구현을 모두 지원하므로 양쪽 다 처리해야 한다.
   //
   // `instanceof`: "이 값이 저 클래스로 만들어진 것인가?"를 확인하는 연산자.
-  if (requestError instanceof DOMException && requestError.name === "AbortError") {
+  // 다른 창이나 fetch 런타임에서 온 DOMException은 instanceof가 다를 수 있다.
+  const errorName = typeof requestError === "object" && requestError !== null && "name" in requestError
+    ? requestError.name : undefined;
+  if (errorName === "TimeoutError") {
+    return { status: 0, errorCode: "REQUEST_TIMEOUT", detail: "응답 대기 시간을 초과했습니다. 서버에서 작업이 계속 진행 중일 수 있습니다.", fieldErrors: [] };
+  }
+  if (errorName === "AbortError") {
     return {
       status: 0,
       errorCode: "REQUEST_CANCELLED",
@@ -127,6 +136,26 @@ export const convertRequestErrorToProblemDetails = (requestError: unknown): ApiP
   return defaultProblemDetails;
 };
 
+/** 프록시·보안 필터의 텍스트/HTML 오류도 상태 코드를 보존합니다. */
+export const normalizeHttpProblem = (status: number, body: unknown): ApiProblemDetails => {
+  if (isApiProblemDetails(body)) return body;
+  if (typeof body === "string" && body.trim() === "Invalid CORS request") {
+    return {
+      status, errorCode: "CORS_ORIGIN_REJECTED", fieldErrors: [],
+      detail: "서버가 현재 접속 주소의 요청을 CORS 설정으로 거부했습니다. 크롤링은 시작되지 않았습니다.",
+      suggestedAction: "백엔드의 허용 주소에 현재 화면의 주소(호스트와 포트)가 포함되어 있는지 확인해 주세요.",
+    };
+  }
+  const details: Record<number, string> = {
+    401: "앱 서버에서 인증을 요구했습니다. 앱 로그인 상태를 확인해 주세요.",
+    403: "앱 서버가 요청을 거부했습니다. 요청 권한과 서버 접근 설정을 확인해 주세요.",
+    502: "프록시가 백엔드에서 정상 응답을 받지 못했습니다. 백엔드 실행 상태를 확인해 주세요.",
+    503: "서버가 현재 요청을 처리할 수 없습니다. 실행 상태를 확인하고 잠시 후 다시 시도해 주세요.",
+    504: "프록시의 응답 대기 시간을 초과했습니다. 서버에서 작업이 계속 진행 중일 수 있습니다.",
+  };
+  return { status, errorCode: `HTTP_${status}`, detail: details[status] ?? `서버가 HTTP ${status} 오류를 반환했으며 상세 오류 설명은 제공하지 않았습니다.`, fieldErrors: [] };
+};
+
 /**
  * "이 오류는 다시 시도해 볼 가치가 있는가?"를 판단한다.
  * ApplicationProviders.tsx의 TanStack Query 재시도 설정이 이 함수를 쓴다.
@@ -142,7 +171,7 @@ export const isApiErrorRetryable = (requestError: unknown): boolean => {
   }
 
   // 재시도할 가치가 있는 경우는 두 가지다.
-  //   status === 0        → 네트워크 문제. 잠깐 뒤에 되살아날 수 있다.
+  //   연결 실패·시간 초과 → 네트워크 문제. 잠깐 뒤에 되살아날 수 있다.
   //   502, 503, 504       → 서버가 일시적으로 힘들어하는 상태.
   //                         (Bad Gateway / Service Unavailable / Gateway Timeout)
   //
@@ -152,7 +181,8 @@ export const isApiErrorRetryable = (requestError: unknown): boolean => {
   //   403 권한이 없다      → 백 번 보내도 권한은 안 생긴다
   //   404 없는 자원이다     → 갑자기 생겨나지 않는다
   //   500 서버 코드 버그    → 고치기 전엔 계속 실패한다
-  return problemDetails.status === 0 || [502, 503, 504].includes(problemDetails.status);
+  return ["NETWORK_CONNECTION_FAILED", "REQUEST_TIMEOUT"].includes(problemDetails.errorCode)
+    || [502, 503, 504].includes(problemDetails.status);
 };
 
 /**

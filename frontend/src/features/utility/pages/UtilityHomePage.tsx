@@ -35,6 +35,19 @@ interface UtilityGroup {
 
 const utilityGroups: UtilityGroup[] = [
   {
+    groupTitle: "데이터 수집과 비교",
+    groupDescription: "허용된 웹페이지에서 정보를 읽고 원하는 조건으로 분류합니다.",
+    cards: [
+      {
+        to: "/utilities/crawler",
+        symbol: "CR",
+        title: "웹 크롤링 도구",
+        description: "Playwright 로그인과 CSS 선택자로 데이터를 읽고 AND/OR 키워드 조건을 적용합니다.",
+        useCase: "API가 없는 허용된 사이트에서 원하는 글이나 상품만 모아 비교하고 싶을 때",
+      },
+    ],
+  },
+  {
     groupTitle: "API 개발과 테스트",
     groupDescription: "요청을 만들고 응답을 확인하며, 서버가 아직 없을 때도 흐름을 검증합니다.",
     cards: [
@@ -238,7 +251,7 @@ export const UtilityHomePage = () => (
     <div className="utility-home-notice">
       <strong>입력한 데이터는 어디로 가나요?</strong>
       <p>
-        대부분의 도구는 브라우저 안에서만 계산하며 서버로 보내지 않습니다.
+        대부분의 도구는 브라우저 안에서만 계산합니다. 웹 크롤링 도구는 URL·선택자·로그인 정보를 백엔드의 격리된 Chromium에 보내지만 DB에는 저장하지 않습니다. 다만 계정정보 저장을 직접 선택하면 현재 브라우저의 localStorage에 평문으로 보관합니다.
         로그인이 필요한 Developer Snippet·투표·Diagram Designer만 내 계정에 저장됩니다.
       </p>
     </div>

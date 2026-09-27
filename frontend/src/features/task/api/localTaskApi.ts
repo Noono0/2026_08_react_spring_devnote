@@ -22,6 +22,15 @@
  */
 
 import type { TaskItem, TaskSaveRequest, TaskStatus } from "../types/taskTypes";
+import { z } from "zod";
+import { parseStoredArray } from "@/shared/lib/parseStoredArray";
+import { applicationLogger } from "@/shared/logging/applicationLogger";
+
+const taskItemSchema: z.ZodType<TaskItem> = z.object({
+  taskId: z.number().int().positive(), taskTitle: z.string(), taskDescription: z.string(),
+  taskStatus: z.enum(["TODO", "IN_PROGRESS", "DONE"]), taskPriority: z.enum(["LOW", "MEDIUM", "HIGH"]),
+  assigneeName: z.string(), dueDate: z.string(),
+});
 
 const TASK_STORAGE_KEY = "practiceTasks";
 
@@ -85,7 +94,7 @@ const loadTaskItems = (): TaskItem[] => {
     localStorage.setItem(TASK_STORAGE_KEY, JSON.stringify(initialTaskItems));
     return initialTaskItems;
   }
-  return JSON.parse(storedTaskItems) as TaskItem[];
+  return parseStoredArray(storedTaskItems, taskItemSchema);
 };
 
 /** 업무 목록을 localStorage에 통째로 덮어쓴다. */
@@ -122,13 +131,13 @@ const throwWhenFailureRequested = (taskTitle: string): void => {
  */
 export const localTaskApi = {
   async getTaskList(): Promise<TaskItem[]> {
-    console.log("[localTaskApi] 업무 목록 조회 요청");
+    applicationLogger.info("[localTaskApi] 업무 목록 조회 요청");
     await waitForSimulatedNetwork();
     return loadTaskItems();
   },
 
   async createTask(taskSaveRequest: TaskSaveRequest): Promise<TaskItem> {
-    console.log("[localTaskApi] 업무 생성 요청", { taskSaveRequest });
+    applicationLogger.info("[localTaskApi] 업무 생성 요청");
     await waitForSimulatedNetwork();
     // ★ 지연 "후에" 검사하는 순서가 중요하다.
     //   진짜 서버라면 요청이 도착해서 처리되는 도중에 오류가 난다.
@@ -139,7 +148,7 @@ export const localTaskApi = {
     // 요청 데이터에 서버가 만드는 값 두 개를 붙여 완성한다.
     const createdTaskItem: TaskItem = {
       ...taskSaveRequest,
-      taskId: Date.now(),
+      taskId: taskItems.reduce((largestId, task) => Math.max(largestId, task.taskId), Date.now()) + 1,
       taskStatus: "TODO", // 새 업무는 항상 "할 일"부터 시작
     };
     saveTaskItems([...taskItems, createdTaskItem]);
@@ -149,7 +158,7 @@ export const localTaskApi = {
   },
 
   async updateTaskStatus(taskId: number, taskStatus: TaskStatus): Promise<TaskItem> {
-    console.log("[localTaskApi] 업무 상태 PATCH 요청", { taskId, taskStatus });
+    applicationLogger.info("[localTaskApi] 업무 상태 PATCH 요청", { taskId, taskStatus });
     await waitForSimulatedNetwork();
     const taskItems = loadTaskItems();
     const targetTaskItem = taskItems.find((taskItem) => taskItem.taskId === taskId);
@@ -160,7 +169,7 @@ export const localTaskApi = {
   },
 
   async deleteTask(taskId: number): Promise<void> {
-    console.log("[localTaskApi] 업무 삭제 요청", { taskId });
+    applicationLogger.info("[localTaskApi] 업무 삭제 요청", { taskId });
     await waitForSimulatedNetwork();
     saveTaskItems(loadTaskItems().filter((taskItem) => taskItem.taskId !== taskId));
   },

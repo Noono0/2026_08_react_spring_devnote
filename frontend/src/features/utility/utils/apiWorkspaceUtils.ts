@@ -3,7 +3,6 @@ import type {
   ApiWorkspaceActualRequest,
   ApiWorkspaceCollection,
   ApiWorkspaceFormDataEntry,
-  ApiWorkspaceHistoryItem,
   ApiWorkspaceEnvironmentVariable,
   ApiWorkspaceFolder,
   ApiWorkspaceKeyValue,
@@ -15,7 +14,7 @@ import type {
 import { createUuid } from "@/shared/lib/createUuid";
 
 export const API_WORKSPACE_MAX_RESPONSE_BYTES = 1024 * 1024;
-export const API_WORKSPACE_MAX_HISTORY_ITEMS = 100;
+export { API_WORKSPACE_MAX_HISTORY_ITEMS, parseStoredTabs, parseStoredHistory } from "./apiWorkspaceStorage";
 
 const sensitiveKeyPattern = /(authorization|cookie|set-cookie|api[-_]?key|password|passwd|access[-_]?token|refresh[-_]?token|client[-_]?secret|secret)/i;
 
@@ -262,26 +261,6 @@ export const serializeTabsForStorage = (tabs: ApiWorkspaceTab[]): string =>
       request: sanitizeRequestForStorage(tab.request),
     })),
   );
-
-export const parseStoredTabs = (storedValue: string | null): ApiWorkspaceTab[] => {
-  if (!storedValue) return [];
-  try {
-    const tabs = JSON.parse(storedValue) as ApiWorkspaceTab[];
-    return Array.isArray(tabs) && tabs.length > 0 ? tabs : [];
-  } catch {
-    return [];
-  }
-};
-
-export const parseStoredHistory = (storedValue: string | null): ApiWorkspaceHistoryItem[] => {
-  if (!storedValue) return [];
-  try {
-    const historyItems = JSON.parse(storedValue) as ApiWorkspaceHistoryItem[];
-    return Array.isArray(historyItems) ? historyItems : [];
-  } catch {
-    return [];
-  }
-};
 
 export const formatByteSize = (sizeBytes: number): string => {
   if (sizeBytes < 1024) return `${sizeBytes} B`;

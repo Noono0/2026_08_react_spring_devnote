@@ -62,7 +62,7 @@ const queryClient = new QueryClient({
       // 왜 무조건 재시도하면 안 되나?
       //   404(없는 문서)나 403(권한 없음)은 백 번을 다시 보내도 똑같이 실패한다.
       //   서버만 괴롭히고 사용자는 오래 기다리게 된다.
-      //   반대로 500(서버 일시 오류)이나 네트워크 끊김은 재시도하면 성공할 수 있다.
+      //   반대로 502·503·504나 네트워크 끊김은 재시도하면 성공할 수 있다.
       //   그 구분을 isApiErrorRetryable 함수가 담당한다.
       retry: (failureCount, requestError) =>
         failureCount < 2 && isApiErrorRetryable(requestError),

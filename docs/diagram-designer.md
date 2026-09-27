@@ -1,5 +1,7 @@
 # Diagram Designer
 
+[문서 목록으로](../README.md)
+
 ERD·순서도·시스템 구성도를 브라우저에서 그리고, 저장하고, 버전으로 되돌리는 기능입니다.
 `/utilities/diagrams` 에서 사용할 수 있습니다.
 
@@ -36,7 +38,7 @@ Mermaid는 텍스트 → 그림 방향만 지원해 "드래그 편집"이 불가
 Browser
  ├ React Flow 캔버스        노드 드래그·관계 연결·미니맵
  ├ sqlSchemaAnalyzer        CREATE TABLE DDL 파싱          (기존 자산 재사용)
- ├ diagramModel             SQL ↔ ERD 양방향 변환          (순수 함수, 12개 테스트)
+ ├ diagramModel             SQL ↔ ERD 양방향 변환          (순수 함수, 단위 테스트 포함)
  └ html-to-image            PNG·SVG 내보내기
 
         ↓ REST API (JSON)

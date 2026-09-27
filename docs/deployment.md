@@ -1,5 +1,7 @@
 # 배포 가이드 — Oracle Cloud Always Free
 
+[문서 목록으로](../README.md)
+
 무료로 계속 운영하는 것을 목표로 한 구성입니다.
 
 ```

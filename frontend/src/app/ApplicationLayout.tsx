@@ -17,7 +17,7 @@
  *   └──────────────────────────────────────┘
  */
 
-import { Outlet } from "react-router-dom";
+import { PageOutlet } from "@/app/components/PageOutlet";
 import { ApplicationSidebar } from "@/app/components/ApplicationSidebar";
 import { ApplicationTopBar } from "@/app/components/ApplicationTopBar";
 import { DevelopmentDebugPanel } from "@/features/development/components/DevelopmentDebugPanel";
@@ -51,7 +51,7 @@ export const ApplicationLayout = () => {
 
               <main> 태그를 쓴 이유: 화면 낭독기(스크린 리더)에게
               "여기가 이 페이지의 본문이다"라고 알려주는 시맨틱 HTML이다. */}
-          <main className="application-main"><Outlet /></main>
+          <main className="application-main"><PageOutlet /></main>
         </div>
         {developmentMenuEnabled ? <DevelopmentDebugPanel /> : null}
       </div>

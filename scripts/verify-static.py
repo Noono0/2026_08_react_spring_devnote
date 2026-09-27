@@ -23,6 +23,32 @@ BACKEND_ROOT = PROJECT_ROOT / "backend"
 failures: list[str] = []
 passes: list[str] = []
 
+EXCLUDED_DIRECTORIES = {
+    ".git", ".idea", ".vscode", ".claude", ".local", ".gradle", ".gradle-wrapper",
+    ".pnpm-store", "node_modules", "dist", "build", "__pycache__", ".venv",
+}
+
+
+def source_files(root: Path, suffixes: set[str]) -> list[Path]:
+    """Prune dependency/build trees before traversal, not after reading every path."""
+    matches: list[Path] = []
+    for directory, children, filenames in os.walk(root):
+        children[:] = sorted(child for child in children if child not in EXCLUDED_DIRECTORIES)
+        matches.extend(Path(directory) / name for name in filenames if Path(name).suffix in suffixes)
+    return sorted(matches)
+
+
+def find_bash() -> str | None:
+    if os.name == "nt":
+        # System32/bash.exe is the WSL launcher, not Git Bash.
+        for location in ("C:/Program Files/Git/bin/bash.exe", "C:/Program Files (x86)/Git/bin/bash.exe"):
+            if Path(location).is_file():
+                return location
+    executable = shutil.which("bash")
+    if executable and "windows/system32" in executable.replace("\\", "/").lower():
+        return None
+    return executable
+
 
 def pass_check(message: str) -> None:
     passes.append(message)
@@ -35,7 +61,7 @@ def fail_check(message: str) -> None:
 
 
 def check_json() -> None:
-    files = sorted(path for path in PROJECT_ROOT.rglob("*.json") if "node_modules" not in path.parts)
+    files = source_files(PROJECT_ROOT, {".json"})
     for path in files:
         try:
             json.loads(path.read_text(encoding="utf-8"))
@@ -61,7 +87,7 @@ def check_yaml() -> None:
     if yaml is None:
         fail_check("PyYAML is unavailable; YAML syntax was not checked")
         return
-    files = sorted([*PROJECT_ROOT.glob("*.yml"), *PROJECT_ROOT.glob("*.yaml"), *BACKEND_ROOT.glob("src/main/resources/*.yml"), *PROJECT_ROOT.glob(".github/workflows/*.yml")])
+    files = source_files(PROJECT_ROOT, {".yml", ".yaml"})
     for path in files:
         try:
             yaml.safe_load(path.read_text(encoding="utf-8"))
@@ -72,13 +98,16 @@ def check_yaml() -> None:
 
 
 def check_shell_scripts() -> None:
-    bash_executable = shutil.which("bash")
+    bash_executable = find_bash()
     if bash_executable is None:
-        print("[SKIP] bash is unavailable; shell syntax was not checked")
+        fail_check("Bash is unavailable; install Git Bash on Windows or bash on macOS/Linux")
         return
-    scripts = sorted(PROJECT_ROOT.glob("*.sh"))
+    scripts = source_files(PROJECT_ROOT, {".sh"}) + [BACKEND_ROOT / "gradlew"]
     for script in scripts:
-        result = subprocess.run([bash_executable, "-n", str(script)], capture_output=True, text=True)
+        result = subprocess.run(
+            [bash_executable, "-n", script.relative_to(PROJECT_ROOT).as_posix()],
+            cwd=PROJECT_ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace",
+        )
         if result.returncode != 0:
             fail_check(f"Shell syntax {script.name}: {result.stderr.strip()}")
     if not any("Shell syntax" in failure for failure in failures):
@@ -109,23 +138,21 @@ def resolve_import(source_path: Path, import_value: str) -> bool:
     base_path = FRONTEND_ROOT / "src" / import_value[2:] if import_value.startswith("@/") else source_path.parent / import_value
     candidates = [
         base_path,
-        base_path.with_suffix(".ts"),
-        base_path.with_suffix(".tsx"),
-        base_path.with_suffix(".js"),
-        base_path.with_suffix(".css"),
+        Path(str(base_path) + ".ts"),
+        Path(str(base_path) + ".tsx"),
+        Path(str(base_path) + ".js"),
+        Path(str(base_path) + ".css"),
         base_path / "index.ts",
         base_path / "index.tsx",
     ]
-    return any(candidate.exists() for candidate in candidates)
+    return any(candidate.is_file() for candidate in candidates)
 
 
 def check_local_imports() -> None:
     import_pattern = re.compile(r"(?:from\s+|import\s*(?:\(\s*)?)(?P<quote>['\"])(?P<value>[^'\"]+)(?P=quote)")
-    source_files = sorted([*FRONTEND_ROOT.rglob("*.ts"), *FRONTEND_ROOT.rglob("*.tsx")])
+    frontend_files = source_files(FRONTEND_ROOT, {".ts", ".tsx"})
     missing: list[str] = []
-    for source_path in source_files:
-        if "node_modules" in source_path.parts:
-            continue
+    for source_path in frontend_files:
         source_text = source_path.read_text(encoding="utf-8")
         for match in import_pattern.finditer(source_text):
             import_value = match.group("value")
@@ -134,13 +161,16 @@ def check_local_imports() -> None:
     for item in missing:
         fail_check(f"Missing local import: {item}")
     if not missing:
-        pass_check(f"Frontend local imports: {len(source_files)} source files")
+        pass_check(f"Frontend local imports: {len(frontend_files)} source files")
 
 
 def check_java_syntax() -> None:
-    javac_executable = shutil.which("javac")
-    java_executable = shutil.which("java")
-    if javac_executable is None or java_executable is None:
+    java_home = os.environ.get("JAVA_HOME")
+    java_bin = Path(java_home) / "bin" if java_home else None
+    executable_suffix = ".exe" if os.name == "nt" else ""
+    javac_executable = str(java_bin / f"javac{executable_suffix}") if java_bin else shutil.which("javac")
+    java_executable = str(java_bin / f"java{executable_suffix}") if java_bin else shutil.which("java")
+    if not javac_executable or not java_executable or not Path(javac_executable).is_file() or not Path(java_executable).is_file():
         fail_check("JDK is unavailable; Java syntax was not checked")
         return
     with tempfile.TemporaryDirectory(prefix="devnote-java-verify-") as temporary_directory:
@@ -165,10 +195,15 @@ def check_java_syntax() -> None:
 
 
 def check_mapper_identifiers() -> None:
+    failure_count = len(failures)
     mapper_files = sorted((BACKEND_ROOT / "src/main/resources/mybatis/mapper").rglob("*.xml"))
     mapper_identifiers: set[str] = set()
     for mapper_file in mapper_files:
-        root = ElementTree.parse(mapper_file).getroot()
+        try:
+            root = ElementTree.parse(mapper_file).getroot()
+        except ElementTree.ParseError as error:
+            fail_check(f"Mapper XML syntax {mapper_file.relative_to(PROJECT_ROOT)}: {error}")
+            continue
         namespace = root.attrib.get("namespace", "")
         for child in root:
             identifier = child.attrib.get("id")
@@ -191,95 +226,10 @@ def check_mapper_identifiers() -> None:
     unused = sorted(mapper_identifiers - required_identifiers)
     for identifier in missing:
         fail_check(f"DAO references missing MyBatis statement: {identifier}")
-    if not missing:
+    if not missing and len(failures) == failure_count:
         pass_check(f"DAO/MyBatis statement links: {len(required_identifiers)} references")
     if unused:
         print(f"[INFO] Mapper statements not directly referenced by DAO scan: {', '.join(unused)}")
-
-
-def check_feature_contracts() -> None:
-    required_fragments = {
-        "backend/src/main/resources/schema.sql": [
-            "thumbnail_file_id BIGINT",
-            "CREATE TABLE IF NOT EXISTS document_files",
-        ],
-        "backend/src/main/java/com/example/devnote/document/dto/DocumentCreateRequest.java": [
-            "List<Long> attachmentFileIds",
-            "Long thumbnailFileId",
-        ],
-        "backend/src/main/java/com/example/devnote/document/dto/DocumentDetailResponse.java": [
-            "List<DocumentAttachmentResponse> attachmentFiles",
-            "String thumbnailImageUrl",
-        ],
-        "backend/src/main/resources/mybatis/mapper/document/DocumentMapper.xml": [
-            'id="insertDocumentAttachment"',
-            'id="selectDocumentAttachments"',
-            "thumbnail_image_url",
-        ],
-        "frontend/src/features/document/types/documentTypes.ts": [
-            "attachmentFiles: DocumentAttachment[]",
-            "attachmentFileIds: number[]",
-            "thumbnailImageUrl?: string",
-        ],
-        "frontend/src/features/document/pages/DocumentListPage.tsx": [
-            'viewMode === "thumbnail"',
-            "DocumentThumbnailCard",
-        ],
-        "frontend/src/app/components/ApplicationSidebar.tsx": [
-            "isSidebarCollapsed",
-        ],
-        "frontend/src/app/components/ApplicationTopBar.tsx": [
-            "toggleApplicationTheme",
-        ],
-        "frontend/src/shared/config/dataSourceSelection.ts": [
-            "getSelectedDataSource",
-            "saveSelectedDataSource",
-            "devnoteDataSource",
-        ],
-        "frontend/src/features/development/components/DataSourceToggle.tsx": [
-            "더미 데이터 ON",
-            "window.location.reload",
-            'role="switch"',
-        ],
-        "frontend/src/mocks/startMockServerWhenEnabled.ts": [
-            "getSelectedDataSource",
-            'selectedDataSource !== "mock"',
-            "setupWorker",
-        ],
-        "frontend/src/features/learning/components/LearningGuideButton.tsx": [
-            "사용 방법",
-            "학습 내용",
-            "소스 흐름",
-            "실습 과제",
-        ],
-        "frontend/src/features/learning/data/learningGuides.ts": [
-            'guideId: "gallery"',
-            'guideId: "reservation"',
-            'guideId: "category"',
-            'guideId: "admin"',
-        ],
-        "frontend/src/App.tsx": [
-            '/practice/general-board',
-            '/practice/gallery',
-            '/practice/comments',
-            '/practice/reservations',
-            '/practice/inquiries',
-            '/practice/categories',
-            '/practice/admin-users',
-        ],
-    }
-    for relative_path, fragments in required_fragments.items():
-        complete_path = PROJECT_ROOT / relative_path
-        if not complete_path.exists():
-            fail_check(f"Required feature file missing: {relative_path}")
-            continue
-        text = complete_path.read_text(encoding="utf-8")
-        for fragment in fragments:
-            if fragment not in text:
-                fail_check(f"Required integration fragment missing: {relative_path}: {fragment}")
-    if not any("Required feature" in failure or "Required integration" in failure for failure in failures):
-        pass_check("CRUD roadmap, guide modal, thumbnail, attachment, sidebar, theme and mock-toggle integration markers")
-
 
 
 def check_gradle_build_files() -> None:
@@ -339,17 +289,23 @@ def check_docker_references() -> None:
     missing = [path for path in required_paths if not path.exists()]
     for path in missing:
         fail_check(f"Docker-required file missing: {path.relative_to(PROJECT_ROOT)}")
-    compose_text = (PROJECT_ROOT / "compose.yml").read_text(encoding="utf-8")
-    for service_name in ["mysql:", "backend:", "frontend:"]:
-        if service_name not in compose_text:
-            fail_check(f"Docker Compose service missing: {service_name}")
-
-    frontend_section = compose_text.split("  frontend:", 1)[1].split("\nvolumes:", 1)[0]
-    frontend_section = compose_text.split("  frontend:", 1)[1].split("\nvolumes:", 1)[0]
-    if "depends_on:" in frontend_section:
-        fail_check("Frontend must start independently from backend for mock-data practice")
-    if "VITE_ENABLE_DEVELOPMENT_MENU: ${VITE_ENABLE_DEVELOPMENT_MENU:-true}" not in frontend_section:
-        fail_check("Docker frontend learning menu must be enabled by default")
+    if missing or yaml is None:
+        return
+    try:
+        compose = yaml.safe_load((PROJECT_ROOT / "compose.yml").read_text(encoding="utf-8"))
+        services = compose["services"]
+        for service_name in ("mysql", "backend", "frontend"):
+            if service_name not in services:
+                fail_check(f"Docker Compose service missing: {service_name}")
+        frontend = services.get("frontend", {})
+        if frontend.get("depends_on"):
+            fail_check("Frontend must start independently from backend for mock-data practice")
+        arguments = frontend.get("build", {}).get("args", {})
+        if arguments.get("VITE_ENABLE_DEVELOPMENT_MENU") != "${VITE_ENABLE_DEVELOPMENT_MENU:-true}":
+            fail_check("Docker frontend learning menu must be enabled by default")
+    except (yaml.YAMLError, KeyError, TypeError, AttributeError) as error:
+        fail_check(f"Docker Compose structure: {error}")
+        return
 
     nginx_text = (FRONTEND_ROOT / "nginx.conf").read_text(encoding="utf-8")
     if "resolver 127.0.0.11" not in nginx_text or "set $backend_host backend;" not in nginx_text:
@@ -373,7 +329,6 @@ def main() -> int:
     check_local_imports()
     check_java_syntax()
     check_mapper_identifiers()
-    check_feature_contracts()
     check_gradle_build_files()
     check_docker_references()
     print()

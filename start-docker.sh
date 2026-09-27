@@ -1,5 +1,6 @@
 #!/bin/sh
 set -e
+cd -- "$(dirname -- "$0")"
 if [ ! -f .env ]; then
   cp .env.example .env
   echo ".env 파일을 생성했습니다."

@@ -1,0 +1,6 @@
+# Windows 배치 파일은 CRLF 줄바꿈이어야 cmd가 올바르게 실행한다.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+# gradlew(셸 스크립트)는 LF를 유지한다.
+gradlew text eol=lf
+*.sh text eol=lf

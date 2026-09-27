@@ -89,6 +89,7 @@ const utilityNavigationGroup: NavigationGroup = {
   collapsible: true,
   items: [
     { label: "유틸리티 홈", description: "개발 도구 전체 보기", route: "/utilities", symbol: "UT" },
+    { label: "웹 크롤링 도구", description: "로그인·선택자·AND/OR 수집", route: "/utilities/crawler", symbol: "CR" },
     { label: "API Workspace", description: "요청·Collection·Runner", route: "/utilities/api-workspace", symbol: "API" },
     { label: "OpenAPI Studio", description: "API 문서·Collection 가져오기", route: "/utilities/api-workspace/openapi", symbol: "OAS" },
     { label: "WebSocket · SSE", description: "실시간 연결·메시지 로그", route: "/utilities/api-workspace/realtime", symbol: "WS" },

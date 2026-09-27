@@ -39,34 +39,21 @@ export const createRequestId = (): string => createUuid().replaceAll("-", "");
  */
 export const createCommonRequestHeaders = (
   additionalHeaders?: Record<string, string>,
-): Record<string, string> => ({
-  // ↑ 화살표 함수가 `=> ({...})` 처럼 소괄호로 감싸진 것에 주목.
-  //   `=> {...}` 라고 쓰면 JavaScript가 중괄호를 "함수 본문"으로 오해한다.
-  //   "이건 객체다"라고 알려주려면 반드시 소괄호로 한 번 더 감싸야 한다.
-
-  // 요청 추적용 ID. 서버 로그에서 이 값으로 검색하면 해당 요청의 흐름을 다 볼 수 있다.
-  "X-Request-Id": createRequestId(),
-
-  // 학습용 임시 로그인 정보. 실무의 진짜 인증(JWT 토큰 등)을 대신하는 간이 방식이다.
-  //
-  // `??` = null 병합 연산자(nullish coalescing).
-  //   "왼쪽이 null이나 undefined면 오른쪽을 쓴다"는 뜻.
-  //
-  // ★ `||` 와 헷갈리기 쉬운데 결정적인 차이가 있다.
-  //   `||` 는 빈 문자열 ""이나 숫자 0도 "없는 것"으로 쳐서 오른쪽을 쓴다.
-  //   `??` 는 오직 null/undefined일 때만 오른쪽을 쓴다.
-  //   "0" 같은 유효한 값을 실수로 날려버리지 않으려면 `??` 가 안전하다.
-  "X-Member-Id": localStorage.getItem("developmentMemberId") ??
-    applicationEnvironment.VITE_DEVELOPMENT_MEMBER_ID,
-
-  // `...` = 전개 연산자(spread). 객체의 내용을 이 자리에 펼쳐 넣는다.
-  //
-  // ★ 위치가 중요하다!
-  //   맨 아래에 뒀기 때문에, 같은 이름의 헤더가 있으면 additionalHeaders 쪽이 이긴다.
-  //   즉 "기본값을 깔아 두고, 호출하는 쪽이 원하면 덮어쓸 수 있게" 한 것이다.
-  //   반대로 맨 위에 뒀다면 위의 두 헤더가 항상 이겨서 덮어쓸 수 없게 된다.
-  ...additionalHeaders,
-});
+): Record<string, string> => {
+  const headers = new Headers({
+    // 서버 로그에서 이 값으로 검색하면 해당 요청의 흐름을 찾을 수 있다.
+    "X-Request-Id": createRequestId(),
+    // 학습용 회원 전환 헤더이며, 실제 인증은 서버의 로그인 세션이 담당한다.
+    // ??는 null/undefined일 때만 기본값을 사용하므로 "0" 같은 값을 보존한다.
+    "X-Member-Id": localStorage.getItem("developmentMemberId") ??
+      applicationEnvironment.VITE_DEVELOPMENT_MEMBER_ID,
+  });
+  // HTTP 헤더 이름은 대소문자를 구분하지 않는다. 객체 spread만 쓰면
+  // X-Request-Id와 x-request-id가 중복되어 서버에 두 값이 전달될 수 있다.
+  // Headers.set으로 호출자가 준 값을 덮어쓴 뒤 두 구현이 쓸 객체로 돌려준다.
+  Object.entries(additionalHeaders ?? {}).forEach(([name, value]) => headers.set(name, value));
+  return Object.fromEntries(headers.entries());
+};
 
 /**
  * 주소 뒤에 `?key=value&key2=value2` 형태의 쿼리스트링을 붙인다.

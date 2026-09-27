@@ -44,7 +44,14 @@ public enum ErrorCode {
     DIAGRAM_NOT_FOUND(HttpStatus.NOT_FOUND, "DIAGRAM_NOT_FOUND", "요청한 다이어그램을 찾을 수 없습니다."),
     DIAGRAM_VERSION_CONFLICT(HttpStatus.CONFLICT, "DIAGRAM_VERSION_CONFLICT", "다른 화면에서 다이어그램을 먼저 수정했습니다."),
     DIAGRAM_MODEL_INVALID(HttpStatus.UNPROCESSABLE_ENTITY, "DIAGRAM_MODEL_INVALID", "다이어그램 데이터 형식이 올바르지 않습니다."),
-    DIAGRAM_VERSION_NOT_FOUND(HttpStatus.NOT_FOUND, "DIAGRAM_VERSION_NOT_FOUND", "요청한 다이어그램 버전을 찾을 수 없습니다.");
+    DIAGRAM_VERSION_NOT_FOUND(HttpStatus.NOT_FOUND, "DIAGRAM_VERSION_NOT_FOUND", "요청한 다이어그램 버전을 찾을 수 없습니다."),
+    CRAWLER_TARGET_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "CRAWLER_TARGET_NOT_ALLOWED", "안전 정책상 접근할 수 없는 수집 주소입니다."),
+    CRAWLER_CONFIGURATION_NOT_FOUND(HttpStatus.NOT_FOUND, "CRAWLER_CONFIGURATION_NOT_FOUND", "저장된 크롤링 설정을 찾을 수 없습니다."),
+    CRAWLER_HISTORY_NOT_FOUND(HttpStatus.NOT_FOUND, "CRAWLER_HISTORY_NOT_FOUND", "크롤링 실행 이력을 찾을 수 없습니다."),
+    CRAWLER_CONFIGURATION_INVALID(HttpStatus.BAD_REQUEST, "CRAWLER_CONFIGURATION_INVALID", "크롤링 설정값을 확인해 주세요."),
+    CRAWLER_LOGIN_FAILED(HttpStatus.UNPROCESSABLE_ENTITY, "CRAWLER_LOGIN_FAILED", "로그인을 완료하지 못했습니다. 선택자와 계정 정보를 확인해 주세요."),
+    CRAWLER_EXECUTION_FAILED(HttpStatus.BAD_GATEWAY, "CRAWLER_EXECUTION_FAILED", "브라우저로 페이지를 수집하지 못했습니다."),
+    CRAWLER_BUSY(HttpStatus.TOO_MANY_REQUESTS, "CRAWLER_BUSY", "다른 크롤링 작업이 실행 중입니다. 잠시 후 다시 시도해 주세요.");
 
     private final HttpStatus httpStatus;
     private final String code;

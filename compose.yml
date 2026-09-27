@@ -31,6 +31,8 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: devnote-backend
+    init: true
+    ipc: host
     environment:
       SPRING_PROFILES_ACTIVE: local
       DATABASE_URL: jdbc:p6spy:mysql://mysql:3306/${MYSQL_DATABASE:-devnote}?useUnicode=true&characterEncoding=UTF-8&serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=false
@@ -45,10 +47,16 @@ services:
       AUTH_SESSION_TIMEOUT: ${AUTH_SESSION_TIMEOUT:-30m}
       AUTH_REMEMBER_ME_DURATION: ${AUTH_REMEMBER_ME_DURATION:-30d}
       SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
+      # '내 PC에 새 창으로 열기' 선택 시 연결할 PC Chrome(start-pc-chrome.cmd)의 원격 디버깅 주소
+      CRAWLER_PC_BROWSER_URL: ${CRAWLER_PC_BROWSER_URL:-http://host.docker.internal:9222}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "${BACKEND_PORT:-8080}:8080"
     volumes:
       - devnote-file-storage:/application/storage
+      # Windows의 최초 수동 로그인 도우미와 Docker Playwright가 세션을 공유합니다.
+      - ./.local/crawler-sessions:/application/storage/crawler-sessions
     depends_on:
       mysql:
         condition: service_healthy

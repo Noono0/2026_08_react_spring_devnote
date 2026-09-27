@@ -9,7 +9,7 @@ set "DISTRIBUTION_URL=https://services.gradle.org/distributions/gradle-%GRADLE_V
 
 if not exist "%GRADLE_HOME%\bin\gradle.bat" (
     if not exist "%WRAPPER_HOME%" mkdir "%WRAPPER_HOME%"
-    echo Gradle %GRADLE_VERSION% 다운로드: %DISTRIBUTION_URL%
+    echo Downloading Gradle %GRADLE_VERSION%: %DISTRIBUTION_URL%
     powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; Invoke-WebRequest -Uri '%DISTRIBUTION_URL%' -OutFile '%ARCHIVE%'; Expand-Archive -Path '%ARCHIVE%' -DestinationPath '%WRAPPER_HOME%' -Force; Remove-Item '%ARCHIVE%' -Force"
     if errorlevel 1 exit /b 1
 )

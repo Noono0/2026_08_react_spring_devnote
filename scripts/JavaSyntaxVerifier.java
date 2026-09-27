@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 
 public final class JavaSyntaxVerifier {
@@ -29,6 +30,7 @@ public final class JavaSyntaxVerifier {
         if (javaCompiler == null) {
             throw new IllegalStateException("JDK compiler is unavailable. Install JDK 21.");
         }
+        AtomicBoolean hasErrors = new AtomicBoolean();
         try (StandardJavaFileManager fileManager = javaCompiler.getStandardFileManager(null, null, null)) {
             Iterable<? extends JavaFileObject> sourceObjects = fileManager.getJavaFileObjectsFromPaths(sourcePaths);
             JavacTask javacTask = (JavacTask) javaCompiler.getTask(
@@ -36,6 +38,7 @@ public final class JavaSyntaxVerifier {
                 fileManager,
                 diagnostic -> {
                     if (diagnostic.getKind() == javax.tools.Diagnostic.Kind.ERROR) {
+                        hasErrors.set(true);
                         System.err.printf(
                             "[FAIL] %s:%d:%d %s%n",
                             diagnostic.getSource(),
@@ -50,6 +53,9 @@ public final class JavaSyntaxVerifier {
                 sourceObjects
             );
             javacTask.parse();
+        }
+        if (hasErrors.get()) {
+            System.exit(1);
         }
         System.out.printf("[PASS] Java syntax parse: %d files%n", sourcePaths.size());
     }

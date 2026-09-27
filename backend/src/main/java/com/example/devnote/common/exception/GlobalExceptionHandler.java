@@ -1,6 +1,7 @@
 package com.example.devnote.common.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
+import com.example.devnote.crawler.service.CrawlerFailure;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
@@ -34,7 +35,17 @@ public class GlobalExceptionHandler {
         ErrorCode errorCode = businessException.getErrorCode();
         log.warn("[BusinessException] code={}, method={}, uri={}, message={}",
             errorCode.getCode(), request.getMethod(), request.getRequestURI(), businessException.getMessage());
-        return createProblemDetail(errorCode, businessException.getMessage(), request, List.of());
+        ProblemDetail problem = createProblemDetail(errorCode, businessException.getMessage(), request, List.of());
+        if (businessException instanceof CrawlerFailure failure) {
+            problem.setProperty("crawlerStage", failure.getStage());
+            problem.setProperty("suggestedAction", failure.getAction());
+            problem.setProperty("elapsedMillis", failure.getElapsedMillis());
+            if (!failure.getTechnicalMessage().isBlank()) {
+                problem.setProperty("technicalMessage", failure.getTechnicalMessage());
+            }
+            log.warn("[CrawlerFailure] stage={}, elapsedMillis={}", failure.getStage(), failure.getElapsedMillis());
+        }
+        return problem;
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

@@ -26,8 +26,8 @@
   `http/` contains manual API request examples.
 - `scripts/`: 저장소 검증 도구를 보관한다.
   `scripts/` contains repository verification utilities.
-- `README.md`: 실행 방법, 아키텍처 설명, 학습 로드맵을 제공한다.
-  `README.md` provides setup instructions, architecture notes, and the learning roadmap.
+- `README.md`는 빠른 시작과 문서 색인, `docs/`는 실행·학습·크롤러·검증·유지보수 상세 안내를 제공한다.
+  `README.md` provides quick-start instructions and a document index; `docs/` contains setup, learning, crawler, verification, and maintenance guides.
 
 ## 작업 원칙 / Working rules
 
@@ -122,3 +122,27 @@
   For educational changes, briefly explain the concept demonstrated and what the learner should inspect.
 - 최종 응답에 변경한 파일과 수행한 검증을 명시한다.
   Mention files changed and verification performed in the final response.
+
+## Codex·Claude 교대 작업 / Codex–Claude handoff
+
+- 작업 시작 또는 인수 시 `git status --short`와 관련 파일의 diff를 확인한다. 기존 미커밋 변경을 작업 맥락으로 취급하고 임의로 지우지 않는다.
+  At the start of a task or handoff, inspect `git status --short` and relevant diffs. Treat existing uncommitted changes as work context and do not erase them.
+- 수정할 파일에 기존 변경이 있으면 먼저 읽고 이번 요청과 겹치는지 확인한다. 수정 중 다른 변경이 생겼다면 최신 내용을 다시 읽고 통합한다. 안전한 통합이 불분명하면 충돌 지점과 필요한 결정을 사용자에게 알린다.
+  Read existing changes before editing a file and check for overlap with the current request. If a file changes during the task, reread and integrate the latest content. If safe integration is unclear, tell the user the exact conflict and decision needed.
+- 동시 작업은 파일 또는 기능 단위로 범위를 나눈다. 겹치는 작업은 별도 Git worktree 또는 순차 작업으로 진행하고 통합 전에 diff를 비교한다.
+  Divide concurrent work by file or feature. Use separate Git worktrees or work sequentially for overlapping tasks, and compare diffs before integration.
+- `git reset`, `git checkout`, `git restore`, `git clean`, 일괄 덮어쓰기로 다른 작업의 변경을 지우지 않는다. 스테이징·커밋을 요청받으면 이번 작업의 파일만 선택한다.
+  Do not erase another task's changes with `git reset`, `git checkout`, `git restore`, `git clean`, or bulk overwrites. When asked to stage or commit, select only files from the current task.
+- 작업을 넘길 때 수정 파일, 검증 결과, 남은 문제, 다음 시작점을 간단히 기록한다. 다음 에이전트는 이 설명과 현재 Git·파일 상태를 함께 확인한다.
+  At handoff, briefly report changed files, verification results, remaining issues, and the next starting point. The next agent checks that report against the current Git and file state.
+
+## 유지보수 메모 / Maintenance notes
+
+- 작업 내역·실행한 검사·미검증 범위는 [유지보수 기록](docs/maintenance.md)에 날짜와 함께 남긴다. 상세 기능 설명은 해당 `docs/` 문서에서 관리하고 README에 중복하지 않는다.
+  Record dated changes, completed checks, and unverified scope in the [maintenance log](docs/maintenance.md). Keep detailed feature documentation in the corresponding `docs/` guide rather than duplicating it in the README.
+- 2026-09-23 정리에서 홈 외 페이지·포트폴리오 편집기를 지연 로딩하고, HTTP 구현의 옵션·오류 처리와 저장 데이터 검증을 보강했다. 후속 수정에서도 공통 `PageOutlet`, 두 HTTP 구현의 계약 테스트, 저장 데이터 스키마를 함께 확인한다.
+  The 2026-09-23 cleanup added lazy loading for secondary pages and the portfolio editor, aligned HTTP options and errors, and validated stored data. In follow-up changes, check the shared `PageOutlet`, both HTTP clients' contract tests, and storage schemas together.
+- 크롤러 설정·이력은 MySQL을 사용한다. 제거된 `crawlerRun`·`CrawlerStandaloneApplication`을 복원하지 말고 일반 애플리케이션 진입점과 `bootRun`을 사용한다. 세션 로그인 전용 `crawlerSessionLogin`은 별도 도구로 유지한다.
+  Crawler configuration and history require MySQL. Use the normal application entry point and `bootRun`; do not restore the removed `crawlerRun` or `CrawlerStandaloneApplication`. Keep `crawlerSessionLogin` as the separate session-login tool.
+- 백엔드 검증에는 JDK 21과 Docker를 사용한다. 정적 검사와 Python 회귀 테스트의 명령은 [검증 가이드](docs/verification.md)를 따른다. 외부 크롤러 테스트의 기본 건너뜀을 외부 사이트 검증 성공으로 기록하지 않는다.
+  Use JDK 21 and Docker for backend verification, and follow the [verification guide](docs/verification.md) for static checks and Python regression tests. Do not report the default skip of the external crawler test as successful external-site verification.

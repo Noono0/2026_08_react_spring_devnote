@@ -1,10 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuthSessionQuery } from "@/features/auth/hooks/useAuthSession";
 import { updatePortfolioSection } from "@/features/portfolio/api/portfolioApi";
 import { PortfolioSectionCard } from "@/features/portfolio/components/PortfolioSectionCard";
-import { PortfolioSectionEditor } from "@/features/portfolio/components/PortfolioSectionEditor";
 import {
   useCreatePortfolioSectionMutation,
   useDeletePortfolioSectionMutation,
@@ -39,6 +38,10 @@ const blockIconMap: Record<PortfolioBlockSectionType, string> = {
 };
 
 const portfolioQueryKey = ["portfolio", "sections"] as const;
+
+const PortfolioSectionEditor = lazy(async () => ({
+  default: (await import("@/features/portfolio/components/PortfolioSectionEditor")).PortfolioSectionEditor,
+}));
 
 /**
  * 포트폴리오를 하나의 고정 양식에 가두지 않고 여러 CRUD 섹션을 블록처럼 배치합니다.
@@ -352,7 +355,7 @@ export const PortfolioHomePage = () => {
         </div>
       ) : null}
 
-      <PortfolioSectionEditor
+      {isSectionEditorOpen ? <Suspense fallback={<div role="status">편집기를 불러오는 중입니다.</div>}><PortfolioSectionEditor
         isOpen={isSectionEditorOpen}
         section={editingSection}
         initialSectionType={initialSectionType}
@@ -360,7 +363,7 @@ export const PortfolioHomePage = () => {
         isSaving={createMutation.isPending || updateMutation.isPending || isReordering}
         onSave={saveSection}
         onClose={closeSectionEditor}
-      />
+      /></Suspense> : null}
 
       <ConfirmDialog
         isOpen={Boolean(deleteTarget)}

@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.devnote.crawler.CrawlerConfigurationMapper">
+    <sql id="configurationColumns">
+        c.crawler_configuration_id, c.configuration_title, c.configuration_description,
+        c.site_preset, CAST(c.request_json AS CHAR) AS request_json,
+        (SELECT COUNT(*) FROM crawler_run_histories h WHERE h.crawler_configuration_id = c.crawler_configuration_id) AS run_count,
+        (SELECT h.run_status FROM crawler_run_histories h WHERE h.crawler_configuration_id = c.crawler_configuration_id ORDER BY h.crawler_run_history_id DESC LIMIT 1) AS last_run_status,
+        (SELECT h.started_at FROM crawler_run_histories h WHERE h.crawler_configuration_id = c.crawler_configuration_id ORDER BY h.crawler_run_history_id DESC LIMIT 1) AS last_run_at,
+        c.created_at, c.updated_at
+    </sql>
+
+    <select id="selectConfigurations" resultType="com.example.devnote.crawler.dao.row.CrawlerConfigurationRow">
+        SELECT <include refid="configurationColumns" />
+        FROM crawler_configurations c
+        ORDER BY c.updated_at DESC, c.crawler_configuration_id DESC
+    </select>
+
+    <select id="selectConfiguration" resultType="com.example.devnote.crawler.dao.row.CrawlerConfigurationRow">
+        SELECT <include refid="configurationColumns" />
+        FROM crawler_configurations c
+        WHERE c.crawler_configuration_id = #{configurationId}
+    </select>
+
+    <insert id="insertConfiguration" useGeneratedKeys="true" keyProperty="crawlerConfigurationId">
+        INSERT INTO crawler_configurations
+            (configuration_title, configuration_description, site_preset, request_json)
+        VALUES
+            (#{configurationTitle}, #{configurationDescription}, #{sitePreset}, CAST(#{requestJson} AS JSON))
+    </insert>
+
+    <update id="updateConfiguration">
+        UPDATE crawler_configurations
+        SET configuration_title = #{configurationTitle},
+            configuration_description = #{configurationDescription},
+            site_preset = #{sitePreset},
+            request_json = CAST(#{requestJson} AS JSON)
+        WHERE crawler_configuration_id = #{crawlerConfigurationId}
+    </update>
+
+    <delete id="deleteConfiguration">
+        DELETE FROM crawler_configurations WHERE crawler_configuration_id = #{configurationId}
+    </delete>
+
+    <insert id="insertRunHistory" useGeneratedKeys="true" keyProperty="crawlerRunHistoryId">
+        INSERT INTO crawler_run_histories (crawler_configuration_id, run_status, request_json)
+        VALUES (#{crawlerConfigurationId}, 'RUNNING', CAST(#{requestJson} AS JSON))
+    </insert>
+
+    <update id="completeRunHistorySuccess">
+        UPDATE crawler_run_histories
+        SET run_status = 'SUCCESS', result_json = CAST(#{resultJson} AS JSON),
+            duration_millis = #{durationMillis}, item_count = #{itemCount}, completed_at = CURRENT_TIMESTAMP(6)
+        WHERE crawler_run_history_id = #{historyId}
+    </update>
+
+    <update id="completeRunHistoryFailure">
+        UPDATE crawler_run_histories
+        SET run_status = 'FAILURE', failure_stage = NULLIF(#{failureStage}, ''),
+            failure_message = #{failureMessage}, duration_millis = #{durationMillis}, completed_at = CURRENT_TIMESTAMP(6)
+        WHERE crawler_run_history_id = #{historyId}
+    </update>
+
+    <select id="selectRunHistories" resultType="com.example.devnote.crawler.dao.row.CrawlerRunHistoryRow">
+        SELECT crawler_run_history_id, crawler_configuration_id, run_status,
+               NULL AS request_json, NULL AS result_json, failure_stage, failure_message,
+               duration_millis, item_count, started_at, completed_at
+        FROM crawler_run_histories
+        WHERE crawler_configuration_id = #{configurationId}
+        ORDER BY crawler_run_history_id DESC
+        LIMIT 100
+    </select>
+
+    <select id="selectRunHistory" resultType="com.example.devnote.crawler.dao.row.CrawlerRunHistoryRow">
+        SELECT crawler_run_history_id, crawler_configuration_id, run_status,
+               CAST(request_json AS CHAR) AS request_json, CAST(result_json AS CHAR) AS result_json,
+               failure_stage, failure_message, duration_millis, item_count, started_at, completed_at
+        FROM crawler_run_histories
+        WHERE crawler_run_history_id = #{historyId}
+    </select>
+
+    <delete id="deleteRunHistory">
+        DELETE FROM crawler_run_histories WHERE crawler_run_history_id = #{historyId}
+    </delete>
+</mapper>

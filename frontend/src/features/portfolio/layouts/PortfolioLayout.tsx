@@ -1,4 +1,5 @@
-import { Link, Outlet, useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
+import { PageOutlet } from "@/app/components/PageOutlet";
 import { ApplicationSidebar } from "@/app/components/ApplicationSidebar";
 import { useApplicationUiStore } from "@/app/state/applicationUiStore";
 
@@ -23,7 +24,7 @@ export const PortfolioLayout = () => {
           <button className="top-bar-icon-button" type="button" onClick={openMobileSidebar} aria-label="사이드바 메뉴 열기">☰</button>
           <Link to="/"><span>DN</span><strong>{getPageTitle(location.pathname)}</strong></Link>
         </header>
-        <main className={`portfolio-main${isUtilityPage ? " portfolio-main-wide" : ""}`}><Outlet /></main>
+        <main className={`portfolio-main${isUtilityPage ? " portfolio-main-wide" : ""}`}><PageOutlet /></main>
         <footer className="portfolio-footer"><p>React와 Spring Boot로 직접 관리하는 포트폴리오입니다.</p></footer>
       </div>
     </div>

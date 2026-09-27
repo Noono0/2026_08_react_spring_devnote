@@ -29,6 +29,9 @@
  */
 
 import { useEffect, useMemo, useReducer, useState } from "react";
+import { z } from "zod";
+import { parseStoredArray } from "@/shared/lib/parseStoredArray";
+import { applicationLogger } from "@/shared/logging/applicationLogger";
 import { LearningGuideTitle } from "@/features/learning/components/LearningGuideTitle";
 import { applicationNotification } from "@/shared/notification/applicationNotification";
 
@@ -39,6 +42,10 @@ interface ContactItem {
   emailAddress: string;
   phoneNumber: string;
 }
+
+const contactSchema: z.ZodType<ContactItem> = z.object({
+  contactId: z.number().int().positive(), contactName: z.string(), emailAddress: z.string(), phoneNumber: z.string(),
+});
 
 /**
  * Action = "무슨 일을 해 달라"는 요청서.
@@ -60,8 +67,7 @@ interface ContactItem {
 type ContactAction =
   | { type: "CREATE"; contactItem: ContactItem }   // 새 연락처를 추가해 달라
   | { type: "UPDATE"; contactItem: ContactItem }   // 이 내용으로 바꿔 달라
-  | { type: "DELETE"; contactId: number }          // 이 번호를 지워 달라
-  | { type: "RESET"; contactItems: ContactItem[] };// 목록을 통째로 갈아 달라
+  | { type: "DELETE"; contactId: number };        // 이 번호를 지워 달라
 
 // localStorage 키. 문자열을 여러 곳에서 쓰므로 상수로 뺐다. (오타 방지)
 const CONTACT_STORAGE_KEY = "practiceContacts";
@@ -90,8 +96,8 @@ const contactReducer = (contactItems: ContactItem[], contactAction: ContactActio
   // 학습용 로그. 개발자도구 콘솔을 열어 두고 버튼을 눌러 보면
   // "어떤 요청이 들어왔고 그 전 상태가 무엇이었는지"가 그대로 찍힌다.
   // useReducer의 큰 장점이 바로 이런 추적 용이성이다.
-  // (실무라면 applicationLogger를 쓰겠지만, 여기서는 눈에 잘 띄라고 console.log를 썼다)
-  console.log("[contactReducer] Action 처리", { contactAction, previousContactItems: contactItems });
+  // 개발 로그를 켠 환경에서만 동작 종류와 개수를 기록한다.
+  applicationLogger.info("[contactReducer] Action 처리", { type: contactAction.type, count: contactItems.length });
 
   // switch: action.type 값에 따라 갈라지는 분기문.
   // if-else를 여러 번 쓰는 것보다 "여러 경우 중 하나"라는 의도가 잘 드러난다.
@@ -114,13 +120,9 @@ const contactReducer = (contactItems: ContactItem[], contactAction: ContactActio
       // 해당 id가 아닌 것만 남긴다.
       return contactItems.filter((contactItem) => contactItem.contactId !== contactAction.contactId);
 
-    case "RESET":
-      // 목록을 통째로 교체한다. (지금 화면에서는 안 쓰지만, 확장을 대비해 남겨 뒀다)
-      return contactAction.contactItems;
-
     default:
       // ★ default가 왜 필요한가?
-      //   위 네 가지에 안 걸리는 요청이 들어와도 앱이 죽지 않게 하는 안전망이다.
+      //   위 세 가지에 안 걸리는 요청이 들어와도 앱이 죽지 않게 하는 안전망이다.
       //   중요한 건 "아무것도 안 한다"가 아니라 "기존 상태를 그대로 돌려준다"는 점이다.
       //   여기서 undefined를 반환하면 상태가 통째로 사라져 화면이 깨진다.
       return contactItems;
@@ -130,31 +132,20 @@ const contactReducer = (contactItems: ContactItem[], contactAction: ContactActio
 /**
  * localStorage에서 저장된 연락처를 읽어 온다.
  *
- * ★ try/catch가 반드시 필요한 이유
+ * ★ JSON 문법뿐 아니라 실제 데이터 형태도 확인해야 한다.
  *   JSON.parse는 문자열이 올바른 JSON이 아니면 에러를 던진다.
  *   저장소 값은 사용자가 개발자도구로 얼마든지 망가뜨릴 수 있고,
  *   예전 버전에서 다른 형식으로 저장해 뒀을 수도 있다.
  *
- *   에러를 안 잡으면 앱이 켜지자마자 흰 화면으로 죽는다.
- *   더 나쁜 건, 사용자가 원인을 알 수도 고칠 수도 없다는 점이다.
- *   그래서 "깨졌으면 기본값으로 시작한다"는 방어 코드를 넣는다.
+ *   공통 parseStoredArray가 JSON 오류를 처리하고 Zod로 각 연락처를 검사한다.
+ *   잘못된 항목이 섞여 있어도 정상 연락처는 유지하며, 읽을 수 없는 값은 빈 목록이 된다.
  */
 const loadStoredContacts = (): ContactItem[] => {
   const storedContacts = localStorage.getItem(CONTACT_STORAGE_KEY);
   // 저장된 게 아예 없으면(첫 방문) 샘플 데이터로 시작.
   if (!storedContacts) return initialContacts;
 
-  try {
-    // `as ContactItem[]`는 "이 타입이라고 믿겠다"는 선언일 뿐,
-    // 실제로 검사하지는 않는다는 점에 주의하자.
-    // 더 엄격하게 하려면 applicationEnvironment.ts처럼 Zod로 검증하면 된다.
-    // (여기서는 학습 단계라 이 정도로 두었다)
-    return JSON.parse(storedContacts) as ContactItem[];
-  } catch {
-    // catch 뒤에 (error) 를 안 적었다.
-    // 오류 내용을 안 쓰고 "실패하면 기본값" 이라는 처리만 할 때 쓰는 문법이다.
-    return initialContacts;
-  }
+  return parseStoredArray(storedContacts, contactSchema);
 };
 
 export const ContactPracticePage = () => {
@@ -201,7 +192,7 @@ export const ContactPracticePage = () => {
     // JSON.stringify: 객체/배열을 문자열로 바꾼다. localStorage는 문자열만 저장할 수 있다.
     // (읽을 때 JSON.parse로 되돌리는 것과 짝을 이룬다)
     localStorage.setItem(CONTACT_STORAGE_KEY, JSON.stringify(contactItems));
-    console.log("[ContactPracticePage] localStorage 저장", { contactCount: contactItems.length });
+    applicationLogger.info("[ContactPracticePage] localStorage 저장", { contactCount: contactItems.length });
     // contactItems가 바뀔 때만 실행. 검색어를 아무리 쳐도 저장은 일어나지 않는다.
   }, [contactItems]);
 

@@ -35,6 +35,9 @@ import type { FileUploadOptions, HttpClient, HttpRequestOptions } from "./HttpCl
 import { appendQueryParameters, createCommonRequestHeaders } from "./requestHelpers";
 import { applicationEnvironment } from "@/shared/config/applicationEnvironment";
 import { applicationLogger } from "@/shared/logging/applicationLogger";
+import { normalizeHttpProblem } from "@/shared/api/error/apiErrorHelpers";
+
+const REQUEST_TIMEOUT_MILLISECONDS = 10_000;
 
 export class FetchHttpClient implements HttpClient {
   // GET: 조회. 보낼 본문이 없고, 조건은 주소 뒤 쿼리스트링으로 붙인다.
@@ -58,6 +61,7 @@ export class FetchHttpClient implements HttpClient {
         headers: createCommonRequestHeaders(requestOptions?.requestHeaders),
         signal: requestOptions?.abortSignal,
       },
+      requestOptions?.timeoutMilliseconds,
     );
   }
 
@@ -68,17 +72,17 @@ export class FetchHttpClient implements HttpClient {
     requestOptions?: HttpRequestOptions,
   ): Promise<ResponseData> {
     return this.sendRequest<ResponseData>(
-      `${applicationEnvironment.VITE_API_BASE_URL}${requestUrl}`,
+      appendQueryParameters(`${applicationEnvironment.VITE_API_BASE_URL}${requestUrl}`, requestOptions?.queryParameters),
       {
         method: "POST",
-        headers: {
+        headers: createCommonRequestHeaders({
           // ★ Content-Type을 직접 적어야 한다.
           //   "내가 보내는 본문은 JSON 형식이다"라고 서버에 알리는 것이다.
           //   이걸 빠뜨리면 서버가 본문을 해석하지 못해 400 오류를 낸다.
           //   (axios는 객체를 넘기면 알아서 붙여 준다)
           "Content-Type": "application/json",
-          ...createCommonRequestHeaders(requestOptions?.requestHeaders),
-        },
+          ...requestOptions?.requestHeaders,
+        }),
 
         // ★ 객체를 JSON 문자열로 직접 바꿔야 한다.
         //   fetch의 body에는 문자열, FormData, Blob 같은 것만 넣을 수 있다.
@@ -91,6 +95,7 @@ export class FetchHttpClient implements HttpClient {
         body: requestData === undefined ? undefined : JSON.stringify(requestData),
         signal: requestOptions?.abortSignal,
       },
+      requestOptions?.timeoutMilliseconds,
     );
   }
 
@@ -101,16 +106,17 @@ export class FetchHttpClient implements HttpClient {
     requestOptions?: HttpRequestOptions,
   ): Promise<ResponseData> {
     return this.sendRequest<ResponseData>(
-      `${applicationEnvironment.VITE_API_BASE_URL}${requestUrl}`,
+      appendQueryParameters(`${applicationEnvironment.VITE_API_BASE_URL}${requestUrl}`, requestOptions?.queryParameters),
       {
         method: "PUT",
-        headers: {
+        headers: createCommonRequestHeaders({
           "Content-Type": "application/json",
-          ...createCommonRequestHeaders(requestOptions?.requestHeaders),
-        },
+          ...requestOptions?.requestHeaders,
+        }),
         body: requestData === undefined ? undefined : JSON.stringify(requestData),
         signal: requestOptions?.abortSignal,
       },
+      requestOptions?.timeoutMilliseconds,
     );
   }
 
@@ -129,6 +135,7 @@ export class FetchHttpClient implements HttpClient {
         headers: createCommonRequestHeaders(requestOptions?.requestHeaders),
         signal: requestOptions?.abortSignal,
       },
+      requestOptions?.timeoutMilliseconds,
     );
   }
 
@@ -184,6 +191,7 @@ export class FetchHttpClient implements HttpClient {
     completeRequestUrl: string,
     // RequestInit = fetch의 두 번째 인자 타입. 브라우저가 제공하는 기본 타입이다.
     requestConfiguration: RequestInit,
+    timeoutMilliseconds = REQUEST_TIMEOUT_MILLISECONDS,
   ): Promise<ResponseData> {
     // 전달받은 설정을 펼치고, credentials만 덧붙인 새 객체를 만든다.
     // 원본 requestConfiguration을 직접 고치지 않는 것 = 불변성을 지키는 습관이다.
@@ -194,6 +202,12 @@ export class FetchHttpClient implements HttpClient {
     const requestWithCredentials: RequestInit = {
       ...requestConfiguration,
       credentials: "include",
+      // Axios와 동일하게 0은 시간 제한 없음이며, 호출자의 취소 신호는 유지한다.
+      signal: timeoutMilliseconds === 0
+        ? requestConfiguration.signal
+        : requestConfiguration.signal
+          ? AbortSignal.any([requestConfiguration.signal, AbortSignal.timeout(timeoutMilliseconds)])
+          : AbortSignal.timeout(timeoutMilliseconds),
     };
 
     // performance.now(): 아주 정밀한 시각을 밀리초로 돌려준다.
@@ -228,7 +242,7 @@ export class FetchHttpClient implements HttpClient {
         responseStatus: response.status,
         responseData,
       });
-      throw new Error("API 요청이 실패했습니다.", { cause: responseData });
+      throw new Error("API 요청이 실패했습니다.", { cause: normalizeHttpProblem(response.status, responseData) });
     }
 
     applicationLogger.info("[FetchHttpClient] 응답 성공", {
@@ -270,9 +284,16 @@ export class FetchHttpClient implements HttpClient {
     //
     // JSON이 아니면 그냥 텍스트로 읽는다.
     // 서버가 오류 시 HTML 페이지를 돌려주는 경우 등에 대비한 것이다.
-    return contentType?.includes("application/json")
-      ? ((await response.json()) as ResponseData)
-      : ((await response.text()) as ResponseData);
+    const responseText = await response.text();
+    if (contentType?.includes("application/json") || contentType?.includes("application/problem+json")) {
+      try {
+        return JSON.parse(responseText) as ResponseData;
+      } catch (error) {
+        // 잘못된 JSON 오류 본문 때문에 HTTP 상태·재시도 판단을 잃지 않도록 한다.
+        if (response.ok) throw error;
+      }
+    }
+    return responseText as ResponseData;
   }
 }
 

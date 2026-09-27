@@ -66,6 +66,10 @@ export interface ApiProblemDetails {
 
   traceId?: string;   // 서버 로그와 대조하기 위한 추적 번호
   timestamp?: string; // 오류 발생 시각
+  crawlerStage?: string;
+  suggestedAction?: string;
+  elapsedMillis?: number;
+  technicalMessage?: string; // 크롤러: Playwright·Java 원본 오류 메시지
 
   // 입력칸별 오류 목록.
   // ★ `?`가 없다 = 항상 배열이 있다. 오류가 없으면 빈 배열 []이 온다.
