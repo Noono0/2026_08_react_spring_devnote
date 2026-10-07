@@ -64,7 +64,7 @@ start "devnote-backend" powershell -NoExit -ExecutionPolicy Bypass -Command "Set
 echo [3/3] 프론트엔드(Vite)를 새 창에서 실행합니다.
 if not exist frontend\node_modules (
   pushd frontend
-  call npm install
+  call corepack pnpm install --frozen-lockfile
   popd
 )
 start "devnote-frontend" powershell -NoExit -ExecutionPolicy Bypass -Command "Set-Location '%~dp0frontend'; cmd /c 'npm run dev 2>&1' | Tee-Object -FilePath '%~dp0.local\logs\frontend.log'"

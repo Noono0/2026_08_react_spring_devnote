@@ -26,19 +26,24 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+      # pnpm-lock.yaml 그대로 설치한다. pnpm 버전은 package.json의 packageManager를 따른다.
       - name: Install dependencies
         working-directory: frontend
-        run: npm install
+        env:
+          COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
       - name: Create MSW worker
         working-directory: frontend
-        run: npx --no-install msw init public --save
+        run: pnpm exec msw init public --save
       - name: Check frontend
         working-directory: frontend
         run: |
-          npm run lint
-          npm run typecheck
-          npm run test
-          npm run build
+          pnpm run lint
+          pnpm run typecheck
+          pnpm run test
+          pnpm run build
       - uses: actions/setup-java@v4
         with:
           distribution: temurin

@@ -20,9 +20,25 @@ Docker 실행 후 `/react`에서 아래 단계를 확인할 수 있습니다. �
 | 10 | `/react/tasks` | 7.5/10 | 업무·칸반 CRUD | TanStack Query, Mutation, 낙관적 업데이트 | 비동기 로컬 API |
 | 11 | `/react/inquiries` | 8/10 | 문의·답변 CRUD | USER/MANAGER/ADMIN 권한, 답변, 상태 | React State |
 | 12 | `/react/categories` | 8.5/10 | 카테고리 트리 CRUD | 재귀 렌더링, 하위 추가, 순서, 삭제 제한 | React State |
-| 13 | `/react/documents` | 9/10 | 문서·에디터·이미지 CRUD | Axios/Fetch, MSW, Tiptap, 파일, MyBatis | Spring Boot + MySQL 또는 MSW |
-| 14 | `/react/admin-users` | 9.5/10 | 관리자 사용자 CRUD | 다중 선택, 일괄 역할·상태 변경, Soft Delete·복구 | React State |
+| 13 | `/react/admin-users` | 9/10 | 관리자 사용자 CRUD | 다중 선택, 일괄 역할·상태 변경, Soft Delete·복구 | React State |
+| 14 | `/react/documents` | 9.5/10 | 문서·에디터·이미지 CRUD | Axios/Fetch, MSW, Tiptap, 파일, MyBatis | Spring Boot + MySQL 또는 MSW |
+| 15 | `/react/infinite-feed` | 7.5/10 | 무한 스크롤 피드 | `useInfiniteQuery`, 커서 페이지네이션, IntersectionObserver | 비동기 로컬 API |
+| 16 | `/react/dynamic-form` | 8/10 | 동적 견적서 폼 | `useFieldArray`, `useWatch`, Zod 배열 검증 | React Hook Form |
+| 17 | `/react/context-auth` | 8.5/10 | Context 로그인·보호 라우트 | `createContext`, 커스텀 훅, 중첩·보호 라우트 | React Context |
+| 18 | `/react/react19-actions` | 9/10 | React 19 Actions 방명록 | `useActionState`, `useFormStatus`, `useOptimistic` | 비동기 로컬 API |
+| 19 | `/react/custom-hooks` | 8/10 | 읽을거리 메모장 | 커스텀 훅, `useSyncExternalStore`, 디바운스, 저장값 검증 | localStorage |
+| 20 | `/react/performance` | 9/10 | 상품 2,000개 목록 측정 | `Profiler`, `memo`·`useCallback`, `useDeferredValue` | React State |
+| 21 | `/react/zustand` | 8/10 | 장바구니 전역 상태 | Zustand selector, `persist`, 저장값 Zod 검증 | Zustand + localStorage |
+| 22 | `/react/url-state` | 8/10 | 검색·필터·페이지 주소 저장 | `useSearchParams`, 주소 값 검증, push·replace | URL |
+| 23 | `/react/refs-focus` | 8/10 | 회의 안건 포커스·스크롤 | `useRef`, ref prop(React 19), 콜백 ref 정리 함수 | React State |
+| 24 | `/react/use-suspense` | 9/10 | 공지 목록 | `use()`, Suspense, Error Boundary, Promise 캐시 | 비동기 로컬 API |
+| 25 | `/react/testing` | 8.5/10 | 주문 금액 계산기 테스트 | Vitest, Testing Library, 순수 함수·경계값 테스트 | React State |
 | 실험실 | `/react/development/scenarios` | 10/10 | 오류·네트워크 실험 | 지연, 빈 결과, 401, 409, 500, 네트워크 오류 | MSW |
+
+로드맵은 두 과정으로 나뉩니다.
+
+- **기본 과정(1~14단계)**: 뒤 단계로 갈수록 난이도가 낮아지지 않도록 배치했습니다. 13단계까지는 브라우저 안의 상태와 로컬 비동기 API만 사용하고, 14단계 문서 CRUD에서 처음으로 실제 Spring Boot·MyBatis·MySQL에 연결해 기본 과정을 마칩니다. `learningGuides.test.ts`가 이 순서를 검사합니다.
+- **심화 과정(15~25단계)**: 기본 과정을 마친 뒤 무한 스크롤·동적 폼·Context·React 19·커스텀 훅·성능·전역 상태·URL 상태·포커스·Suspense·테스트를 주제별로 다룹니다. 앞 단계의 개념을 이어 쓰는 순서이므로 난이도 점수는 주제에 따라 오르내립니다.
 
 ### 화면별 학습 가이드 아이콘
 
@@ -74,6 +90,7 @@ frontend/src/app/components/ApplicationTopBar.tsx
 - Axios·Fetch 실행 방식 전환
 - 개발 오류 시나리오와 디버그 패널
 - Sonner 성공·경고·오류 알림
+- 페이지 오류 화면(`PageErrorBoundary`): 한 화면이 렌더링 중 실패해도 메뉴는 남기고 새로고침·다시 시도를 안내합니다. 재배포 뒤 열려 있던 탭에서 옛 화면 파일을 못 찾으면 "새 버전이 배포되었습니다"로 구분해 안내하고, 다른 메뉴로 이동하면 오류 상태가 지워집니다.
 - 초보자가 흐름을 확인할 수 있는 개발 로그
 
 ## 더미 데이터 ON/OFF
@@ -92,12 +109,25 @@ frontend/src/app/components/ApplicationTopBar.tsx
 
 선택 상태는 `localStorage`에 저장되며 전환 시 MSW 초기화를 위해 화면이 새로고침됩니다.
 
-할 일·연락처·상품·검색·일반 게시판·갤러리·댓글·예약·문의·카테고리·관리자 화면은 **React 상태와 사용자 상호작용 패턴 자체를 학습하기 위한 독립 실습 화면**입니다. 실제 REST·MyBatis·MySQL 연결은 13단계 문서 CRUD에서 학습합니다.
+할 일·연락처·상품·검색·일반 게시판·갤러리·댓글·예약·문의·카테고리·관리자 화면은 **React 상태와 사용자 상호작용 패턴 자체를 학습하기 위한 독립 실습 화면**입니다. 실제 REST·MyBatis·MySQL 연결은 14단계 문서 CRUD에서 학습합니다.
+
+### 14단계 문서 CRUD와 업무 History의 코드 위치
+
+14단계 학습 화면(`/react/documents`)과 포트폴리오의 업무 History(`/history`)는 백엔드에서 같은 `documents` 테이블을 범위(`PRACTICE`·`HISTORY`)로 나눠 쓰고, 응답 모양도 같습니다. 그래도 프론트엔드 코드는 서로 공유하지 않습니다. 학습자가 14단계 코드를 고치며 실습해도 실제 포트폴리오 화면이 바뀌지 않게 하기 위해서입니다.
+
+| 위치 | 담당 | 비고 |
+|---|---|---|
+| `frontend/src/features/practice/14-documents/` | 14단계 학습 화면 | `/api/v1/documents`만 호출, 캐시 키 `["documents", …]` |
+| `frontend/src/features/history/` | 포트폴리오 업무 History | `/api/v1/history`만 호출, 캐시 키 `["history", …]`, 슈퍼관리자만 편집 |
+| `frontend/src/features/rich-text-editor/` | Tiptap 리치 텍스트 에디터 | 14단계·업무 History·포트폴리오 블록 편집기가 함께 사용 |
+| `frontend/src/shared/ui/Pagination.tsx` | 페이지 번호 버튼 | 14단계·업무 History·Snippet·투표 목록이 함께 사용 |
+
+두 화면을 나란히 열어 보면 같은 API 모양에 서로 다른 권한 규칙(방문자는 발행 글만, 슈퍼관리자만 작성)을 적용하는 방법을 비교할 수 있습니다. 로그인·로그아웃 시에는 `useAuthSession.ts`가 두 캐시를 모두 무효화합니다.
 
 ## 현재 포함된 React 기능
 
 - React 19 + TypeScript strict + Vite
-- 난이도별 14개 React 학습 단계와 개발 오류 실험실
+- 난이도별 25개 React 학습 단계와 개발 오류 실험실
 - 화면별 사용 설명서·학습 내용·소스 흐름·과제 모달
 - `useState` 인라인 할 일 CRUD
 - `useReducer + localStorage` 연락처 CRUD
@@ -112,7 +142,7 @@ frontend/src/app/components/ApplicationTopBar.tsx
 - USER·MANAGER·ADMIN 역할별 문의·답변·상태 전이
 - 카테고리 재귀 트리, 하위 추가, 이름 수정, 순서 변경, 삭제 제한
 - 관리자 사용자 다중 선택, 일괄 역할·상태 변경, Soft Delete·복구, 감사 로그
-- Spring Boot 문서 목록·상세·생성·수정·삭제
+- Spring Boot 문서 목록·상세·생성·수정·삭제(14단계)
 - 문서 표 목록·썸네일 카드 보기 전환
 - Tiptap 워드프로세서형 고정 툴바: H1~H6·글꼴·글자 크기(8pt~72pt)·색상·형광펜·정렬·목록·체크리스트·Office 방식 10×10 표 격자 선택·최대 50×50 직접 입력·열 너비와 행 높이 조절·셀 병합·분할·셀 배경색·링크·이미지·배율·실행 취소. 최종 화면에서는 모든 표가 카드 폭에 맞춰지고, 10열 초과 표는 글자와 셀 여백을 줄인 조밀한 한 화면 보기로 표시됩니다.
 - 클립보드 이미지 붙여넣기·드래그 업로드와 이미지 전용 문서 저장
@@ -298,15 +328,19 @@ API Workspace는 요청 실행·응답·History·Collection 기능을 모두 사
   → /react/tasks
   → /react/inquiries
   → /react/categories
+  → /react/admin-users
   → /react/documents?viewMode=table
   → /react/documents?viewMode=thumbnail
-  → /react/admin-users
+  → /react/infinite-feed
+  → /react/dynamic-form
+  → /react/context-auth
+  → /react/react19-actions
   → /react/development/scenarios
 ```
 
 ## 초보자 학습 순서
 
-1. `/react`에서 14단계 난이도와 오류 실험실을 확인합니다.
+1. `/react`에서 25단계 난이도와 오류 실험실을 확인합니다.
 2. 각 화면에서 생성·조회·수정·삭제를 모두 실행합니다.
 3. 오른쪽 상단 `?` 아이콘에서 사용 방법과 학습 내용을 읽습니다.
 4. 할 일 → 연락처 → 상품 모달 순서로 로컬 상태와 폼을 익힙니다.
@@ -314,12 +348,14 @@ API Workspace는 요청 실행·응답·History·Collection 기능을 모두 사
 6. 일반 게시판 → 이미지 → 댓글 → 예약으로 데이터 구조와 업무 규칙을 확장합니다.
 7. 업무 관리에서 TanStack Query와 낙관적 업데이트를 확인합니다.
 8. 문의·카테고리에서 권한과 재귀 트리를 익힙니다.
-9. 문서 화면에서 더미 데이터 ON으로 MSW API를 연습합니다.
-10. 더미 데이터 OFF로 Spring Boot·MyBatis·MySQL 실제 흐름을 확인합니다.
-11. Backend 로그에서 같은 `traceId`, mapper ID와 P6Spy SQL을 찾습니다.
-12. 관리자 화면에서 다중 선택과 Soft Delete·복구를 실행합니다.
-13. 오류 시나리오에서 401·409·500·지연·네트워크 오류를 확인합니다.
-14. Frontend·Backend 테스트와 정적 검사를 실행합니다.
+9. 관리자 화면(13단계)에서 다중 선택과 Soft Delete·복구를 실행합니다.
+10. 문서 화면(14단계)에서 더미 데이터 ON으로 MSW API를 연습합니다.
+11. 더미 데이터 OFF로 Spring Boot·MyBatis·MySQL 실제 흐름을 확인합니다.
+12. Backend 로그에서 같은 `traceId`, mapper ID와 P6Spy SQL을 찾습니다.
+13. 심화 단계에서 무한 스크롤(15) → 동적 폼(16) → Context 보호 라우트(17) → React 19 Actions(18)를 익힙니다. 18단계는 10단계 업무 관리의 TanStack Query 낙관적 업데이트와 비교해 봅니다.
+    이어서 커스텀 훅(19) → 성능 측정(20) → Zustand(21) → URL 상태(22) → ref·포커스(23) → `use()`·Suspense(24) → 테스트 작성(25)으로 실무 주제를 다룹니다.
+14. 오류 시나리오에서 401·409·500·지연·네트워크 오류를 확인합니다.
+15. Frontend·Backend 테스트와 정적 검사를 실행합니다.
 
 각 화면 오른쪽 위의 `?` 학습 가이드에서 사용법, 소스 흐름과 확장 과제를 확인할 수 있습니다.
 

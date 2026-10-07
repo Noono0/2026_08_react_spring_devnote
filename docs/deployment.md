@@ -413,14 +413,26 @@ node scripts/generate-admin-hash.mjs "직접_정한_새_비밀번호"
 
 > 형식이 맞지 않으면 로그인이 실패합니다. 배포 후 반드시 로그인을 확인하세요.
 
+> ⚠️ **이 해시는 DB가 처음 만들어질 때 한 번만 적용됩니다.**
+> `MemberMapper.xml` 의 `upsertSuperAdministrator` 는 `admin` 계정이 아직 없을 때(`login_id IS NULL`)만 비밀번호를 넣습니다.
+> 첫 기동 뒤에 `.env.app` 의 해시를 바꾸거나 `set-admin-hash.sh` 를 다시 실행해도 **기존 비밀번호는 바뀌지 않습니다.**
+> 또 첫 기동 때 이 값이 비어 있으면 빈 해시가 저장되어 관리자 로그인이 막힙니다. 첫 `up -d` 전에 값을 꼭 넣으세요.
+> 이미 배포한 뒤 바꿔야 한다면 MySQL 에서 직접 갱신합니다.
+>
+> ```sql
+> UPDATE members SET password_hash = '<새 해시>' WHERE login_id = 'admin';
+> ```
+
 ---
 
 ## 6. GitHub Actions 로 이미지 만들기
 
 1. 저장소 **Settings > Actions > General > Workflow permissions**
    → **Read and write permissions** 선택 (없으면 push 가 거부됩니다)
-2. `main` 에 푸시하면 `publish-images.yml` 이 돌면서
-   `ghcr.io/<사용자명>/devnote-backend:main`, `devnote-frontend:main` 이 만들어집니다
+2. `main` 에 푸시하면 먼저 `continuous-integration.yml`(테스트·빌드)이 돌고, **성공했을 때만** `publish-images.yml` 이 이어서 돌면서
+   `ghcr.io/<사용자명>/devnote-backend:main`, `devnote-frontend:main` 이 만들어집니다.
+   CI 가 실패하면 이미지가 갱신되지 않으므로 Actions 탭에서 실패 원인을 먼저 고칩니다.
+   급하게 다시 만들어야 하면 Actions 탭에서 `Publish Images` 를 수동 실행(workflow_dispatch)할 수 있습니다
 3. **Packages > 각 이미지 > Package settings > Change visibility → Public**
    비공개로 두면 서버에서 `docker login` 이 필요합니다. 공개가 간단합니다
 
@@ -462,6 +474,12 @@ docker compose -f compose.app.yml logs -f backend
 sed -i 's/SQL_INIT_MODE=always/SQL_INIT_MODE=never/' .env.app
 docker compose -f compose.app.yml --env-file .env.app up -d
 ```
+
+> ⚠️ **새 테이블이 추가된 버전을 배포할 때**는 한 번만 `SQL_INIT_MODE=always` 로 되돌려 기동해야 합니다.
+> `schema.sql` 의 `CREATE TABLE IF NOT EXISTS` 가 그때 새 테이블을 만들고, 기존 테이블·데이터는 건드리지 않습니다.
+> `never` 상태 그대로 올리면 운영 프로필의 `validate` 는 Entity 가 없는 새 테이블을 확인하지 않으므로 기동은 되지만,
+> 해당 기능을 쓰는 순간 `Table doesn't exist` 오류가 납니다.
+> 2026-10-04 버전에서 추가된 테이블: `portfolio_project_details`(프로젝트 기술 스택·링크), `document_tags`(업무 History 태그).
 
 ---
 
@@ -522,8 +540,8 @@ docker compose -f compose.app.yml --env-file .env.app pull
 docker compose -f compose.app.yml --env-file .env.app up -d
 ```
 
-> ⚠️ 워크플로는 **`main` 에 푸시될 때만** 동작한다.
-> 다른 브랜치에 푸시하면 이미지가 만들어지지 않는다.
+> ⚠️ 워크플로는 **`main` 에 푸시된 커밋의 CI 가 성공했을 때만** 동작한다.
+> 다른 브랜치에 푸시하거나 CI 가 실패하면 이미지가 만들어지지 않는다.
 
 ### 완전 자동 배포를 하지 않은 이유
 
@@ -578,6 +596,24 @@ scp -i <키> opc@<공인IP>:~/devnote-backups/*.gz ./
 **소스 클론도, 빌드 도구 설치도 필요 없습니다.** 이미지를 받아 쓰기 때문입니다.
 
 > 도메인을 쓰는 이유가 여기 있습니다. IP 로 공유하면 이사할 때마다 링크가 죽습니다.
+
+---
+
+## 12. 외부 공개 전 체크리스트
+
+지금은 혼자 쓰는 개인·테스트 서버라 아래 항목을 **의도적으로 미뤄 둔 상태**입니다(2026-10-03 점검).
+링크를 다른 사람에게 공개하기 전에 위에서부터 처리합니다.
+
+| 순서 | 항목 | 현재 상태 | 공개 전 조치 |
+|---|---|---|---|
+| 1 | 웹 크롤러 API 인증 | `CrawlerController` 의 모든 API(실행·녹화·설정·이력·실시간 화면·네이버 세션)가 로그인 없이 열려 있음. `SecurityConfiguration` 이 전체 `permitAll` | 슈퍼관리자만 허용하거나 운영 프로필에서 크롤러를 끔. 1GB 서버에서 Chromium 실행은 메모리 부족(OOM)으로 이어질 수 있음 |
+| 2 | 비로그인 요청의 회원 처리 | `CurrentMemberProvider` 가 세션이 없으면 1번 회원(슈퍼관리자)으로 처리하고 `X-Member-Id` 헤더로 다른 회원도 지정 가능. 학습 문서·다이어그램·파일 업로드가 이 방식을 사용 | 운영 프로필에서 헤더·기본값 대체를 끄고, 업로드·다이어그램은 로그인을 요구. (24시간 지난 미사용 `TEMP` 파일은 매일 자동 정리됨) |
+| 3 | 서버 정규식 실행 제한 | `JavaRegexService` 의 위험 패턴 검사를 `\d*\d*\d*z` 같은 패턴이 통과하고, Java 정규식은 중단 요청을 무시해 1초 제한 뒤에도 계속 실행됨. 작업 스레드가 2개라 이런 요청 두 번이면 재시작 전까지 기능이 멈춤 | 입력 문자열을 감싸 `charAt()` 에서 제한 시간을 확인하도록 변경 |
+| 4 | 관리자 비밀번호 교체 | 5번 절의 경고처럼 첫 기동 뒤에는 해시 변경이 반영되지 않음 | 공개 전에 SQL 로 비밀번호를 교체하고 로그인 확인 |
+| 5 | 로컬 DEBUG 로그의 비밀번호 | `MethodLoggingAspect` 가 `MemberPasswordService.encode/matches` 의 문자열 인자를 그대로 기록(운영 INFO 레벨에서는 출력 안 됨) | 비밀번호 서비스는 로깅 대상에서 제외 |
+| 6 | HTTPS | 미적용. 로그인 비밀번호가 평문 전송 | 8번 절의 Cloudflare 적용 후 `SESSION_COOKIE_SECURE=true` |
+| 7 | 로그인 시도 제한 | 없음 | 계정·IP 기준 실패 횟수 제한 |
+| 8 | 백업 자동 실행 | 스크립트만 있고 cron 미등록 | 10번 절대로 cron 등록 |
 
 ---
 

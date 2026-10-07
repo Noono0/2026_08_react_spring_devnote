@@ -4,7 +4,7 @@
 
 ## 준비
 
-- 프론트엔드: Node.js 22.12 이상, npm, `frontend/`에서 설치한 의존성
+- 프론트엔드: Node.js 22.13 이상(Corepack 포함), `frontend/`에서 `pnpm-lock.yaml` 기준으로 설치한 의존성
 - 백엔드: JDK 21과 실행 중인 Docker. `ArchitectureSmokeTest`는 독립적인 Testcontainers MySQL을 사용합니다.
 - 정적 검사: Python 3.10 이상, PyYAML, Node.js, JDK 21, Bash. Windows에서는 Git for Windows의 Bash를 사용합니다.
 
@@ -14,7 +14,7 @@
 
 ```sh
 cd frontend
-npm install
+corepack pnpm install --frozen-lockfile
 npm run lint
 npm run typecheck
 npm run test

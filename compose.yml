@@ -79,6 +79,7 @@ services:
         VITE_MOCK_SCENARIO: ${VITE_MOCK_SCENARIO:-success}
         VITE_DEVELOPMENT_MEMBER_ID: ${VITE_DEVELOPMENT_MEMBER_ID:-1}
         VITE_ENABLE_DEVELOPMENT_MENU: ${VITE_ENABLE_DEVELOPMENT_MENU:-true}
+        VITE_SITE_URL: ${VITE_SITE_URL:-}
     container_name: devnote-frontend
     ports:
       - "${FRONTEND_PORT:-3000}:80"
