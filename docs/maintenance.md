@@ -2,6 +2,12 @@
 
 [문서 목록으로](../README.md) · [작업 규칙](../AGENTS.md) · [검증 명령](verification.md)
 
+## 2026-10-08 — 서버 정규식 실행 제한 보강, 다음 작업 인계
+
+- **정규식**: `JavaRegexService`가 1초 제한 뒤 요청은 끊었지만 Java 정규식이 중단 신호를 확인하지 않아 작업 스레드(2개)가 계속 계산했습니다. 입력을 `DeadlineCharSequence`로 감싸 `charAt()`마다 제한 시각·중단 신호를 확인하게 해 계산 자체를 멈춥니다. 배포 체크리스트 3번을 완료로 바꿨습니다.
+- **검증**: 백엔드 `gradlew.bat test`(JDK 21) 120개 중 119개 통과·1개 기본 건너뜀. 새 테스트는 사전 검사를 통과하는 `\d*\d*\d*z`를 두 번 보낸 뒤 정상 요청이 처리되는지 확인합니다(약 2초).
+- **다음 시작점(미처리)**: 배포 체크리스트 2번(비로그인 요청을 1번 회원으로 처리하고 `X-Member-Id`로 회원 전환 가능)은 학습 문서·다이어그램·파일 업로드의 동작과 학습 가이드 설명이 함께 바뀌어 이번에 하지 않았습니다. 운영 프로필에서 헤더·기본 회원 대체를 끄고 로그인을 요구하는 방향으로 `CurrentMemberProvider`부터 확인합니다. 이 세션의 브랜치(`chore/deploy-script`)는 main으로 PR을 열어 CI 결과를 확인해야 합니다.
+
 ## 2026-10-08 — 크롤러 원격 브라우저 모드와 슈퍼관리자 전용 API
 
 - **실행 위치 설정**: `CrawlerBrowserSettings`가 `CRAWLER_BROWSER_MODE`(local 기본 / remote)를 읽습니다. remote면 `PlaywrightCrawlerEngine.openBrowser`가 표시 방식과 관계없이 항상 `CRAWLER_REMOTE_BROWSER_URL`(비어 있으면 `CRAWLER_PC_BROWSER_URL`)의 Chrome에 CDP로 연결하고, 이 서버에서는 Chromium을 띄우지 않습니다. 운영 `compose.app.yml`은 remote가 기본, 로컬 `compose.yml`은 local입니다. 값 오타는 서버 시작 시 실패합니다. compose가 빈 값을 빈 문자열로 넘겨 `${A:${B}}` 대체가 동작하지 않는 문제를 코드에서 직접 처리했습니다.
