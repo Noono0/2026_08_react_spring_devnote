@@ -612,7 +612,7 @@ scp -i <키> opc@<공인IP>:~/devnote-backups/*.gz ./
 | 4 | 관리자 비밀번호 교체 | 5번 절의 경고처럼 첫 기동 뒤에는 해시 변경이 반영되지 않음 | 공개 전에 SQL 로 비밀번호를 교체하고 로그인 확인 |
 | 5 | 로컬 DEBUG 로그의 비밀번호 | `MethodLoggingAspect` 가 `MemberPasswordService.encode/matches` 의 문자열 인자를 그대로 기록(운영 INFO 레벨에서는 출력 안 됨) | 비밀번호 서비스는 로깅 대상에서 제외 |
 | 6 | HTTPS | 미적용. 로그인 비밀번호가 평문 전송 | 8번 절의 Cloudflare 적용 후 `SESSION_COOKIE_SECURE=true` |
-| 7 | 로그인 시도 제한 | 없음 | 계정·IP 기준 실패 횟수 제한 |
+| 7 | 로그인 시도 제한 | ✅ 2026-10-08 적용. 같은 IP·아이디로 15분 안에 5번 틀리면 15분 잠금(429 `LOGIN_TEMPORARILY_LOCKED`). 서버 메모리 기준이라 재시작하면 기록이 사라지고, IP를 바꾸는 분산 공격까지는 막지 못함 | 필요하면 `AUTH_LOGIN_MAX_FAILURES`·`AUTH_LOGIN_FAILURE_WINDOW`·`AUTH_LOGIN_LOCK_DURATION`으로 조정. 분산 공격 대비가 필요하면 Nginx `limit_req` 추가 |
 | 8 | 백업 자동 실행 | 스크립트만 있고 cron 미등록 | 10번 절대로 cron 등록 |
 
 ---

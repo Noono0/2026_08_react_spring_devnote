@@ -35,6 +35,8 @@ public enum ErrorCode {
     ACCESS_DENIED(HttpStatus.FORBIDDEN, "ACCESS_DENIED", "요청한 기능을 사용할 권한이 없습니다."),
     LOGIN_FAILED(HttpStatus.UNAUTHORIZED, "LOGIN_FAILED", "아이디 또는 비밀번호가 올바르지 않습니다."),
     ACCOUNT_NOT_ACTIVE(HttpStatus.FORBIDDEN, "ACCOUNT_NOT_ACTIVE", "현재 사용할 수 없는 계정입니다."),
+    // 429 Too Many Requests: 같은 IP·아이디로 로그인 실패가 반복되어 잠시 막은 상태(LoginAttemptLimiter).
+    LOGIN_TEMPORARILY_LOCKED(HttpStatus.TOO_MANY_REQUESTS, "LOGIN_TEMPORARILY_LOCKED", "로그인 실패가 반복되어 잠시 로그인할 수 없습니다. 잠시 후 다시 시도해 주세요."),
     LOGIN_ID_ALREADY_EXISTS(HttpStatus.CONFLICT, "LOGIN_ID_ALREADY_EXISTS", "이미 사용 중인 아이디입니다."),
     EMAIL_ALREADY_EXISTS(HttpStatus.CONFLICT, "EMAIL_ALREADY_EXISTS", "이미 가입된 이메일입니다."),
     MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "MEMBER_NOT_FOUND", "회원을 찾을 수 없습니다."),

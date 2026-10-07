@@ -38,6 +38,7 @@ public class AuthenticationService {
     public static final String AUTHENTICATED_MEMBER_ID = "AUTHENTICATED_MEMBER_ID";
     private final MemberDao memberDao;
     private final MemberPasswordService passwordService;
+    private final LoginAttemptLimiter loginAttemptLimiter;
     // @Value("${이름:기본값}"): application.yml 값을 읽고, 없으면 : 뒤의 기본값을 쓴다. "30d"는 Duration(30일)으로 자동 변환된다.
     @Value("${auth.remember-me-duration:30d}")
     private Duration rememberMeDuration;
@@ -48,13 +49,22 @@ public class AuthenticationService {
 
     @Transactional
     public AuthSessionResponse login(LoginRequest request, HttpServletRequest servletRequest, HttpServletResponse servletResponse) {
+        // 운영 환경은 Nginx 뒤에 있지만 forward-headers-strategy 설정 덕분에 getRemoteAddr()가 실제 접속자 IP를 돌려준다.
+        String clientAddress = servletRequest.getRemoteAddr();
+        // ★ 비밀번호를 확인하기 "전에" 잠금부터 본다. 잠긴 동안에는 맞는 비밀번호를 넣어도 통과하지 못하므로
+        //   공격자가 잠금 중에 계속 비밀번호를 시험해 보는 것도 의미가 없어진다.
+        loginAttemptLimiter.checkAllowed(clientAddress, request.loginId());
         // 앞뒤 공백을 지운 아이디로 회원을 찾는다.
         MemberRow member = memberDao.selectMemberByLoginId(request.loginId().trim());
         // ★ "아이디가 없음"과 "비밀번호가 틀림"을 같은 오류(LOGIN_FAILED)로 돌려준다.
         //   따로 알려 주면 공격자가 "어떤 아이디가 가입돼 있는지"를 알아낼 수 있기 때문이다.
+        //   없는 아이디도 실패로 센다. 그래야 "잠기는지 여부"로 아이디 존재를 알아낼 수 없다.
         if (member == null || !passwordService.matches(request.password(), member.getPasswordHash())) {
+            loginAttemptLimiter.recordFailure(clientAddress, request.loginId());
             throw new BusinessException(ErrorCode.LOGIN_FAILED);
         }
+        // 비밀번호가 맞았으므로 이 IP·아이디의 실패 기록을 지운다.
+        loginAttemptLimiter.reset(clientAddress, request.loginId());
         // 정지·휴면 등 ACTIVE가 아닌 계정은 비밀번호가 맞아도 로그인할 수 없다.
         if (!"ACTIVE".equals(member.getAccountStatus())) {
             throw new BusinessException(ErrorCode.ACCOUNT_NOT_ACTIVE);

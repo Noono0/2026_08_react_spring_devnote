@@ -433,6 +433,8 @@ await startMockServerWhenEnabled();
 
 로그인 모달에서 `아이디 기억`을 선택하면 비밀번호가 아닌 로그인 ID만 `localStorage`에 저장합니다. `자동 로그인`을 선택하면 서버가 HttpOnly·SameSite 세션 쿠키를 최대 30일간 유지하며, 로그아웃할 때 쿠키와 자동 로그인 선택을 해제합니다. 기간은 `AUTH_REMEMBER_ME_DURATION`으로 조정할 수 있습니다.
 
+같은 IP에서 같은 아이디로 15분 안에 5번 로그인에 실패하면 15분 동안 맞는 비밀번호로도 로그인할 수 없고 `429 LOGIN_TEMPORARILY_LOCKED`와 남은 시간이 표시됩니다(`LoginAttemptLimiter`). 로컬 실습 중 잠겼다면 15분을 기다리거나 백엔드를 재시작합니다. 횟수와 시간은 `AUTH_LOGIN_MAX_FAILURES`(기본 5), `AUTH_LOGIN_FAILURE_WINDOW`(기본 15m), `AUTH_LOGIN_LOCK_DURATION`(기본 15m)으로 바꿀 수 있습니다.
+
 `/react/documents`의 소유권 오류 실습은 로그인과 별개로 기존 `X-Member-Id` 헤더 전환 기능을 유지합니다. 로그인하지 않은 요청에만 적용되며, 헤더가 없으면 1번 회원으로 처리합니다. 이 방식을 쓰는 API는 학습 문서(`/api/v1/documents`), 다이어그램(`/api/v1/diagrams`), 파일 업로드(`/api/v1/files`)입니다. 포트폴리오·업무 History·관리자 권한은 부여하지 않습니다. 개발 편의 기능이므로 외부 공개 전에는 [배포 가이드의 공개 전 체크리스트](deployment.md#12-외부-공개-전-체크리스트)에 따라 정리합니다.
 
 | Member ID | 이메일 | 학습 데이터 역할 |

@@ -2,6 +2,14 @@
 
 [문서 목록으로](../README.md) · [작업 규칙](../AGENTS.md) · [검증 명령](verification.md)
 
+## 2026-10-08 — 에디터 본문·표 입력 버그 수정, 로그인 실패 제한
+
+- **에디터 본문이 빈 칸으로 열리던 문제**: 시드 문서 1~3·101·102번의 `content_json`이 빈 문서라, 수정 화면이 빈 에디터로 열리고 거기에 쓴 글이 원래 HTML 본문을 덮어쓸 수 있었습니다. `data.sql`의 JSON과 `content_text`를 HTML 본문과 맞췄고(새 DB), 이미 만들어진 DB는 `INSERT IGNORE`라 바뀌지 않으므로 `rich-text-editor/utils/editorInitialContent.ts`가 "JSON이 비고 HTML에 본문이 있으면 HTML로 채운다"로 대비합니다. 운영 DB는 직접 수정하지 않았습니다.
+- **표 직접 입력 form 중첩**: `RichTextTableMenu`의 안쪽 `<form>`이 문서 작성 `<form>` 안에 들어가, React submit 이벤트가 바깥까지 전달되어 Enter 한 번에 문서 저장까지 실행될 수 있었습니다. 그룹(`role="group"`)+버튼+Enter 처리로 바꿨습니다.
+- **로그인 실패 제한**: `LoginAttemptLimiter`가 같은 IP·아이디로 15분 안에 5번 틀리면 15분 동안 맞는 비밀번호도 거부합니다(429 `LOGIN_TEMPORARILY_LOCKED`, 남은 분 표시). 없는 아이디도 실패로 세어 잠금 여부로 아이디 존재를 알 수 없게 했고, 아이디만이 아니라 IP와 묶어 공격자가 진짜 관리자를 잠그지 못하게 했습니다. 서버 메모리 기준이라 재시작하면 기록이 사라지고 분산 공격은 막지 못합니다. 설정은 `AUTH_LOGIN_MAX_FAILURES`·`AUTH_LOGIN_FAILURE_WINDOW`·`AUTH_LOGIN_LOCK_DURATION`(compose 두 파일·`.env.example` 반영), 배포 체크리스트 7번을 완료로 바꿨습니다.
+- **검증**: 백엔드 `gradlew.bat test`(JDK 21, Testcontainers) 108개 중 107개 통과·1개 기본 건너뜀(외부 크롤러), 새 `data.sql`도 테스트 DB 초기화에서 실행됨. 프론트엔드 `eslint`·`tsc -b` 통과, 에디터 테스트 14개 통과(form 중첩·Enter 시 바깥 form 미제출, HTML 대체 채우기). 실행 중인 로컬 서버에서 JSON이 빈 3번 문서 수정 화면이 HTML 본문으로 열리고 form 중첩이 0개임을 확인했습니다. `docker compose config`로 compose 문법 확인.
+- **미검증 범위**: 로그인 잠금은 단위 테스트로만 확인했고, 실행 중인 로컬 백엔드를 재시작하지 않아 실제 브라우저 잠금 화면은 확인하지 않았습니다. 운영 서버의 Nginx 뒤에서 `getRemoteAddr()`가 실제 IP를 주는지는 `forward-headers-strategy: native` 설정으로 판단했고 운영에서 직접 확인하지는 않았습니다.
+
 ## 2026-10-08 — 학습 13·14단계 순서 교체, 14단계 문서 CRUD와 업무 History 코드 분리
 
 - **단계 순서**: 기본 과정(1~14단계) 안에서 실제 API 문서 CRUD(옛 13단계) 다음에 로컬 State 관리자 CRUD(옛 14단계)가 오던 역순을 바로잡았습니다. 관리자 사용자 CRUD가 13단계(난이도 9), 문서 CRUD가 14단계(난이도 9.5)로 기본 과정을 마칩니다. 주소(`/react/admin-users`, `/react/documents`)와 `guideId`는 그대로입니다. 폴더는 `practice/14-admin-users` → `practice/13-admin-users`로 옮겼고, `learningGuides.test.ts`에 기본 과정 난이도가 낮아지지 않는지 검사하는 테스트를 추가했습니다.

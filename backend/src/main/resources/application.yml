@@ -53,6 +53,11 @@ server:
 
 auth:
   remember-me-duration: ${AUTH_REMEMBER_ME_DURATION:30d}
+  # 로그인 무차별 대입 방어(LoginAttemptLimiter): 같은 IP·아이디로 failure-window 안에 max-failures번 틀리면 lock-duration 동안 잠근다.
+  login-limit:
+    max-failures: ${AUTH_LOGIN_MAX_FAILURES:5}
+    failure-window: ${AUTH_LOGIN_FAILURE_WINDOW:15m}
+    lock-duration: ${AUTH_LOGIN_LOCK_DURATION:15m}
 
 springdoc:
   swagger-ui:
