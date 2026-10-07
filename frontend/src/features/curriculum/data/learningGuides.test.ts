@@ -37,6 +37,18 @@ describe("learningGuides", () => {
     expect(ADVANCED_TOPIC_FIRST_STAGE_NUMBER).toBe(15);
   });
 
+  it("모든 로드맵 단계의 실습 과제에 힌트가 있고, 진도 키로 쓰는 과제 문장이 단계 안에서 겹치지 않는다", () => {
+    roadmapLearningGuides.forEach((learningGuide) => {
+      expect(learningGuide.practiceTasks.length, learningGuide.guideId).toBeGreaterThan(0);
+      learningGuide.practiceTasks.forEach((practiceTask) => {
+        expect(practiceTask.task.trim(), learningGuide.guideId).not.toBe("");
+        expect(practiceTask.hint.trim(), `${learningGuide.guideId}: ${practiceTask.task}`).not.toBe("");
+      });
+      const taskTexts = learningGuide.practiceTasks.map((practiceTask) => practiceTask.task);
+      expect(new Set(taskTexts).size, learningGuide.guideId).toBe(taskTexts.length);
+    });
+  });
+
   it("resolves route-specific guides", () => {
     expect(findLearningGuideByPathname("/practice/gallery")?.guideId).toBe("gallery");
     expect(findLearningGuideByPathname("/practice/reservations")?.guideId).toBe("reservation");
