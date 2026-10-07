@@ -3,6 +3,7 @@ import {
   portfolioSectionGroups,
   sortPortfolioBlocks,
   sortPortfolioSections,
+  parseTechStackText,
   toPortfolioSectionSaveRequest,
 } from "@/features/portfolio/utils/portfolioSectionPresentation";
 
@@ -22,6 +23,7 @@ const createSection = (changes: Partial<PortfolioSection> = {}): PortfolioSectio
   visibility: "PUBLIC",
   versionNumber: 3,
   editorImageFileIds: [11],
+  techStack: [],
   createdAt: "2026-08-01T00:00:00",
   updatedAt: "2026-08-01T00:00:00",
   ...changes,
@@ -71,5 +73,18 @@ describe("portfolioSectionPresentation", () => {
     ];
 
     expect(sortPortfolioBlocks(sections).map((section) => section.portfolioSectionId)).toEqual([2, 3, 1]);
+  });
+
+  it("기술 스택 입력을 공백·빈 값·대소문자 중복 없이 정리한다", () => {
+    expect(parseTechStackText(" React, spring boot ,, react ,Spring Boot")).toEqual(["React", "spring boot"]);
+    expect(parseTechStackText("")).toEqual([]);
+  });
+
+  it("프로젝트 저장 요청에 기술 스택과 링크를 그대로 담아 공개 전환 때 지워지지 않게 한다", () => {
+    const project = createSection({ sectionType: "PROJECT", techStack: ["React"], repositoryUrl: "https://github.com/example/devnote" });
+    expect(toPortfolioSectionSaveRequest(project, { visibility: "HIDDEN" })).toMatchObject({
+      techStack: ["React"],
+      repositoryUrl: "https://github.com/example/devnote",
+    });
   });
 });

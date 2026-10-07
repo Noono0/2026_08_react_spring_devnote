@@ -1,3 +1,11 @@
+/**
+ * CrawlerStepEditor.tsx — 크롤러 "단계별 실행" 편집기
+ *
+ * [화면 구성] 왼쪽: 동작 추가 버튼 / 가운데: 단계 표(행 선택) / 아래: 선택한 단계 설정·실행 로그·녹화
+ * [데이터 흐름] 단계 목록(steps)은 부모(WebCrawlerPage)가 가진 State다. 이 컴포넌트는 바꾼 새 배열을 onChange로 올려보낸다.
+ *   → 저장·실행에 쓰는 값이 항상 부모 한 곳에만 있다(상태 끌어올리기).
+ * [단계 구조] COLLECT(목록 반복) 단계는 안에 "데이터 추출" 칸(fields)을 가진다. 선택은 { 단계 id, 추출 칸 id }로 기억한다.
+ */
 import { useEffect, useRef, useState } from "react";
 import type { CrawlerBrowserWindow, CrawlerFieldRequest, CrawlerStepType } from "@/features/crawler/types/webCrawlerTypes";
 import { useCrawlerLiveView, useCrawlerManualAction, useCrawlerRecording } from "@/features/crawler/hooks/useWebCrawler";
@@ -26,7 +34,9 @@ interface CrawlerStepEditorProps {
   focusProblem?: StepProblem & { requestId: number };
 }
 
+// 서버가 알려 주는 단계 상태 → 화면 표시 글자.
 const statusLabels: Record<string, string> = { PENDING: "대기", RUNNING: "실행 중", DONE: "완료", BLOCKED: "확인 필요", WAITING: "사용자 대기", SKIPPED: "건너뜀", FAILED: "실패" };
+/** 단계 표의 "설명" 칸에 보여 줄 한 줄 요약. 메모가 있으면 메모를, 없으면 단계 종류별로 만든 문장을 쓴다. */
 const describe = (step: EditableScenarioStep): string => {
   if (step.memo) return step.memo;
   switch (step.type) {
@@ -43,14 +53,17 @@ const describe = (step: EditableScenarioStep): string => {
 };
 
 export const CrawlerStepEditor = ({ steps, onChange, onLoadExample, startUrl, browserWindow, username, password, onUsernameChange, onPasswordChange, disabled, onRun, onBeforeAddAction, commonFields, commonItemSelector, focusProblem }: CrawlerStepEditorProps) => {
+  // 지금 선택한 행. fieldId가 있으면 목록 반복 안의 추출 칸을 고른 것이다.
   const [selection, setSelection] = useState<{ stepId: string; fieldId?: string }>();
   const editorRef = useRef<HTMLElement>(null);
   const handledFocusRequest = useRef(0);
   const recording = useCrawlerRecording();
+  // 실행 중(disabled)이거나 녹화를 시작했으면 0.7초마다 실행 상태를 받아 각 행의 진행 상태와 로그를 갱신한다.
   const liveQuery = useCrawlerLiveView(true, disabled || recording.start.isSuccess);
   const live = liveQuery.data;
   const manual = useCrawlerManualAction();
   const isRecording = live?.recording === true;
+  // 실행·녹화 중에는 단계를 바꾸지 못하게 잠근다(실행 중인 단계 목록과 화면이 어긋나지 않게).
   const locked = disabled || isRecording || recording.start.isPending;
   const selectedIndex = steps.findIndex((step) => step.id === selection?.stepId);
   const selected = steps[selectedIndex];
@@ -59,6 +72,8 @@ export const CrawlerStepEditor = ({ steps, onChange, onLoadExample, startUrl, br
   const selectedPosition = selectedField ? fieldIndex : selectedIndex;
   const selectedLength = selectedField ? selected?.fields?.length ?? 0 : steps.length;
   const isPaused = disabled && live?.stage === "일시정지" && live.manualActionRequired;
+  // 부모가 "이 단계의 이 칸이 비었다"(focusProblem)를 알려 오면: 그 행을 선택하고, 다시 그려진 뒤 해당 입력칸에 포커스·오류 표시를 한다.
+  // requestId로 같은 요청을 두 번 처리하지 않는다. 입력칸이 없으면 행 버튼(또는 동작 추가 버튼)으로 포커스를 보낸다.
   useEffect(() => {
     if (!focusProblem || handledFocusRequest.current === focusProblem.requestId) return;
     if (focusProblem.stepId && (selection?.stepId !== focusProblem.stepId || selection?.fieldId !== focusProblem.fieldId)) {
@@ -81,7 +96,9 @@ export const CrawlerStepEditor = ({ steps, onChange, onLoadExample, startUrl, br
     button?.focus({ preventScroll: true });
     button?.scrollIntoView?.({ block: "center", behavior: "smooth" });
   }, [focusProblem, selection]);
+  /** 단계 하나의 일부 값만 바꾼 새 배열을 부모에게 올린다(불변 갱신: map + 펼침 연산자). */
   const update = (id: string, patch: Partial<EditableScenarioStep>): void => onChange(steps.map((step) => step.id === id ? { ...step, ...patch } : step));
+  /** 선택한 행 바로 아래에 단계를 넣는다. 선택이 없으면 맨 끝(마지막이 CSV 저장이면 그 앞)에 넣는다. */
   const insert = (step: EditableScenarioStep): void => {
     const next = [...steps];
     const insertion = selectedIndex < 0 ? (next.at(-1)?.type === "CSV" && step.type !== "CSV" ? next.length - 1 : next.length) : selectedIndex + 1;
@@ -89,10 +106,12 @@ export const CrawlerStepEditor = ({ steps, onChange, onLoadExample, startUrl, br
     onChange(next);
     setSelection({ stepId: step.id });
   };
+  /** 동작 추가 버튼. 페이지 열기는 시작 주소를, 목록 반복은 공통 수집 설정을 기본값으로 채운다. */
   const add = (type: CrawlerStepType): void => {
     if (!onBeforeAddAction()) return;
     insert(createStep(type, type === "GOTO" ? { value: startUrl } : type === "COLLECT" ? { targetMode: "SELECTOR", target: commonItemSelector, fields: commonFields } : {}));
   };
+  /** 데이터 추출 추가: 목록 반복을 선택했으면 그 안에 추가하고, 아니면 추출 칸 하나를 가진 새 목록 반복 단계를 만든다. */
   const addExtraction = (): void => {
     if (!onBeforeAddAction()) return;
     const parent = selected?.type === "COLLECT" ? selected : undefined;
@@ -108,6 +127,7 @@ export const CrawlerStepEditor = ({ steps, onChange, onLoadExample, startUrl, br
       setSelection({ stepId: step.id, fieldId: field.id });
     }
   };
+  /** 선택한 행 위로·아래로·복사·삭제. 추출 칸을 골랐으면 그 목록 반복 안에서만 움직인다. */
   const editSelection = (action: "up" | "down" | "copy" | "delete"): void => {
     if (!selected) return;
     if (selectedField) {
@@ -148,6 +168,7 @@ export const CrawlerStepEditor = ({ steps, onChange, onLoadExample, startUrl, br
     onChange(next);
   };
 
+  // 아래 JSX는 한 줄이 길어 영역별로 나눠 읽으면 쉽다: 실행 버튼 → 동작 추가(aside) → 단계 표 → 행 편집 버튼 → 선택 단계 설정 → 실행 로그 → 예시·녹화·계정정보.
   return <section ref={editorRef} className="crawler-config-section crawler-workflow">
     <header><span>▶</span><div><h2>단계별 실행</h2><p>동작 추가 → 행 선택 → 설정. 목록 반복을 선택하면 그 안에 데이터 추출을 추가할 수 있습니다.</p></div></header>
     <div className="crawler-workflow-toolbar">
@@ -169,6 +190,7 @@ export const CrawlerStepEditor = ({ steps, onChange, onLoadExample, startUrl, br
           <table className="crawler-workflow-table"><caption>실행 순서와 목록 반복 하위 추출 단계</caption><thead><tr><th scope="col">순서</th><th scope="col">동작 · 설명</th><th scope="col">상태</th></tr></thead>
             {steps.map((step, index) => {
               const progress = live?.steps.length === steps.length ? live.steps[index] : undefined;
+              // 단계마다 <tbody>를 하나씩 만든다. 목록 반복이면 아래에 추출 칸 행들이 함께 묶여 들여 보인다.
               return <tbody key={step.id} className={step.type === "COLLECT" ? "crawler-loop-group" : undefined}>
                 <tr className={`${selection?.stepId === step.id && !selection.fieldId ? "is-selected" : ""} ${progress?.status === "RUNNING" && disabled ? "is-running" : ""}`}>
                   <td>{index + 1}</td><td><button type="button" data-step-row-id={step.id} aria-pressed={selection?.stepId === step.id && !selection.fieldId} onClick={() => setSelection({ stepId: step.id })}><span><CrawlerStepIcon type={step.type} /><strong>{stepTypeOptions.find((option) => option.value === step.type)?.label}</strong>{step.type === "COLLECT" ? <em>묶음 · 하위 {step.fields?.length ?? 0}개</em> : null}</span><small>{describe(step)}</small></button></td>

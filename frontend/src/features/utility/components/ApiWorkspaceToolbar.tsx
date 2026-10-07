@@ -13,6 +13,7 @@ interface ApiWorkspaceToolbarProps {
   onCollectionRunnerOpen: () => void;
 }
 
+// API 작업 공간 상단 도구 모음: 사용할 환경 선택, 요청·응답 배치(위아래/좌우) 전환, 새 요청, Postman 가져오기·내보내기, 컬렉션 실행기 열기.
 export const ApiWorkspaceToolbar = ({
   environments,
   activeEnvironmentId,

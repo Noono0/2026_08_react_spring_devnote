@@ -1,3 +1,12 @@
+/**
+ * cronUtils.ts — Cron 표현식(예약 실행 시간표) 만들기·설명·다음 실행 시각 계산
+ *
+ * 두 방언을 지원한다.
+ *   SPRING : 초 분 시 일 월 요일 (6칸) — @Scheduled(cron = "0 0 9 * * ?"). 일·요일 중 하나는 ?(지정 안 함)를 쓸 수 있다.
+ *   LINUX  : 분 시 일 월 요일 (5칸) — crontab
+ * 각 칸에 쓸 수 있는 모양: 숫자(5), 별표 *(매번), 별표+슬래시+숫자(15분마다 = 별표 슬래시 15), 범위(1-5), 목록(1,3,5)
+ */
+
 export type CronDialect = "SPRING" | "LINUX";
 
 export interface CronFields {
@@ -9,6 +18,7 @@ export interface CronFields {
   dayOfWeek: string;
 }
 
+/** 칸 하나를 검사한다. 허용된 모양이 아니거나 범위를 벗어나면 어느 칸이 왜 틀렸는지 알려 주는 오류를 던진다. */
 const validateField = (label: string, rawValue: string, minimum: number, maximum: number, allowQuestion = false): string => {
   const value = rawValue.trim();
   if (value === "*" || (allowQuestion && value === "?")) return value;
@@ -40,6 +50,7 @@ const validateField = (label: string, rawValue: string, minimum: number, maximum
   throw new Error(`${label} 필드는 숫자, *, ${allowQuestion ? "?, " : ""}*/간격, 범위, 쉼표 목록만 사용할 수 있습니다.`);
 };
 
+/** 칸들을 검사한 뒤 방언에 맞는 순서로 공백으로 이어 붙여 표현식을 만든다. */
 export const buildCronExpression = (dialect: CronDialect, fields: CronFields): string => {
   const second = dialect === "SPRING" ? validateField("초", fields.second, 0, 59) : "";
   const minute = validateField("분", fields.minute, 0, 59);
@@ -59,12 +70,14 @@ const describeField = (value: string, unit: string): string => {
   return `${value}${unit}`;
 };
 
+/** 사람이 읽는 설명("매 분, 9시, … 에 실행합니다.")을 만든다. */
 export const describeCron = (dialect: CronDialect, fields: CronFields): string => {
   const parts = [describeField(fields.minute, "분"), describeField(fields.hour, "시"), describeField(fields.dayOfMonth, "일"), describeField(fields.month, "월"), describeField(fields.dayOfWeek, "요일")];
   if (dialect === "SPRING") parts.unshift(describeField(fields.second, "초"));
   return `${parts.join(", ")}에 실행합니다.`;
 };
 
+/** 현재 값(예: 지금 몇 분)이 칸의 조건에 맞는지. */
 const fieldMatches = (value: string, current: number): boolean => {
   if (value === "*" || value === "?") return true;
   if (value.startsWith("*/")) return current % Number(value.slice(2)) === 0;
@@ -76,6 +89,11 @@ const fieldMatches = (value: string, current: number): boolean => {
   return Number(value) === current;
 };
 
+/**
+ * 다음 실행 시각 count개를 찾는다. 시작 시각부터 1초(또는 1분)씩 앞으로 가며 모든 칸이 맞는 순간을 모은다.
+ * 무한 반복을 막기 위해 최대 탐색 범위를 둔다(분 단위면 약 370일, 초 단위면 14일).
+ * LINUX이거나 SPRING의 초가 고정 숫자면 1분씩 건너뛰어 계산량을 60분의 1로 줄인다.
+ */
 export const nextCronRuns = (dialect: CronDialect, fields: CronFields, startDate = new Date(), count = 5): Date[] => {
   const results: Date[] = [];
   const cursor = new Date(startDate);

@@ -3,6 +3,8 @@ import type { OpenApiDocumentSummary, OpenApiOperationSummary, OpenApiParameterS
 import { parseSimpleYaml } from "@/features/utility/utils/dataConverter";
 import { createEmptyApiRequest, createWorkspaceId } from "@/features/utility/utils/apiWorkspaceUtils";
 
+// openApiStudio.ts — OpenAPI 3.x(Swagger) 문서를 읽어 API 목록·파라미터·예시 본문을 정리하고, 바로 실행할 수 있는 요청으로 만드는 도구.
+// 붙여 넣은 문서는 모양을 믿을 수 없으므로 asRecord·asString 같은 도우미로 하나씩 안전하게 꺼낸다.
 const supportedMethods = new Set<ApiWorkspaceMethod>(["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]);
 
 const isRecord = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === "object" && !Array.isArray(value);
@@ -23,6 +25,7 @@ export const formatOpenApiExample = (value: unknown, fallback = ""): string => {
   }
 };
 
+// JSON으로 먼저 읽어 보고, 실패하면 YAML로 읽는다(4MB까지).
 export const parseOpenApiSource = (source: string): Record<string, unknown> => {
   if (!source.trim()) throw new Error("OpenAPI 문서를 입력해 주세요.");
   if (new Blob([source]).size > 4 * 1024 * 1024) throw new Error("OpenAPI 문서는 4MB 이하만 처리할 수 있습니다.");
@@ -40,6 +43,7 @@ export const parseOpenApiSource = (source: string): Record<string, unknown> => {
   return parsed;
 };
 
+// $ref: "#/components/schemas/User" 같은 문서 안 참조를 따라가 실제 정의를 찾는다(~1은 /, ~0은 ~ 를 뜻하는 이스케이프).
 const resolveLocalReference = (root: Record<string, unknown>, value: unknown): unknown => {
   if (!isRecord(value) || typeof value.$ref !== "string" || !value.$ref.startsWith("#/")) return value;
   return value.$ref.slice(2).split("/").reduce<unknown>((current, segment) => {
@@ -48,6 +52,7 @@ const resolveLocalReference = (root: Record<string, unknown>, value: unknown): u
   }, root);
 };
 
+// 스키마로 예시 값을 만든다(example → default → enum 첫 값 → 타입·형식별 기본값 순서). 자기 자신을 참조하는 스키마나 너무 깊은 중첩(7단계)은 null로 끊는다.
 const exampleFromSchema = (root: Record<string, unknown>, schemaValue: unknown, seenReferences = new Set<string>(), depth = 0): unknown => {
   if (depth > 7) return null;
   if (isRecord(schemaValue) && typeof schemaValue.$ref === "string") {
@@ -80,6 +85,7 @@ const getParameterExample = (root: Record<string, unknown>, parameter: Record<st
   return exampleFromSchema(root, parameter.schema);
 };
 
+// servers 주소가 없거나 /api처럼 경로만 있으면 로컬 백엔드(http://localhost:8080)를 기준으로 쓴다.
 const normalizeServerUrl = (serverUrl: string): string => {
   const trimmed = serverUrl.trim().replace(/\/$/, "");
   if (!trimmed) return "http://localhost:8080";
@@ -87,6 +93,7 @@ const normalizeServerUrl = (serverUrl: string): string => {
   return `http://localhost:8080${trimmed.startsWith("/") ? trimmed : `/${trimmed}`}`;
 };
 
+// 문서의 security 설정(Bearer·Basic·API 키)을 보고 요청의 인증 칸 종류를 미리 맞춘다(값은 비워 둔다).
 const createAuthorization = (root: Record<string, unknown>, operation: Record<string, unknown>): ApiWorkspaceAuthorization => {
   const security = Array.isArray(operation.security) ? operation.security : Array.isArray(root.security) ? root.security : [];
   const securityName = security.flatMap((requirement) => isRecord(requirement) ? Object.keys(requirement) : [])[0];
@@ -165,6 +172,7 @@ const readRequestExample = (root: Record<string, unknown>, operation: Record<str
   return { example: exampleFromSchema(root, media.schema), contentType };
 };
 
+// paths의 각 경로 × 메서드를 하나의 API(operation)로 정리한다. 3.x가 아니거나 paths가 비면 오류.
 export const analyzeOpenApiDocument = (source: Record<string, unknown>): OpenApiDocumentSummary => {
   const openApiVersion = asString(source.openapi);
   if (!openApiVersion) throw new Error("openapi 버전 필드가 없습니다. OpenAPI 3.x 문서인지 확인해 주세요.");

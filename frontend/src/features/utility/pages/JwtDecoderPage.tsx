@@ -1,9 +1,13 @@
+// JwtDecoderPage.tsx — JWT 해독기: 토큰의 헤더·내용(payload)을 읽고 만료 시각을 확인한다(utils/jwtDecoder.ts).
+// ★ 서명이 진짜인지는 검증하지 않는다(비밀키가 필요하고, 비밀키를 브라우저에 넣으면 안 된다). 진위 확인은 서버의 몫이다.
+
 import { useMemo, useState } from "react";
 import { UtilityHelpDialog, UtilityPageTitle } from "@/features/utility/components/UtilityHelpDialog";
 import { copyText } from "@/features/utility/utils/browserFileUtils";
 import { decodeJwt } from "@/features/utility/utils/jwtDecoder";
 import { applicationNotification } from "@/shared/notification/applicationNotification";
 
+// 예시 토큰 만들기: JSON → Base64URL(+ → -, / → _, = 제거). 서명 부분은 연습용 가짜 값이다.
 const base64Url = (value: object): string => btoa(unescape(encodeURIComponent(JSON.stringify(value)))).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
 const exampleToken = `${base64Url({ alg: "HS256", typ: "JWT" })}.${base64Url({ sub: "devnote-user", role: "USER", iat: 1786622400, exp: 1786626000 })}.example-signature`;
 const stateLabels = { VALID_TIME: "시간 조건상 사용 가능", EXPIRED: "만료됨", NOT_ACTIVE: "아직 유효하지 않음", NO_TIME_CLAIMS: "시간 Claim 없음" } as const;

@@ -1,3 +1,6 @@
+// regexTester.ts — 브라우저(JavaScript) 정규식 실행·패턴 설명·ReDoS 위험 경고
+// 모드: FIND(모두 찾기) / FULL(전체 일치) / REPLACE(바꾸기). 같은 입력을 서버 Java로도 실행해 결과를 비교할 수 있다(regexApi.ts).
+
 export type RegexMode = "FIND" | "FULL" | "REPLACE";
 
 export interface RegexMatchResult {
@@ -17,11 +20,13 @@ export interface RegexExecutionResult {
 const maximumInputLength = 100_000;
 const maximumMatches = 200;
 
+// 지원하는 플래그만 남기고 중복을 없앤다. 모두 찾기·바꾸기는 g(전역) 플래그가 있어야 하므로 없으면 붙인다.
 const normalizedFlags = (flags: string, requireGlobal: boolean): string => {
   const uniqueFlags = [...new Set(flags.replace(/[^dgimsuvy]/g, ""))].join("");
   return requireGlobal && !uniqueFlags.includes("g") ? `${uniqueFlags}g` : uniqueFlags;
 };
 
+// 일치 결과의 그룹 값: 번호 그룹(1, 2, …) 다음에 이름 그룹을 붙인다.
 const toGroups = (match: RegExpExecArray): RegexMatchResult["groups"] => {
   const numberedGroups = match.slice(1).map((value, index) => ({ name: String(index + 1), value: value ?? "" }));
   const namedGroups = Object.entries(match.groups ?? {}).map(([name, value]) => ({ name, value: value ?? "" }));
@@ -38,6 +43,7 @@ export const runJavaScriptRegex = (
   if (!pattern) throw new Error("정규식 패턴을 입력해 주세요.");
   if (input.length > maximumInputLength) throw new Error("테스트 문자열은 100,000자 이하로 입력해 주세요.");
 
+  // 전체 일치: 패턴을 ^(?: … )$로 감싸 입력 전체가 맞는지만 본다.
   if (mode === "FULL") {
     const expression = new RegExp(`^(?:${pattern})$`, normalizedFlags(flags, false).replace("g", ""));
     const match = expression.exec(input);
@@ -64,6 +70,7 @@ const collectMatches = (expression: RegExp, input: string): RegexExecutionResult
   return { matched: matches.length > 0, matches, truncated: Boolean(currentMatch) };
 };
 
+// 자주 쓰는 정규식 조각과 그 뜻(\d 숫자, \w 단어 문자, ^ 시작, $ 끝 …). explainRegex가 패턴을 조각내 이 표로 설명한다.
 const explanations: Array<[RegExp, string]> = [
   [/^\^$/, "문자열의 시작"],
   [/^\$$/, "문자열의 끝"],
@@ -97,5 +104,6 @@ export const explainRegex = (pattern: string): RegexExplanationToken[] => {
   });
 };
 
+// (a+)+처럼 "반복 안의 반복"이나 .*가 이어지는 패턴은 입력에 따라 매우 느려질 수 있어 경고한다(서버 JavaRegexService와 같은 규칙).
 export const hasPotentialRedosRisk = (pattern: string): boolean => /(\([^)]*[+*][^)]*\))[+*{]/.test(pattern) || /(\.\*){2,}/.test(pattern);
 

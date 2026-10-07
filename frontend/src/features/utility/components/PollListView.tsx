@@ -11,6 +11,7 @@ const formatEndsAt = (endsAt: string): string => new Intl.DateTimeFormat("ko-KR"
   year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit",
 }).format(new Date(endsAt));
 
+// 투표 목록 표(상태·질문·참여 수·마감 시각). 질문을 누르면 상세 보기로 가고, 삭제 권한이 있으면 삭제 버튼을 보여 준다.
 export const PollListView = ({ polls, onDetailOpen, onDelete }: PollListViewProps) => (
   <div className="poll-compact-list">
     <div className="poll-compact-heading" aria-hidden="true">

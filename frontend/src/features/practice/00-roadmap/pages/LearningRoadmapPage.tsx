@@ -1,31 +1,22 @@
 import { Link } from "react-router-dom";
 import { LearningGuideTitle } from "@/features/curriculum/components/LearningGuideTitle";
-import { learningGuideList, type LearningGuide } from "@/features/curriculum/data/learningGuides";
+import { ADVANCED_TOPIC_FIRST_STAGE_NUMBER, learningStageRoutes, roadmapLearningGuides, type LearningGuide } from "@/features/curriculum/data/learningGuides";
 
-const learningRouteMap: Record<string, string> = {
-  fundamentals: "/react/fundamentals",
-  todo: "/react/todos",
-  contact: "/react/contacts",
-  product: "/react/modal-products",
-  search: "/react/search-autocomplete",
-  board: "/react/general-board",
-  gallery: "/react/gallery",
-  comment: "/react/comments",
-  reservation: "/react/reservations",
-  task: "/react/tasks",
-  inquiry: "/react/inquiries",
-  category: "/react/categories",
-  document: "/react/documents",
-  admin: "/react/admin-users",
-};
+// 1~14단계는 난이도로, 15단계부터는 "심화" 묶음으로 보여 준다. (심화는 CRUD를 마친 뒤 실무 주제를 다룬다)
+const stageGroupDescriptions = {
+  "기초·초급": "React 상태와 가장 단순한 CRUD 흐름을 익힙니다.",
+  중급: "화면 패턴과 데이터 구조, 업무 규칙을 다양하게 경험합니다.",
+  고급: "권한·트리·파일·백엔드·대량 처리를 연습합니다.",
+  심화: "CRUD를 마친 뒤 커스텀 훅·성능·전역 상태·URL 상태·접근성·Suspense·테스트 같은 실무 주제를 다룹니다.",
+} as const;
+type StageGroupLabel = keyof typeof stageGroupDescriptions;
 
-const getStageGroupLabel = (learningGuide: LearningGuide): string => {
+const getStageGroupLabel = (learningGuide: LearningGuide): StageGroupLabel => {
+  if (learningGuide.stageNumber >= ADVANCED_TOPIC_FIRST_STAGE_NUMBER) return "심화";
   if (learningGuide.difficultyScore <= 3) return "기초·초급";
   if (learningGuide.difficultyScore < 8) return "중급";
   return "고급";
 };
-
-const roadmapLearningGuides = learningGuideList.filter((learningGuide) => learningGuide.stageNumber > 0 && learningGuide.stageNumber <= 14);
 
 export const LearningRoadmapPage = () => (
   <section className="learning-page">
@@ -39,17 +30,17 @@ export const LearningRoadmapPage = () => (
     </div>
 
     <div className="roadmap-summary-grid">
-      <article><strong>14개</strong><span>난이도별 React 실습 단계</span></article>
+      <article><strong>{roadmapLearningGuides.length}개</strong><span>난이도별 React 실습 단계</span></article>
       <article><strong>8종</strong><span>인라인·모달·페이지·계층·트리 등 UI 패턴</span></article>
       <article><strong>ON/OFF</strong><span>실제 백엔드와 MSW 더미 전환</span></article>
       <article><strong>?</strong><span>모든 화면 학습 가이드 모달</span></article>
     </div>
 
-    {(["기초·초급", "중급", "고급"] as const).map((stageGroupLabel) => (
+    {(Object.keys(stageGroupDescriptions) as StageGroupLabel[]).map((stageGroupLabel) => (
       <section className="roadmap-stage-section" key={stageGroupLabel}>
         <div className="roadmap-section-heading">
           <h2>{stageGroupLabel}</h2>
-          <p>{stageGroupLabel === "기초·초급" ? "React 상태와 가장 단순한 CRUD 흐름을 익힙니다." : stageGroupLabel === "중급" ? "화면 패턴과 데이터 구조, 업무 규칙을 다양하게 경험합니다." : "권한·트리·파일·백엔드·대량 처리를 연습합니다."}</p>
+          <p>{stageGroupDescriptions[stageGroupLabel]}</p>
         </div>
         <div className="roadmap-grid">
           {roadmapLearningGuides.filter((learningGuide) => getStageGroupLabel(learningGuide) === stageGroupLabel).map((learningGuide) => (
@@ -66,7 +57,7 @@ export const LearningRoadmapPage = () => (
               <ul className="topic-chip-list">
                 {learningGuide.learningTopics.slice(0, 5).map((learningTopic) => <li key={learningTopic}>{learningTopic}</li>)}
               </ul>
-              <Link className="primary-link" to={learningRouteMap[learningGuide.guideId] ?? "/react"}>단계 시작하기</Link>
+              <Link className="primary-link" to={learningStageRoutes[learningGuide.guideId] ?? "/react"}>단계 시작하기</Link>
             </article>
           ))}
         </div>

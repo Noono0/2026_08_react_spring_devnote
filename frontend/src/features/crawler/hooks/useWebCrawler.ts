@@ -1,3 +1,11 @@
+/**
+ * useWebCrawler.ts — 크롤러 화면의 서버 상태 훅 모음(TanStack Query)
+ *
+ *   실행·녹화·수동 조작 → useMutation(서버에 무언가를 시킨다)
+ *   실시간 화면·설정·이력·세션 상태 → useQuery(서버 상태를 읽는다)
+ * 수동 조작·녹화의 응답은 최신 실시간 화면 상태이므로, 다시 요청하지 않고 setQueriesData로 캐시에 바로 넣는다.
+ */
+
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   deleteNaverCrawlerSession,
@@ -21,6 +29,10 @@ import type { CrawlerConfigurationSaveRequest, CrawlerRunRequest } from "@/featu
 
 export const useWebCrawlerMutation = () => useMutation({ mutationFn: runWebCrawler });
 
+/**
+ * 실시간 화면 상태. polling이 true면 0.7초마다 다시 받아 화면 캡처와 진행 단계를 갱신한다.
+ * retry: false — 실패하면 다시 시도하지 않고 다음 주기를 기다린다(0.7초마다 재시도가 쌓이지 않게).
+ */
 export const useCrawlerLiveView = (enabled: boolean, polling = enabled) => useQuery({
   queryKey: ["crawler", "live-view", polling],
   queryFn: getCrawlerLiveView,
@@ -30,6 +42,7 @@ export const useCrawlerLiveView = (enabled: boolean, polling = enabled) => useQu
   refetchInterval: (query) => (polling || query.state.data?.inspecting === true || query.state.data?.recording === true ? 700 : false),
 });
 
+// setQueriesData: ["crawler", "live-view"]로 시작하는 모든 캐시(polling 값이 다른 것까지)에 응답을 넣는다.
 export const useCrawlerManualAction = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -86,6 +99,7 @@ export const useCrawlerConfigurations = () => useQuery({
   queryFn: getCrawlerConfigurations,
 });
 
+/** 설정 생성·수정·삭제가 공통으로 쓰는 틀: 성공하면 설정 목록을 다시 받는다. 제네릭으로 인자·결과 타입을 그대로 이어받는다. */
 const useConfigurationMutation = <TVariables, TData>(mutationFn: (variables: TVariables) => Promise<TData>) => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -104,6 +118,7 @@ export const useRunCrawlerConfiguration = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ configurationId, request }: { configurationId: number; request: CrawlerRunRequest }) => runCrawlerConfiguration(configurationId, request),
+    // onSettled: 성공이든 실패든 끝나면 실행 횟수·마지막 상태(설정 목록)와 이력 목록을 새로 받는다(실패도 이력에 남기 때문).
     onSettled: async (_data, _error, variables) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: crawlerConfigurationQueryKey }),
@@ -115,10 +130,12 @@ export const useRunCrawlerConfiguration = () => {
 
 export const useCrawlerRunHistories = (configurationId?: number) => useQuery({
   queryKey: crawlerHistoryQueryKey(configurationId ?? 0),
+  // enabled가 false면 이 함수는 불리지 않으므로, 불릴 때는 configurationId가 반드시 있다.
   queryFn: () => getCrawlerRunHistories(configurationId as number),
   enabled: configurationId !== undefined,
 });
 
+// 이력 상세는 사용자가 "열기"를 누를 때만 받으므로 useMutation으로 필요할 때 한 번 호출한다.
 export const useCrawlerRunHistoryMutation = () => useMutation({ mutationFn: getCrawlerRunHistory });
 
 export const useDeleteCrawlerRunHistory = (configurationId?: number) => {

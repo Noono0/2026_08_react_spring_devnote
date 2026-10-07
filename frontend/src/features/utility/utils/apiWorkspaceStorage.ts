@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { parseStoredArray } from "@/shared/lib/parseStoredArray";
 
+// apiWorkspaceStorage.ts — API 작업 공간이 localStorage에 저장한 탭·기록·컬렉션·폴더·저장 요청·환경을 Zod로 검사하며 읽는다.
+// parseStoredArray: 깨진 JSON이면 빈 배열, 모양이 틀린 항목만 골라 버리고 나머지는 살린다.
 const keyValueSchema = z.object({
   id: z.string(), key: z.string(), value: z.string(), enabled: z.boolean(), secret: z.boolean().optional(),
 });
@@ -40,6 +42,7 @@ const environmentSchema = z.object({
 });
 
 export const API_WORKSPACE_MAX_HISTORY_ITEMS = 100;
+// 열린 탭은 최대 8개, 요청 기록은 최대 100개까지만 복원한다(저장소가 무한히 커지지 않게).
 export const parseStoredTabs = (value: string | null) => parseStoredArray(value, tabSchema).slice(0, 8);
 export const parseStoredHistory = (value: string | null) => parseStoredArray(value, historySchema).slice(0, API_WORKSPACE_MAX_HISTORY_ITEMS);
 export const parseStoredCollections = (value: string | null) => parseStoredArray(value, collectionSchema);

@@ -1,9 +1,19 @@
 import { z } from "zod";
 
+/*
+ * webCrawlerTypes.ts — 크롤러 요청·응답 타입과 응답 검증 스키마
+ *
+ * ★ 서버 crawler/dto의 Java record와 필드 이름·값이 같아야 한다(예: CrawlerRunRequest, CrawlerLiveViewResponse).
+ * 보내는 값(요청)은 interface로, 받는 값(응답)은 Zod 스키마로 만들고 z.infer로 타입을 뽑는다.
+ * → 응답은 실제로 검사(parse)되므로, 서버 모양이 바뀌면 화면 깊은 곳이 아니라 API 호출 지점에서 바로 오류가 난다.
+ */
+
+// 로그인 방식 / 값 읽는 방식(글자·속성) / 키워드 결합(모두·하나라도)
 export type CrawlerLoginMode = "NONE" | "FORM" | "SAVED_SESSION";
 export type CrawlerValueSource = "TEXT" | "ATTRIBUTE";
 export type CrawlerMatchMode = "ALL" | "ANY";
 
+/** 로그인 설정(서버 CrawlerLoginRequest). 아이디·비밀번호는 서버 DB에 저장되지 않는다. */
 export interface CrawlerLoginRequest {
   mode: CrawlerLoginMode;
   loginUrl: string;
@@ -15,6 +25,7 @@ export interface CrawlerLoginRequest {
   loggedInSelector: string;
 }
 
+/** 수집할 값 하나 = 결과 표의 열 하나(이름, 항목 안 선택자, 글자/속성). */
 export interface CrawlerFieldRequest {
   name: string;
   selector: string;
@@ -22,6 +33,7 @@ export interface CrawlerFieldRequest {
   attributeName: string;
 }
 
+/** 사이트 안 검색창 사용 설정 */
 export interface CrawlerPageSearchRequest {
   enabled: boolean;
   keyword: string;
@@ -29,6 +41,7 @@ export interface CrawlerPageSearchRequest {
   submitSelector: string;
 }
 
+/** 수집 단계의 키워드 필터(서버 CrawlerItemMatcher가 판단). 그룹 안 결합 + 그룹끼리 결합 두 단계다. */
 export interface CrawlerKeywordGroupRequest {
   matchMode: CrawlerMatchMode;
   keywords: string[];
@@ -58,6 +71,7 @@ export interface CrawlerScenarioStep {
   fields?: CrawlerFieldRequest[];
 }
 
+// 녹화된 단계·저장된 설정을 받을 때 검사하는 스키마(위 interface와 같은 모양).
 export const crawlerScenarioStepSchema = z.object({
   type: z.enum(["GOTO", "CLICK", "FILL", "PRESS", "WAIT", "WAIT_FOR", "MANUAL", "COLLECT", "SCROLL", "NEXT_PAGE", "CSV"]),
   targetMode: z.enum(["TEXT", "SELECTOR", "COORDINATE"]).default("TEXT"),
@@ -73,6 +87,7 @@ export const crawlerScenarioStepSchema = z.object({
 /** WEB: 웹 화면 안에서 보기, PC_WINDOW: 내 PC에 새 브라우저 창으로 열기 */
 export type CrawlerBrowserWindow = "WEB" | "PC_WINDOW";
 
+/** 실행 요청 전체(서버 CrawlerRunRequest). steps가 비어 있으면 기존 폼 방식, 있으면 단계 방식으로 실행된다. */
 export interface CrawlerRunRequest {
   showBrowser: boolean;
   browserWindow: CrawlerBrowserWindow;
@@ -109,6 +124,7 @@ const crawlerFieldRequestSchema = z.object({
   name: z.string(), selector: z.string(), valueSource: z.enum(["TEXT", "ATTRIBUTE"]), attributeName: z.string(),
 });
 
+// 저장된 설정·이력의 request를 받을 때 검사한다. z.ZodType<CrawlerRunRequest>로 위 interface와 모양이 맞는지 컴파일러가 확인한다.
 export const crawlerRunRequestSchema: z.ZodType<CrawlerRunRequest> = z.object({
   showBrowser: z.boolean().default(true),
   browserWindow: z.enum(["WEB", "PC_WINDOW"]).default("WEB"),
@@ -128,6 +144,7 @@ export const crawlerRunRequestSchema: z.ZodType<CrawlerRunRequest> = z.object({
   nextPageSelector: z.string(), maxPages: z.number().int(), waitAfterNavigationMillis: z.number().int(), maxItems: z.number().int(),
 });
 
+// 실행 결과(서버 CrawlerRunResponse). items는 { 열 이름: 값 } 객체의 배열이다.
 export const crawlerRunResponseSchema = z.object({
   crawledAt: z.string().datetime(),
   pageTitle: z.string(),
@@ -142,6 +159,7 @@ export const crawlerRunResponseSchema = z.object({
 
 export type CrawlerRunResponse = z.infer<typeof crawlerRunResponseSchema>;
 
+// 실시간 화면 상태(서버 CrawlerLiveViewResponse). 0.7초마다 받아 화면 캡처·단계 진행·로그를 그린다.
 export const crawlerLiveViewSchema = z.object({
   active: z.boolean(),
   stage: z.string(),
@@ -169,6 +187,7 @@ export const crawlerLiveViewSchema = z.object({
 
 export type CrawlerLiveView = z.infer<typeof crawlerLiveViewSchema>;
 
+/** 실시간 화면에서 보내는 수동 조작(클릭 좌표·글자·키·계속/다시 시도/건너뛰기/중단/일시정지). */
 export interface CrawlerManualActionRequest {
   action: "CLICK" | "TYPE" | "KEY" | "CONTINUE" | "RETRY" | "SKIP" | "STOP" | "PAUSE";
   x?: number;
@@ -183,6 +202,7 @@ export interface CrawlerConfigurationSaveRequest {
   request: CrawlerRunRequest;
 }
 
+// 저장된 설정과 실행 이력(목록·상세), 이력 번호가 붙은 실행 결과, 네이버 세션 상태 응답.
 export const crawlerConfigurationSchema = z.object({
   configurationId: z.number().int().positive(), title: z.string(), description: z.string(),
   sitePreset: z.enum(["GENERIC", "NAVER_CAFE"]), request: crawlerRunRequestSchema,
@@ -222,6 +242,7 @@ export const crawlerSessionStatusSchema = z.object({
 
 export type CrawlerSessionStatus = z.infer<typeof crawlerSessionStatusSchema>;
 
+// 결과 표 거르기 규칙(화면 전용 — 서버로 보내지 않는다).
 export type CrawlerFilterOperator = "CONTAINS" | "NOT_CONTAINS" | "EQUALS" | "NUMBER_GTE" | "NUMBER_LTE";
 
 export interface CrawlerFilterRule {

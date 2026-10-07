@@ -1,6 +1,7 @@
 import { useState, type MouseEvent } from "react";
 import { useCloseCrawlerLiveView, useCrawlerLiveView, useCrawlerManualAction } from "@/features/crawler/hooks/useWebCrawler";
 
+// 단계 상태별 아이콘·글자(서버 CrawlerLiveViewStore.markStep의 상태 값과 같다).
 const stepStatusIcon: Record<string, string> = {
   PENDING: "○", RUNNING: "▶", DONE: "✔", BLOCKED: "⚠", WAITING: "✋", SKIPPED: "↷", FAILED: "✖",
 };
@@ -8,6 +9,11 @@ const stepStatusLabel: Record<string, string> = {
   PENDING: "대기", RUNNING: "진행 중", DONE: "완료", BLOCKED: "막힘", WAITING: "직접 처리 대기", SKIPPED: "건너뜀", FAILED: "실패",
 };
 
+/**
+ * 실행 중인 크롤러 브라우저의 "실시간 화면" 패널.
+ * 서버가 0.7초마다 찍는 화면 캡처(JPEG)를 보여 주고, 사람이 처리해야 하는 단계(캡차·실패 확인·녹화)에서는
+ * 캡처 이미지를 클릭·입력해 실제 브라우저를 원격으로 조작할 수 있게 한다.
+ */
 export const CrawlerLiveViewPanel = ({ running }: { running: boolean }) => {
   const liveViewQuery = useCrawlerLiveView(true, running);
   const manualActionMutation = useCrawlerManualAction();
@@ -23,10 +29,16 @@ export const CrawlerLiveViewPanel = ({ running }: { running: boolean }) => {
   const manualMode = !directWindow && (waitingForUser || inspecting || recording);
   const stepStatuses = liveView?.steps ?? [];
   const blockedStep = stepStatuses.find((step) => step.status === "BLOCKED" || step.status === "WAITING");
+  /** 막힌 단계에 대한 선택: 계속 / 다시 시도 / 건너뛰기 / 중단 */
   const sendControl = (action: "CONTINUE" | "RETRY" | "SKIP" | "STOP"): void => {
     manualActionMutation.mutate({ action });
   };
 
+  /**
+   * 화면에 보이는 캡처 이미지 위의 클릭 위치를 "실제 브라우저 화면 좌표(1280×720)"로 바꿔 보낸다.
+   * 이미지는 비율을 유지한 채 줄어들고 가운데 정렬되므로, 줄어든 비율(scale)과 남는 여백(offset)을 빼서 계산한다.
+   * 이미지 바깥 여백을 누르면 보내지 않는다.
+   */
   const clickBrowser = (event: MouseEvent<HTMLImageElement>): void => {
     if (!manualMode || manualActionMutation.isPending) return;
     const image = event.currentTarget;
@@ -44,6 +56,7 @@ export const CrawlerLiveViewPanel = ({ running }: { running: boolean }) => {
     manualActionMutation.mutate({ action: "CLICK", x, y });
   };
 
+  /** 입력한 글자를 브라우저에 그대로 입력한다. 성공하면 입력칸을 비운다. */
   const sendText = (): void => {
     if (!manualText.trim()) return;
     manualActionMutation.mutate(

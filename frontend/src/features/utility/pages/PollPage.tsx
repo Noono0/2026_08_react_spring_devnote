@@ -1,6 +1,9 @@
+// PollPage.tsx — 토픽 투표 화면: 목록·상세 보기, 투표, 만들기·수정, 마감·결과 공개, 삭제(관리자)
+// 서버 상태는 usePollQueries.ts(5초마다 갱신), 버튼 표시 여부는 서버가 준 manageable·deletable 값을 따른다(최종 권한 검사는 서버).
+
 import { useMemo, useState } from "react";
 import { useAuthSessionQuery } from "@/features/auth/hooks/useAuthSession";
-import { DocumentPagination } from "@/features/document/components/DocumentPagination";
+import { Pagination } from "@/shared/ui/Pagination";
 import { PollCard } from "@/features/utility/components/PollCard";
 import { PollEditor } from "@/features/utility/components/PollEditor";
 import { PollListView } from "@/features/utility/components/PollListView";
@@ -28,6 +31,7 @@ export const PollPage = () => {
   const updateMutation = useUpdatePollMutation();
   const statusMutation = useUpdatePollStatusMutation();
   const deleteMutation = useDeletePollMutation();
+  // 투표 전 고른 선택지: { 투표 번호: [선택지 번호들] }. 여러 투표의 선택을 한 State에 따로 기억한다.
   const [selectedOptions, setSelectedOptions] = useState<Record<number, number[]>>({});
   const [editorMode, setEditorMode] = useState<"CLOSED" | "CREATE">("CLOSED");
   const [helpOpen, setHelpOpen] = useState(false);
@@ -38,10 +42,12 @@ export const PollPage = () => {
   const [viewMode, setViewMode] = useState<PollViewMode>("LIST");
   const [pageNumber, setPageNumber] = useState(0);
   const [pageSize, setPageSize] = useState(10);
+  // 목록 조건 객체를 값이 바뀔 때만 새로 만든다. 렌더링마다 새 객체면 쿼리 키가 매번 달라져 불필요하게 다시 요청할 수 있다.
   const searchCondition = useMemo(
     () => ({ pageNumber, pageSize, status: filter }),
     [filter, pageNumber, pageSize],
   );
+  // 로그인 회원이 바뀌면 "내가 투표했는지"·버튼 권한이 달라지므로 회원 범위를 캐시 키에 넣는다.
   const viewerScope = sessionQuery.data?.authenticated ? `member-${sessionQuery.data.memberId}` : "guest";
   const pollsQuery = usePollsQuery(searchCondition, viewerScope);
   const pagePolls = pollsQuery.data?.content ?? [];
@@ -49,6 +55,7 @@ export const PollPage = () => {
     ? pagePolls.filter((poll) => poll.pollId === selectedDetailPollId)
     : pagePolls;
 
+  // 아래 핸들러들은 같은 모양이다: mutateAsync로 요청 → 성공하면 화면 상태 정리·성공 알림 / 실패하면 서버 오류 메시지를 알림으로.
   const create = async (request: PollDefinitionRequest): Promise<void> => {
     try {
       await createMutation.mutateAsync(request);
@@ -67,6 +74,7 @@ export const PollPage = () => {
     } catch (error) { applicationNotification.apiError(convertRequestErrorToProblemDetails(error)); }
   };
 
+  // 단일 선택이면 하나만, 복수 선택이면 최대 선택 수까지 담는다(넘으면 경고만 하고 바꾸지 않는다).
   const changeSelection = (poll: Poll, optionId: number, checked: boolean): void => {
     setSelectedOptions((currentSelections) => {
       const currentOptionIds = currentSelections[poll.pollId] ?? [];
@@ -82,6 +90,7 @@ export const PollPage = () => {
     });
   };
 
+  // 고른 선택지로 투표한다. 성공하면 그 투표의 선택 기억을 비운다(목록은 캐시 무효화로 다시 받아 "투표함" 상태가 된다).
   const vote = async (poll: Poll): Promise<void> => {
     const optionIds = selectedOptions[poll.pollId] ?? [];
     if (optionIds.length === 0) return;
@@ -99,6 +108,7 @@ export const PollPage = () => {
     } catch (error) { applicationNotification.apiError(convertRequestErrorToProblemDetails(error)); }
   };
 
+  // 삭제 후 현재 페이지가 비게 되면 한 페이지 앞으로 이동한다.
   const deleteSelectedPoll = async (): Promise<void> => {
     if (!deleteTargetPoll) return;
     try {
@@ -164,7 +174,7 @@ export const PollPage = () => {
         />)}
       </div> : null}
 
-      {pollsQuery.data ? <DocumentPagination ariaLabel="투표 목록 페이지 이동" pageInformation={pollsQuery.data.pageInformation} handlePageChange={(nextPageNumber) => { setPageNumber(nextPageNumber); setSelectedDetailPollId(undefined); }} /> : null}
+      {pollsQuery.data ? <Pagination ariaLabel="투표 목록 페이지 이동" pageInformation={pollsQuery.data.pageInformation} handlePageChange={(nextPageNumber) => { setPageNumber(nextPageNumber); setSelectedDetailPollId(undefined); }} /> : null}
 
       <ConfirmDialog
         isOpen={Boolean(deleteTargetPoll)}

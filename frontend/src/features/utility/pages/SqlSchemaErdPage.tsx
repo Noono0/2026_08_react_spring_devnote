@@ -1,3 +1,6 @@
+// SqlSchemaErdPage.tsx — CREATE TABLE DDL로 ERD를 그리는 화면(SVG로 직접 그림). 변경 DDL과 비교, Mermaid ERD 복사·내려받기도 한다.
+// DDL 해석·비교·Mermaid 생성은 utils/sqlSchemaAnalyzer.ts.
+
 import { useMemo, useState } from "react";
 import { UtilityHelpDialog, UtilityPageTitle } from "@/features/utility/components/UtilityHelpDialog";
 import { copyText, downloadText } from "@/features/utility/utils/browserFileUtils";
@@ -29,6 +32,7 @@ CREATE TABLE comment (
   CONSTRAINT fk_comment_member FOREIGN KEY (member_id) REFERENCES member(member_id)
 );`;
 
+// SVG 위에 테이블 상자를 놓을 위치·크기. 컬럼 수에 따라 높이가 정해지고 격자 모양으로 배치한다.
 interface TablePosition { name: string; x: number; y: number; width: number; height: number }
 
 export const SqlSchemaErdPage = () => {

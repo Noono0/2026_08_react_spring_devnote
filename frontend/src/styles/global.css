@@ -217,6 +217,43 @@ textarea { resize: vertical; }
 .practice-example-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 18px; }
 .practice-card { display: grid; align-content: start; gap: 13px; padding: 22px; }
 .practice-card h2 { margin-bottom: 0; font-size: 19px; }
+.practice-feed-list { display: grid; gap: 12px; margin: 18px 0 0; padding: 0; list-style: none; }
+.practice-feed-list small { color: var(--text-muted); }
+.practice-feed-footer { display: grid; justify-items: center; gap: 8px; margin: 18px 0; color: var(--text-secondary); }
+.practice-quote-items { display: grid; gap: 12px; min-width: 0; margin: 0; padding: 12px; border: 1px solid var(--border-color); border-radius: 12px; }
+/* 견적서는 입력칸이 많아 폼을 넓게(2:1) 쓰고, 금액과 버튼은 둘째 줄에 둔다. */
+.split-practice-layout.practice-quote-layout { grid-template-columns: minmax(0, 2fr) minmax(240px, 1fr); }
+.practice-quote-row { display: grid; grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr)); gap: 8px; align-items: start; padding-bottom: 12px; border-bottom: 1px dashed var(--border-color); }
+.practice-quote-row > .button-row { grid-column: 2 / -1; justify-self: end; }
+.practice-quote-row output { align-self: center; font-weight: 700; }
+@media (max-width: 900px) { .split-practice-layout.practice-quote-layout { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 720px) { .practice-quote-row { grid-template-columns: minmax(0, 1fr); } .practice-quote-row > .button-row { grid-column: auto; justify-self: start; } }
+.practice-guestbook-list { display: grid; gap: 10px; margin: 0; padding-left: 18px; overflow-wrap: anywhere; }
+.practice-guestbook-list small { color: var(--text-muted); }
+.practice-guestbook-pending { opacity: .55; }
+/* 심화 단계(19~25) 공통 */
+.practice-status-chip { display: inline-flex; align-items: center; padding: 6px 12px; border-radius: 999px; color: var(--success-color); background: color-mix(in srgb, var(--success-color) 12%, var(--background-panel)); font-size: 13px; font-weight: 700; }
+.practice-status-chip-off { color: var(--warning-color); background: color-mix(in srgb, var(--warning-color) 12%, var(--background-panel)); }
+.practice-check-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.practice-check-list > li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 10px; overflow-wrap: anywhere; }
+.practice-check-list > li small { color: var(--text-muted); }
+.practice-check-list input[type="number"] { width: 72px; }
+.practice-done-text { color: var(--text-muted); text-decoration: line-through; }
+.practice-performance-toolbar, .practice-url-toolbar { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; margin-bottom: 14px; }
+.practice-performance-toolbar p, .practice-url-preview { flex-basis: 100%; margin: 0; color: var(--text-secondary); font-size: 13px; overflow-wrap: anywhere; }
+.practice-performance-summary { color: var(--text-secondary); }
+.practice-performance-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 6px; max-height: 520px; margin: 0; padding: 0; overflow-y: auto; list-style: none; transition: opacity .15s; }
+.practice-performance-row { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid var(--border-color); border-radius: 8px; }
+.practice-performance-row span { flex: 1; }
+.practice-performance-row small { color: var(--text-muted); }
+.practice-performance-row button { min-height: 30px; padding: 2px 9px; }
+.practice-url-pagination { justify-content: center; margin-top: 14px; }
+.practice-checkout-summary, .practice-testing-tips { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 14px; margin: 0; }
+.practice-testing-tips { grid-template-columns: minmax(0, 1fr); }
+.practice-testing-tips dt { font-weight: 700; }
+.practice-checkout-summary dd, .practice-testing-tips dd { margin: 0; }
+.practice-code-card { margin-top: 22px; }
+.practice-code-card pre { max-height: 480px; margin: 0; padding: 14px; overflow: auto; border-radius: 10px; background: var(--background-muted); font-size: 12px; line-height: 1.6; }
 .large-value { margin: 5px 0; color: var(--primary-color); font-size: 56px; font-weight: 800; line-height: 1; }
 .notice-box, .security-note { padding: 12px 14px; border: 1px solid color-mix(in srgb, var(--warning-color) 35%, transparent); border-radius: 10px; color: var(--text-primary); background: color-mix(in srgb, var(--warning-color) 10%, var(--background-panel)); }
 .simple-list { display: grid; gap: 8px; padding: 0; list-style: none; }
@@ -290,6 +327,12 @@ tbody tr:hover { background: color-mix(in srgb, var(--primary-color) 5%, var(--b
 .document-thumbnail-content h2 { display: -webkit-box; min-height: 49px; margin-bottom: 6px; overflow: hidden; font-size: 18px; line-height: 1.38; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .document-thumbnail-content p { margin-bottom: 13px; font-size: 13px; }
 .document-card-metadata { display: flex; justify-content: space-between; gap: 10px; color: var(--text-muted); font-size: 12px; }
+.document-tag-list { margin: 6px 0 0; }
+.document-tag-list li { font-size: 11px; }
+.document-tag-list a { color: inherit; text-decoration: none; }
+.document-tag-filter { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 15px; }
+.document-tag-filter button { min-height: 32px; padding: 4px 11px; font-size: 12px; }
+.document-tag-filter small { margin-left: 4px; opacity: .7; }
 .thumbnail-skeleton { aspect-ratio: 4 / 3; border-radius: 17px; background: linear-gradient(100deg, var(--background-muted) 20%, var(--background-panel) 40%, var(--background-muted) 60%); background-size: 200% 100%; animation: thumbnail-loading 1.2s infinite linear; }
 @keyframes thumbnail-loading { to { background-position-x: -200%; } }
 
@@ -1143,6 +1186,20 @@ tbody tr:hover { background: color-mix(in srgb, var(--primary-color) 5%, var(--b
 .portfolio-entry-subtitle { margin: 0 0 15px; color: var(--text-secondary); font-size: 16px; font-weight: 700; }
 .portfolio-entry-link { align-self: flex-start; gap: 7px; margin-top: 16px; }
 .portfolio-rich-content { min-width: 0; max-width: 100%; color: var(--text-secondary); line-height: 1.75; }
+.portfolio-project-role { margin: 8px 0 0; color: var(--text-secondary); }
+.portfolio-project-role strong { margin-right: 6px; color: var(--text-primary); }
+.portfolio-tech-stack { margin: 10px 0 0; }
+.portfolio-project-summary { margin: 10px 0 0; color: var(--text-secondary); line-height: 1.7; }
+.portfolio-project-links { margin-top: 14px; }
+.portfolio-project-detail { display: grid; gap: 18px; }
+.portfolio-project-detail > nav a { color: var(--text-secondary); }
+.portfolio-project-heading { display: grid; gap: 6px; padding-bottom: 16px; border-bottom: 1px solid var(--border-color); }
+.portfolio-project-heading h1 { margin: 0; font-size: clamp(28px, 4vw, 40px); overflow-wrap: anywhere; }
+.portfolio-project-heading p { margin: 0; color: var(--text-secondary); }
+.portfolio-project-facts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 8px 16px; margin: 0; }
+.portfolio-project-facts dt { color: var(--text-muted); font-weight: 700; }
+.portfolio-project-facts dd { margin: 0; }
+.portfolio-project-facts .portfolio-tech-stack { margin: 0; }
 .portfolio-rich-content > :last-child { margin-bottom: 0; }
 .portfolio-rich-content img { display: block; max-width: 100%; height: auto; margin: 18px 0; border-radius: 14px; }
 .portfolio-rich-content pre { padding: 15px; overflow-x: auto; border-radius: 12px; color: #dce9ff; background: #11182a; }
@@ -2146,6 +2203,13 @@ tbody tr:hover { background: color-mix(in srgb, var(--primary-color) 5%, var(--b
 .crawler-results-header h2 { margin: 4px 0; font-size: 20px; }
 .crawler-results-header p { margin: 0; color: var(--text-muted); font-size: 9px; }
 .crawler-warning-list { display: grid; gap: 4px; margin: 0; padding: 11px 14px 11px 32px; border-radius: 10px; color: var(--warning-color); background: color-mix(in srgb, var(--warning-color) 8%, var(--background-panel)); font-size: 9px; }
+.crawler-comparison-summary { display: grid; gap: 8px; padding: 12px 14px; border: 1px solid color-mix(in srgb, var(--success-color) 30%, var(--border-color)); border-radius: 10px; background: color-mix(in srgb, var(--success-color) 6%, var(--background-panel)); font-size: 10px; }
+.crawler-comparison-summary p { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; margin: 0; }
+.crawler-comparison-summary b { color: var(--success-color); }
+.crawler-comparison-summary small { flex-basis: 100%; color: var(--text-muted); font-size: 9px; }
+.crawler-comparison-summary summary { cursor: pointer; color: var(--text-secondary); }
+.crawler-removed-list { display: grid; gap: 3px; max-height: 220px; margin: 6px 0 0; padding-left: 18px; overflow-y: auto; overflow-wrap: anywhere; }
+.crawler-new-badge { display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 999px; color: var(--background-panel); background: var(--success-color); font-size: 8px; white-space: nowrap; }
 .crawler-error-panel { display: grid; gap: 13px; text-align: left; }
 .crawler-error-panel > header { display: grid; gap: 3px; }
 .crawler-error-panel > header span { color: var(--danger-color); font-size: 8px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
@@ -2263,3 +2327,22 @@ input[aria-invalid="true"]:focus, select[aria-invalid="true"]:focus, textarea[ar
 .crawler-detail-cell:not(:empty) { white-space: pre-wrap; }
 .crawler-table-wrap td.crawler-detail-cell { vertical-align: top; }
 .crawler-table-wrap td.crawler-detail-cell { max-height: 160px; }
+
+/* ── 포트폴리오 인쇄·PDF 저장 ─────────────────────────────────────────
+   브라우저 인쇄 창에서 "PDF로 저장"을 고르면 이 규칙이 적용된 모양으로 저장된다.
+   메뉴·편집 버튼처럼 화면 조작용 요소는 숨기고, 어두운 테마여도 흰 종이에 검은 글자로 찍는다. */
+.portfolio-heading-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px; }
+@media print {
+  @page { margin: 14mm; }
+  :root { color-scheme: light; }
+  html, body { background: #fff !important; color: #111 !important; }
+  aside, .mobile-sidebar-backdrop, .portfolio-mobile-top-bar, .portfolio-footer, .portfolio-heading-actions,
+  .portfolio-editor-guide, .portfolio-entry-admin, .portfolio-block-insert-button, .portfolio-block-drag-handle,
+  .portfolio-block-move-controls, .portfolio-entry-hidden, [data-sonner-toaster] { display: none !important; }
+  .application-shell, .application-content-shell, .portfolio-main { display: block !important; margin: 0 !important; padding: 0 !important; width: auto !important; max-width: none !important; background: #fff !important; }
+  .portfolio-page *, .portfolio-page *::before, .portfolio-page *::after { color: #111 !important; background: transparent !important; box-shadow: none !important; }
+  .portfolio-entry, .portfolio-project-facts { break-inside: avoid; border-color: #ccc !important; }
+  .portfolio-entry-image img { max-height: 70mm; object-fit: contain; }
+  /* 종이에서는 링크를 누를 수 없으므로 외부 주소를 글자로 함께 찍는다. */
+  .portfolio-page a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 9pt; word-break: break-all; }
+}

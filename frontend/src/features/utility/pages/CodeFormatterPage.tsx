@@ -1,3 +1,5 @@
+// CodeFormatterPage.tsx — 코드 정렬(들여쓰기 정리)·압축(공백 제거) 도구. 실제 변환은 utils/sourceFormatter.ts가 한다.
+
 import { useState } from "react";
 import { UtilityHelpDialog, UtilityPageTitle } from "@/features/utility/components/UtilityHelpDialog";
 import { copyText, downloadText } from "@/features/utility/utils/browserFileUtils";
@@ -29,6 +31,7 @@ export const CodeFormatterPage = () => {
   const [errorMessage, setErrorMessage] = useState("");
   const [helpOpen, setHelpOpen] = useState(false);
 
+  // 정렬 또는 압축 실행. 문법 오류 등으로 실패하면 결과 대신 오류 문구를 보여 준다.
   const run = (operation: "FORMAT" | "MINIFY"): void => {
     try {
       setResult(operation === "FORMAT" ? formatSource(language, source, options) : minifySource(language, source));

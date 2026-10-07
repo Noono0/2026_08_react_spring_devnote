@@ -1,3 +1,5 @@
+// DataConverterPage.tsx — JSON·YAML·XML 변환, TypeScript interface·Java record 생성, JSON Schema 검사 도구(utils/dataConverter.ts)
+
 import { useMemo, useState } from "react";
 import { UtilityHelpDialog, UtilityPageTitle } from "@/features/utility/components/UtilityHelpDialog";
 import { copyText, downloadText } from "@/features/utility/utils/browserFileUtils";
@@ -44,6 +46,7 @@ export const DataConverterPage = () => {
     try { return parseStructuredData(inputFormat, source); } catch { return undefined; }
   }, [inputFormat, source]);
 
+  // 선택한 모드로 실행: 입력을 먼저 값으로 읽은 뒤(형식별 해석), 변환·코드 생성·스키마 검사 중 하나를 한다. 실패하면 오류 문구를 보여 준다.
   const run = (): void => {
     setErrorMessage("");
     try {
@@ -72,6 +75,7 @@ export const DataConverterPage = () => {
   const changeInputFormat = (format: StructuredFormat): void => {
     setInputFormat(format); setSource(examples[format]); setResult(""); setErrorMessage("");
   };
+  // 결과를 입력으로, 출력 형식을 입력 형식으로 맞바꿔 반대 방향 변환을 바로 해 볼 수 있게 한다.
   const swap = (): void => {
     if (mode !== "CONVERT") return;
     setInputFormat(outputFormat); setOutputFormat(inputFormat); setSource(result || examples[outputFormat]); setResult("");

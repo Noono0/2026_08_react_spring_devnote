@@ -9,6 +9,7 @@ interface ApiKeyValueEditorProps {
   onChange: (entries: ApiWorkspaceKeyValue[]) => void;
 }
 
+// 파라미터·헤더 같은 "키 = 값" 목록 편집 표(켜기/끄기, 비밀 표시, 삭제, 줄 추가). 바꾼 새 배열을 onChange로 부모에게 올린다.
 export const ApiKeyValueEditor = ({
   entries,
   keyLabel,

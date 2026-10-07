@@ -1,3 +1,11 @@
+/**
+ * crawlerSteps.ts — 단계별 실행 편집기의 데이터 규칙(순수 함수·상수)
+ *   - 단계 종류 목록·도움말, 종류별로 필요한 칸(대상·값) 판단
+ *   - 화면용 단계(id 포함) ↔ 서버 요청용 단계(id 없음) 변환
+ *   - 저장·실행 전 빈 필수 칸 찾기(validateSteps)
+ * 화면 컴포넌트와 분리해 두어 crawlerSteps.test.ts에서 규칙만 따로 테스트한다.
+ */
+
 import { createUuid } from "@/shared/lib/createUuid";
 import type { CrawlerFieldRequest, CrawlerScenarioStep, CrawlerStepType, CrawlerTargetMode } from "@/features/crawler/types/webCrawlerTypes";
 
@@ -5,11 +13,13 @@ import type { CrawlerFieldRequest, CrawlerScenarioStep, CrawlerStepType, Crawler
 export interface EditableExtractionField extends CrawlerFieldRequest { id: string }
 export const createExtractionField = (field: CrawlerFieldRequest = { name: "새 데이터", selector: "", valueSource: "TEXT", attributeName: "" }): EditableExtractionField => ({ ...field, id: createUuid() });
 
+/** 화면에서 다루는 단계. 서버 단계(CrawlerScenarioStep)에 React key용 id를 더하고, 추출 칸도 id가 있는 모양으로 바꾼다. */
 export interface EditableScenarioStep extends Omit<CrawlerScenarioStep, "fields"> {
   id: string;
   fields?: EditableExtractionField[];
 }
 
+// 동작 추가 버튼과 설정 화면에 보여 줄 단계 종류(이름·도움말).
 export const stepTypeOptions: { value: CrawlerStepType; label: string; help: string }[] = [
   { value: "GOTO", label: "페이지 열기", help: "값에 적은 주소로 이동합니다." },
   { value: "CLICK", label: "요소 클릭", help: "대상(글자·선택자·좌표)을 클릭합니다." },
@@ -47,10 +57,12 @@ export const stepValueLabel = (type: CrawlerStepType): string | null => ({
   SCROLL: "스크롤 거리(px)",
   NEXT_PAGE: null,
   CSV: "파일 이름 (날짜·시간 자동 추가)",
+// satisfies: 객체가 "모든 단계 종류를 빠짐없이 가진 표"인지 검사만 하고, 값의 타입은 그대로 둔다(종류를 추가하면 여기서 컴파일 오류).
 } satisfies Record<CrawlerStepType, string | null>)[type];
 
 const createId = (): string => createUuid();
 
+/** 새 단계를 만든다. 종류별 기본값(키 입력은 Enter, 대기는 1000ms …)을 채우고 partial로 받은 값으로 덮어쓴 뒤 새 id를 붙인다. */
 export const createStep = (type: CrawlerStepType = "CLICK", partial: Partial<CrawlerScenarioStep> = {}): EditableScenarioStep => ({
   type,
   targetMode: "TEXT",
@@ -65,9 +77,11 @@ export const createStep = (type: CrawlerStepType = "CLICK", partial: Partial<Cra
   fields: partial.fields?.map(createExtractionField),
 });
 
+/** 서버에서 받은(또는 녹화한) 단계 → 화면용 단계(id 붙이기) */
 export const toEditableSteps = (steps: CrawlerScenarioStep[]): EditableScenarioStep[] =>
   steps.map((step) => createStep(step.type, step));
 
+/** 화면용 단계 → 서버 요청용 단계. id를 빼고(구조 분해 후 나머지만), 대상·메모·이름 같은 칸의 앞뒤 공백을 지운다. */
 export const toRequestSteps = (steps: EditableScenarioStep[]): CrawlerScenarioStep[] =>
   steps.map(({ id: _id, ...step }) => ({
     ...step,

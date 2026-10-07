@@ -1,3 +1,5 @@
+// snippetTypes.ts — 개인 코드 조각 타입(서버 snippet/dto와 같은 모양). deleted = 휴지통에 있음.
+
 export interface Snippet {
   snippetId: number;
   title: string;
@@ -21,6 +23,7 @@ export interface SnippetSaveRequest {
   favorite: boolean;
 }
 
+/** 목록 조건: status ACTIVE(보관함)/TRASH(휴지통), sort LATEST/TITLE/FAVORITE. 쿼리 문자열로 보내진다. */
 export interface SnippetSearchCondition {
   pageNumber: number;
   pageSize: number;

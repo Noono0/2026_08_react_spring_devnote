@@ -1,3 +1,6 @@
+// DependencyAnalyzerPage.tsx — package.json·package-lock.json·build.gradle·gradlew dependencies 결과를 분석하는 화면(utils/dependencyAnalyzer.ts)
+// 파일은 서버로 올리지 않고 브라우저에서 글자로 읽어 분석한다.
+
 import { useMemo, useRef, useState } from "react";
 import { UtilityHelpDialog, UtilityPageTitle } from "@/features/utility/components/UtilityHelpDialog";
 import { copyText, downloadText } from "@/features/utility/utils/browserFileUtils";
@@ -28,6 +31,7 @@ export const DependencyAnalyzerPage = () => {
     try { setResult(analyzeDependencySource(nextSource)); setErrorMessage(""); }
     catch (error) { setErrorMessage(error instanceof Error ? error.message : "의존성을 분석하지 못했습니다."); }
   };
+  // 고른 파일(8MB 이하)을 글자로 읽어(File.text()) 바로 분석한다.
   const readFile = async (file?: File): Promise<void> => {
     if (!file) return;
     if (file.size > 8 * 1024 * 1024) { setErrorMessage("파일은 8MB 이하만 선택할 수 있습니다."); return; }

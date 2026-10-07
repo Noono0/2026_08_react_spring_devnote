@@ -2,6 +2,9 @@ import type { ApiWorkspaceKeyValue, ApiWorkspaceRequest, ApiWorkspaceResponse } 
 import type { MockApiResponseStep, MockApiScenario } from "@/features/utility/types/mockApiTypes";
 import { createWorkspaceId, resolveEnvironmentTemplate } from "@/features/utility/utils/apiWorkspaceUtils";
 
+// mockApiEngine.ts — 브라우저 안에서만 동작하는 "가짜 API 서버"(Mock API 시나리오 도구 + API 작업 공간의 Mock 모드)
+// 시나리오(메서드 + 경로 + 응답 목록)는 localStorage에, 순서 응답(SEQUENCE)의 호출 횟수는 sessionStorage에 둔다.
+// → 시나리오는 계속 남고, 호출 횟수는 탭을 닫으면 처음부터 다시 센다.
 export const MOCK_API_SCENARIOS_STORAGE_KEY = "devnote-mock-api:scenarios";
 const MOCK_API_COUNTERS_STORAGE_KEY = "devnote-mock-api:counters";
 
@@ -15,6 +18,7 @@ export const createMockApiScenario = (): MockApiScenario => {
   return { id: createWorkspaceId(), name: "새 Mock API", description: "", enabled: true, method: "GET", path: "/api/mock/items", mode: "FIXED", repeatSequence: true, steps: [createMockApiStep()], createdAt: now, updatedAt: now };
 };
 
+// 저장된 시나리오 목록을 읽는다. 깨진 값은 버리고 빈 목록으로 시작한다(저장 값은 믿을 수 없는 입력).
 export const parseStoredMockScenarios = (value: string | null): MockApiScenario[] => {
   if (!value) return [];
   try {
@@ -33,6 +37,10 @@ const parseCounters = (storage: Pick<Storage, "getItem">): Record<string, number
 
 export const resetMockApiCounters = (storage: Pick<Storage, "setItem"> = sessionStorage): void => storage.setItem(MOCK_API_COUNTERS_STORAGE_KEY, "{}");
 
+// 이번 요청에 돌려줄 응답 고르기.
+//   1. 요청 본문 조건(bodyIncludes)이 맞는 응답만 후보로, 하나도 없으면 조건 없는 응답들을 후보로
+//   2. FIXED: 첫 후보 / RANDOM: 무작위 / SEQUENCE: 호출 횟수 번째(반복이면 처음부터, 아니면 마지막에 머묾)
+// storage·random을 인자로 받는 이유: 테스트에서 가짜 저장소·고정 난수를 넣어 결과를 예측할 수 있게 하려는 것이다.
 export const selectMockApiResponseStep = (
   scenario: MockApiScenario,
   requestBody: string,
@@ -53,12 +61,15 @@ export const selectMockApiResponseStep = (
   return candidates[responseIndex] as MockApiResponseStep;
 };
 
+// 지연 시간(최대 60초)만큼 기다린다. 사용자가 요청을 취소하면(AbortSignal) 기다리지 않고 바로 실패한다.
 const waitForDelay = (milliseconds: number, signal: AbortSignal): Promise<void> => new Promise((resolve, reject) => {
   if (signal.aborted) { reject(new DOMException("요청이 취소되었습니다.", "AbortError")); return; }
   const timer = window.setTimeout(resolve, Math.max(0, Math.min(milliseconds, 60_000)));
   signal.addEventListener("abort", () => { window.clearTimeout(timer); reject(new DOMException("요청이 취소되었습니다.", "AbortError")); }, { once: true });
 });
 
+// 실제 네트워크 대신 시나리오로 응답을 만든다. 메서드와 경로가 같은 "켜진" 시나리오를 찾고, 고른 응답을 실제 응답과 같은 모양으로 돌려준다.
+// 응답 헤더에 x-devnote-mock-scenario를 붙여 "가짜 응답"임을 표시한다.
 export const executeMockApiRequest = async (
   request: ApiWorkspaceRequest,
   resolvedUrl: URL,
@@ -89,6 +100,7 @@ export const executeMockApiRequest = async (
   };
 };
 
+// 요청 본문 안의 {{변수}}를 환경 값으로 바꾼 뒤 bodyIncludes 조건 비교에 쓴다.
 export const resolveMockRequestBody = (request: ApiWorkspaceRequest, environmentValues: Array<{ key: string; value: string; enabled: boolean }>): string => {
   if (!request.bodyText) return "";
   return resolveEnvironmentTemplate(request.bodyText, environmentValues.map((item) => ({ ...item, id: item.key, secret: false }))).value;

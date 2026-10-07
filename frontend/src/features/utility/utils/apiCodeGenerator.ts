@@ -1,8 +1,11 @@
 import type { ApiWorkspaceKeyValue, ApiWorkspaceRequest } from "@/features/utility/types/apiWorkspaceTypes";
 import { createEmptyApiRequest, createWorkspaceId } from "@/features/utility/utils/apiWorkspaceUtils";
 
+// apiCodeGenerator.ts — API 작업 공간의 요청을 cURL·fetch·axios·Java 코드로 바꾸고, 반대로 cURL 명령을 요청으로 가져오는 도구
+// ★ 만든 코드에는 비밀 값(토큰·비밀번호·쿠키 등)을 넣지 않고 {{ACCESS_TOKEN}} 같은 자리표시자로 바꾼다(복사·공유해도 안전하게).
 export type ApiCodeTarget = "CURL" | "FETCH" | "AXIOS" | "JAVA";
 
+// 이름에 이 단어가 들어간 헤더는 비밀 값으로 보고 가린다.
 const secretHeader = /authorization|cookie|api[-_ ]?key|token|secret|password/i;
 const safeHeaders = (request: ApiWorkspaceRequest): Array<[string, string]> => {
   const headers = request.headers.filter((header) => header.enabled && header.key.trim()).map((header) => [header.key.trim(), secretHeader.test(header.key) || header.secret ? "{{SECRET_VALUE}}" : header.value] as [string, string]);
@@ -12,6 +15,7 @@ const safeHeaders = (request: ApiWorkspaceRequest): Array<[string, string]> => {
   return headers;
 };
 
+// 켜진 쿼리 파라미터(그리고 쿼리 위치의 API 키)를 주소 뒤에 붙인다. 값은 encodeURIComponent로 안전하게 바꾼다.
 const requestUrl = (request: ApiWorkspaceRequest): string => {
   const parameters = request.params.filter((parameter) => parameter.enabled && parameter.key.trim());
   if (request.authorization.type === "API_KEY" && request.authorization.apiKeyLocation === "QUERY") parameters.push({ id: "api-key", key: request.authorization.apiKeyName || "api_key", value: "{{API_KEY}}", enabled: true });
@@ -20,6 +24,7 @@ const requestUrl = (request: ApiWorkspaceRequest): string => {
   return `${request.url}${separator}${parameters.map((parameter) => `${encodeURIComponent(parameter.key)}=${encodeURIComponent(parameter.secret ? "{{SECRET_VALUE}}" : parameter.value)}`).join("&")}`;
 };
 
+// 코드에 넣을 본문: JSON·텍스트는 그대로, 폼(urlencoded)은 키=값&… 모양으로. 파일 업로드(multipart)는 코드로 만들지 않는다.
 const bodyValue = (request: ApiWorkspaceRequest): string | undefined => {
   if (request.bodyType === "JSON" || request.bodyType === "TEXT") return request.bodyText;
   if (request.bodyType === "FORM_URLENCODED") return request.formData.filter((entry) => entry.enabled && entry.key).map((entry) => `${encodeURIComponent(entry.key)}=${encodeURIComponent(entry.value)}`).join("&");
@@ -53,6 +58,7 @@ HttpResponse<String> response = HttpClient.newHttpClient()
     .send(request, HttpResponse.BodyHandlers.ofString());`;
 };
 
+// cURL 명령을 셸처럼 조각낸다: "큰따옴표"·'작은따옴표' 안은 한 덩어리, 줄 끝 \(줄 잇기)는 무시.
 const tokenizeCurl = (source: string): string[] => {
   const tokens: string[] = [];
   const matcher = /"((?:\\.|[^"\\])*)"|'([^']*)'|([^\s\\]+)|\\\s*/g;
@@ -65,6 +71,7 @@ const tokenizeCurl = (source: string): string[] => {
   return tokens;
 };
 
+// 조각들을 읽어 메서드(-X)·헤더(-H)·본문(-d 등)·주소를 요청으로 만든다. 지원하지 않는 옵션은 경고로 알려 준다. 본문이 있는데 메서드가 GET이면 curl처럼 POST로 바꾼다.
 export const parseCurlRequest = (source: string): { request: ApiWorkspaceRequest; warnings: string[] } => {
   const tokens = tokenizeCurl(source);
   if (tokens[0]?.toLocaleLowerCase() !== "curl") throw new Error("cURL 명령은 curl로 시작해야 합니다.");

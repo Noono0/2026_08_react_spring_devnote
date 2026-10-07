@@ -1,4 +1,4 @@
-import type { DocumentDetail, DocumentListItem } from "@/features/document/types/documentTypes";
+import type { DocumentDetail, DocumentListItem } from "@/features/practice/14-documents/types/documentTypes";
 
 export const createMockThumbnailDataUrl = (documentSequence: number): string => {
   const hueValue = (documentSequence * 47) % 360;
@@ -19,6 +19,8 @@ export const createMockThumbnailDataUrl = (documentSequence: number): string => 
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svgMarkup)}`;
 };
 
+const mockTagNames = ["React", "TanStack Query", "MSW", "배포"];
+
 export const createMockDocuments = (documentCount: number): DocumentListItem[] =>
   Array.from({ length: documentCount }, (_unusedValue, documentIndex) => {
     const documentSequence = documentIndex + 1;
@@ -34,6 +36,8 @@ export const createMockDocuments = (documentCount: number): DocumentListItem[] =
       authorName: `사용자 ${(documentSequence % 4) + 1}`,
       createdAt: "2026-08-01T10:00:00Z",
       updatedAt: "2026-08-04T10:00:00Z",
+      // 태그 필터 연습용: 문서 번호에 따라 1~2개의 태그를 돌아가며 붙인다.
+      tags: [mockTagNames[documentSequence % mockTagNames.length] ?? "React", ...(documentSequence % 2 === 0 ? ["트러블슈팅"] : [])],
     };
   });
 

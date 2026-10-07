@@ -60,12 +60,21 @@ const initialCommentItems: CommentItem[] = [
 ];
 
 export const CommentPracticePage = () => {
+  // ★ 댓글과 대댓글을 "한 배열"에 평평하게 담는다. 트리 모양은 parentCommentId로만 표현한다.
+  //   대댓글을 부모 안에 children 배열로 넣으면, 대댓글 하나를 고칠 때 부모 객체까지 깊게 복사해야 해서 불변성 코드가 복잡해진다.
   const [commentItems, setCommentItems] = useState<CommentItem[]>(initialCommentItems);
   const [newCommentContent, setNewCommentContent] = useState("");
+
+  // "지금 어느 댓글에 답글을 쓰는 중인가"를 id 하나로 기억한다. null이면 답글 입력칸이 닫혀 있다.
+  //   ★ 댓글마다 isReplying: boolean을 두면 여러 칸이 동시에 열릴 수 있다. id 하나면 한 번에 하나만 열린다.
   const [replyTargetCommentId, setReplyTargetCommentId] = useState<number | null>(null);
   const [replyContent, setReplyContent] = useState("");
+
+  // 수정도 같은 방식: 수정 중인 댓글 id + 입력 중인 내용(원본은 저장 전까지 그대로 둔다).
   const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
   const [editingContent, setEditingContent] = useState("");
+
+  // 삭제 확인창에 띄울 댓글. 바로 지우지 않고 한 번 묻는다(되돌릴 수 없는 작업).
   const [deleteTargetComment, setDeleteTargetComment] = useState<CommentItem | null>(null);
 
   // 최상위 댓글(부모가 없는 것)만 골라낸다.
@@ -76,6 +85,13 @@ export const CommentPracticePage = () => {
   //   "최상위만 그리고, 자식은 부모가 알아서 그리게 한다"가 맞다.
   const rootCommentItems = useMemo(() => commentItems.filter((commentItem) => commentItem.parentCommentId === null), [commentItems]);
 
+  /**
+   * 【Create】 최상위 댓글 등록.
+   *
+   * - trim()으로 공백만 입력한 경우도 빈 댓글로 본다.
+   * - 새 배열을 만들어 끝에 붙인다([...이전, 새 항목]). push로 기존 배열을 바꾸면 React가 바뀐 줄 모른다.
+   * - id는 학습용으로 Date.now()를 쓴다. 실제 서비스에서는 서버(DB)가 만든 id를 받아 쓴다.
+   */
   const createComment = (): void => {
     if (!newCommentContent.trim()) {
       applicationNotification.warning("댓글 내용을 입력해 주세요.");
@@ -105,6 +121,14 @@ export const CommentPracticePage = () => {
     applicationNotification.success("대댓글을 등록했습니다.");
   };
 
+  /**
+   * 【Update】 수정 저장.
+   *
+   * map으로 "같은 id만 새 객체로 바꾸고 나머지는 그대로" 돌려준다. 수정의 기본 패턴이다.
+   *   ❌ commentItem.content = editingContent  → 기존 객체를 직접 바꿔 화면이 갱신되지 않을 수 있다.
+   *   ✓ { ...commentItem, content: ... }        → 새 객체를 만든다.
+   * 저장한 뒤에는 수정 모드(id·내용)를 비워야 다음 수정이 이전 내용과 섞이지 않는다.
+   */
   const saveUpdate = (): void => {
     if (editingCommentId === null || !editingContent.trim()) return;
     setCommentItems((previousCommentItems) => previousCommentItems.map((commentItem) => commentItem.commentId === editingCommentId ? { ...commentItem, content: editingContent.trim() } : commentItem));
@@ -184,7 +208,7 @@ export const CommentPracticePage = () => {
             내용을 지웠는데 이름이 남아 있으면 개인정보가 노출된 것이나 마찬가지다. */}
         <div className="comment-heading"><div><strong>{commentItem.isDeleted ? "알 수 없음" : commentItem.authorName}</strong><small>{commentItem.createdAt}</small></div><span>좋아요 {commentItem.likeCount}</span></div>
         {editingCommentId === commentItem.commentId ? (
-          <div className="inline-edit-area"><textarea value={editingContent} onChange={(event) => setEditingContent(event.target.value)} rows={3} /><div className="button-row"><button type="button" onClick={saveUpdate}>수정 저장</button><button type="button" className="ghost-button" onClick={() => setEditingCommentId(null)}>취소</button></div></div>
+          <div className="inline-edit-area"><textarea aria-label="댓글 수정 내용" value={editingContent} onChange={(event) => setEditingContent(event.target.value)} rows={3} /><div className="button-row"><button type="button" onClick={saveUpdate}>수정 저장</button><button type="button" className="ghost-button" onClick={() => setEditingCommentId(null)}>취소</button></div></div>
         ) : <p className={commentItem.isDeleted ? "deleted-comment-text" : ""}>{commentItem.content}</p>}
         {/* ★ 삭제된 댓글에는 버튼을 아예 안 보여준다.
               "삭제된 댓글입니다"에 좋아요를 누르거나 수정할 수 있으면 이상하다.
@@ -195,7 +219,7 @@ export const CommentPracticePage = () => {
               화면이 오른쪽으로 계속 밀려서 모바일에서 읽을 수 없게 된다.
               실제 커뮤니티들도 보통 2~3단계로 제한한다. */}
         {!commentItem.isDeleted ? <div className="button-row compact-button-row"><button type="button" className="ghost-button" onClick={() => setCommentItems((previousCommentItems) => previousCommentItems.map((previousCommentItem) => previousCommentItem.commentId === commentItem.commentId ? { ...previousCommentItem, likeCount: previousCommentItem.likeCount + 1 } : previousCommentItem))}>좋아요</button>{!isReply ? <button type="button" className="secondary-button" onClick={() => { setReplyTargetCommentId(commentItem.commentId); setReplyContent(""); }}>답글</button> : null}<button type="button" className="secondary-button" onClick={() => { setEditingCommentId(commentItem.commentId); setEditingContent(commentItem.content); }}>수정</button><button type="button" className="danger-button" onClick={() => setDeleteTargetComment(commentItem)}>삭제</button></div> : null}
-        {replyTargetCommentId === commentItem.commentId ? <div className="reply-form"><textarea value={replyContent} onChange={(event) => setReplyContent(event.target.value)} rows={3} placeholder="대댓글 내용" /><div className="button-row"><button type="button" onClick={createReply}>대댓글 등록</button><button type="button" className="ghost-button" onClick={() => setReplyTargetCommentId(null)}>취소</button></div></div> : null}
+        {replyTargetCommentId === commentItem.commentId ? <div className="reply-form"><textarea aria-label="대댓글 내용" value={replyContent} onChange={(event) => setReplyContent(event.target.value)} rows={3} placeholder="대댓글 내용" /><div className="button-row"><button type="button" onClick={createReply}>대댓글 등록</button><button type="button" className="ghost-button" onClick={() => setReplyTargetCommentId(null)}>취소</button></div></div> : null}
         {/* ★★ 여기가 재귀가 일어나는 지점이다.
               자식 댓글마다 renderComment를 "다시" 부른다.
               두 번째 인자로 true를 넘겨 "이건 대댓글"이라고 알려 주면

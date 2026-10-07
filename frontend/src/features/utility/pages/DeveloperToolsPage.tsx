@@ -1,3 +1,6 @@
+// DeveloperToolsPage.tsx — 작은 개발 도구 모음(이름 표기 변환, Base64, SHA-256, 비밀번호 생성, 색상 변환, HTTP 상태 코드 표)
+// 위쪽 검색어로 도구 카드를 거르고(visible), 한 입력을 여러 도구가 함께 쓰게 할 수 있다(공유 입력).
+
 import { useMemo, useState } from "react";
 import { UtilityHelpDialog, UtilityPageTitle } from "@/features/utility/components/UtilityHelpDialog";
 import { copyText } from "@/features/utility/utils/browserFileUtils";
@@ -34,6 +37,7 @@ export const DeveloperToolsPage = () => {
   const activeJsonStringSource = sharedSourceEnabled ? sharedSource : jsonStringSource;
   const converted = useMemo(() => convertCase(activeCaseSource), [activeCaseSource]);
   const colorResult = useMemo(() => { try { const rgb = hexToRgb(color); return { rgb, hsl: rgbToHsl(rgb.red, rgb.green, rgb.blue), error: "" }; } catch (error) { return { rgb: undefined, hsl: undefined, error: error instanceof Error ? error.message : "색상을 변환하지 못했습니다." }; } }, [color]);
+  // 카드의 키워드에 검색어가 들어 있으면 보여 준다(검색어가 비면 모두).
   const visible = (keywords: string): boolean => keywords.toLocaleLowerCase().includes(searchKeyword.trim().toLocaleLowerCase());
   const filteredStatuses = httpStatuses.filter((status) => `${status.code} ${status.name} ${status.meaning}`.toLocaleLowerCase().includes(statusKeyword.toLocaleLowerCase()));
   const copy = (text: string, message: string): void => { void copyText(text).then(() => applicationNotification.success(message)); };

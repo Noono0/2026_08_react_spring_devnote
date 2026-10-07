@@ -1,3 +1,7 @@
+// logAnalyzer.ts — 붙여 넣은 로그·Stack Trace를 분석하는 도구
+//   레벨별 개수, 예외와 "Caused by" 근본 원인, 우리 코드의 스택 위치, SQL 오류 신호, 반복되는 메시지를 뽑는다.
+// ★ 분석 전에 비밀번호·토큰·JWT를 먼저 가린다(redactLogSecrets). 결과를 복사·공유해도 비밀 값이 새지 않게 하기 위해서다.
+
 export type LogLevel = "TRACE" | "DEBUG" | "INFO" | "WARN" | "ERROR" | "FATAL" | "UNKNOWN";
 
 export interface ParsedLogEntry {
@@ -42,8 +46,10 @@ export interface LogAnalysisResult {
 
 const levels: LogLevel[] = ["TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL", "UNKNOWN"];
 const levelPattern = /\b(TRACE|DEBUG|INFO|WARN|WARNING|ERROR|FATAL|SEVERE)\b/i;
+// 라이브러리·프레임워크 패키지. 스택에서 이 패키지가 아닌 첫 줄을 "우리 코드에서 문제가 난 위치"로 본다.
 const applicationPackageExclusions = /^(?:java|javax|jdk|sun|org\.springframework|org\.apache|org\.hibernate|com\.fasterxml|react|node_modules)\./;
 
+// WARNING → WARN, SEVERE(Java 기본 로거) → ERROR 처럼 이름이 다른 레벨을 통일한다.
 const normalizeLevel = (value?: string): LogLevel => {
   const upper = value?.toUpperCase();
   if (upper === "WARNING") return "WARN";
@@ -51,6 +57,7 @@ const normalizeLevel = (value?: string): LogLevel => {
   return levels.includes(upper as LogLevel) ? upper as LogLevel : "UNKNOWN";
 };
 
+// Authorization: Bearer 값, password=…/api_key=… 같은 값, 점 세 덩어리 모양의 JWT를 가리고 가린 개수를 센다.
 export const redactLogSecrets = (source: string): { value: string; count: number } => {
   let count = 0;
   const replace = (pattern: RegExp, replacement: string): void => { source = source.replace(pattern, (...args: unknown[]) => { count += 1; const prefix = typeof args[1] === "string" ? args[1] : ""; return `${prefix}${replacement}`; }); };
@@ -60,6 +67,7 @@ export const redactLogSecrets = (source: string): { value: string; count: number
   return { value: source, count };
 };
 
+// 한 줄 해석 시도 순서: ① Spring 로그(시각 레벨 [스레드] 로거 - 메시지) ② "ERROR: …" 같은 브라우저식 ③ 줄 어딘가에 레벨 단어
 const parseLogEntry = (line: string, lineNumber: number): ParsedLogEntry | undefined => {
   const springMatch = line.match(/^\s*((?:\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:[.,]\d+)?|\d{2}:\d{2}:\d{2}(?:[.,]\d+)?))\s+(?:\[[^\]]+\]\s*)?(TRACE|DEBUG|INFO|WARN|ERROR|FATAL)\s+(?:\d+\s+---\s+\[[^\]]+\]\s+)?([^\s:]+)?\s*(?:[-:]\s*)?(.*)$/i);
   if (springMatch) return { id: `line-${lineNumber}`, lineNumber, timestamp: springMatch[1], level: normalizeLevel(springMatch[2]), logger: springMatch[3], message: springMatch[4]?.trim() ?? "", raw: line };
@@ -70,6 +78,8 @@ const parseLogEntry = (line: string, lineNumber: number): ParsedLogEntry | undef
   return undefined;
 };
 
+// 5MB·5만 줄까지만 분석한다. 반복 메시지는 숫자·UUID를 #·{uuid}로 바꿔 "같은 종류"끼리 묶어 센다.
+// 근본 원인 = 마지막 "Caused by" 예외(없으면 마지막 예외).
 export const analyzeLogs = (source: string, maximumLines = 50_000): LogAnalysisResult => {
   if (!source.trim()) throw new Error("분석할 로그 또는 Stack Trace를 입력해 주세요.");
   if (new Blob([source]).size > 5 * 1024 * 1024) throw new Error("로그는 5MB 이하로 줄여 주세요.");

@@ -254,6 +254,9 @@ export const TodoPracticePage = () => {
             if (keyboardEvent.key === "Enter") createTodo();
           }}
           placeholder="새 할 일을 입력하세요"
+          // ★ placeholder는 라벨이 아니다. 글자를 치면 사라지고, 화면 낭독기가 이름으로 읽지 않을 수 있다.
+          //   눈에 보이는 라벨을 두기 어려운 한 줄 입력칸은 aria-label로 이름을 붙인다.
+          aria-label="새 할 일"
         />
         <button type="button" onClick={createTodo}>추가</button>
       </div>
@@ -328,6 +331,7 @@ export const TodoPracticePage = () => {
                 // autoFocus: 나타나자마자 커서를 이 입력창에 놓는다.
                 // 수정 버튼을 누른 뒤 다시 입력창을 클릭해야 한다면 번거롭다.
                 autoFocus
+                aria-label={`${todoItem.todoTitle} 수정 입력`}
               />
             ) : (
               // 완료된 항목에는 취소선 클래스를 붙인다.

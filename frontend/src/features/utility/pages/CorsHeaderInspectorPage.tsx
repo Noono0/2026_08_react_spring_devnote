@@ -1,3 +1,6 @@
+// CorsHeaderInspectorPage.tsx — CORS·보안 헤더 점검 도구
+// 응답 헤더를 붙여 넣어 분석하거나(utils/corsHeaderAnalyzer.ts), 브라우저에서 대상 주소로 직접 요청해 받은 헤더로 분석한다.
+
 import { useMemo, useState } from "react";
 import { UtilityHelpDialog, UtilityPageTitle } from "@/features/utility/components/UtilityHelpDialog";
 import { analyzeCorsAndHeaders, parseRawHeaders, type HeaderFindingSeverity } from "@/features/utility/utils/corsHeaderAnalyzer";
@@ -29,6 +32,11 @@ export const CorsHeaderInspectorPage = () => {
   const result = useMemo(() => analyzeCorsAndHeaders({ requestOrigin: requestOrigin.trim(), targetUrl: targetUrl.trim(), method, credentials, requestHeaders: parseRawHeaders(requestHeadersSource), responseHeaders: parseRawHeaders(responseHeadersSource) }), [credentials, method, requestHeadersSource, requestOrigin, responseHeadersSource, targetUrl]);
   const severityCounts = useMemo(() => Object.fromEntries((["ERROR", "WARNING", "INFO", "PASS"] as HeaderFindingSeverity[]).map((severity) => [severity, result.findings.filter((finding) => finding.severity === severity).length])) as Record<HeaderFindingSeverity, number>, [result.findings]);
 
+  /**
+   * 브라우저 fetch로 대상 주소에 실제 요청을 보낸다(10초 제한). {{변수}}가 남은 헤더는 빼고 보낸다.
+   * ★ CORS가 막히면 브라우저가 응답을 감춰 오류만 보인다. 또 JavaScript가 읽을 수 있는 헤더는 서버가 노출(Expose)한 것뿐이라
+   *   개발자 도구 Network 탭에 보이는 헤더보다 적을 수 있다. 그 경우 Network 탭의 헤더를 복사해 붙여 넣으면 된다.
+   */
   const sendLiveRequest = async (): Promise<void> => {
     setLoading(true); setLiveStatus("");
     const controller = new AbortController();

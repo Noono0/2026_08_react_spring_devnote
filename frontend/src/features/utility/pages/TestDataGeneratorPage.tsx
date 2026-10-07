@@ -1,3 +1,5 @@
+// TestDataGeneratorPage.tsx — 테스트 데이터 생성 화면: 컬럼 규칙을 만들고 미리보기 → CSV·JSON·INSERT SQL로 복사·내려받기(utils/testDataGenerator.ts)
+
 import { useState } from "react";
 import { UtilityHelpDialog, UtilityPageTitle } from "@/features/utility/components/UtilityHelpDialog";
 import { copyText, downloadText } from "@/features/utility/utils/browserFileUtils";
@@ -31,6 +33,7 @@ export const TestDataGeneratorPage = () => {
   const [helpOpen, setHelpOpen] = useState(false);
 
   const updateRule = (ruleId: string, patch: Partial<TestDataRule>): void => setRules((current) => current.map((rule) => rule.ruleId === ruleId ? { ...rule, ...patch } : rule));
+  // 규칙 순서(= 열 순서) 바꾸기: 복사한 배열에서 두 칸을 맞바꾼다. 범위를 벗어나면 그대로 둔다.
   const moveRule = (index: number, direction: -1 | 1): void => setRules((current) => {
     const targetIndex = index + direction;
     if (targetIndex < 0 || targetIndex >= current.length) return current;

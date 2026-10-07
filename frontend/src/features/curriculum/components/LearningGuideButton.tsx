@@ -1,7 +1,14 @@
+/**
+ * LearningGuideButton.tsx — 학습 화면 제목 옆의 ? 버튼과 학습 가이드 대화상자
+ *
+ * 버튼을 누르면 ModalDialog(공통 대화상자)가 열리고, 네 개의 탭으로 learningGuides.ts의 내용을 보여 준다.
+ * 탭은 role="tablist"·role="tab"·aria-selected로 화면 낭독기에도 "탭"으로 읽히게 했다.
+ */
 import { useState } from "react";
 import type { LearningGuide } from "@/features/curriculum/data/learningGuides";
 import { ModalDialog } from "@/shared/ui/ModalDialog";
 
+// 탭 종류. 문자열 합집합 타입이라 오타가 나면 TypeScript가 잡아 준다.
 type GuideTab = "USAGE" | "LEARNING" | "FLOW" | "PRACTICE";
 
 interface LearningGuideButtonProps {
@@ -19,6 +26,7 @@ export const LearningGuideButton = ({ learningGuide }: LearningGuideButtonProps)
   const [isGuideOpen, setGuideOpen] = useState(false);
   const [selectedGuideTab, setSelectedGuideTab] = useState<GuideTab>("USAGE");
 
+  // 열 때마다 첫 탭(사용 방법)부터 보여 준다.
   const openGuide = (): void => {
     setSelectedGuideTab("USAGE");
     setGuideOpen(true);
@@ -41,11 +49,13 @@ export const LearningGuideButton = ({ learningGuide }: LearningGuideButtonProps)
         title={`${learningGuide.stageNumber > 0 ? `${learningGuide.stageNumber}단계 · ` : ""}${learningGuide.title}`}
         description={`${learningGuide.level} · 난이도 ${learningGuide.difficultyScore}/10 · ${learningGuide.description}`}
         resizable
+        // 사용자가 늘린 대화상자 크기를 가이드별로 기억한다.
         resizeStorageKey={`learning-guide:${learningGuide.title}`}
         onRequestClose={() => setGuideOpen(false)}
         footer={<button type="button" onClick={() => setGuideOpen(false)}>확인하고 닫기</button>}
       >
         <div className="learning-guide-tabs" role="tablist" aria-label="학습 가이드 메뉴">
+          {/* Object.keys는 string[]을 돌려주므로 GuideTab[]으로 좁힌다(표의 키가 곧 탭 종류). */}
           {(Object.keys(guideTabLabelMap) as GuideTab[]).map((guideTab) => (
             <button
               key={guideTab}
@@ -60,6 +70,7 @@ export const LearningGuideButton = ({ learningGuide }: LearningGuideButtonProps)
           ))}
         </div>
 
+        {/* 선택된 탭의 내용만 그린다. 목록의 key는 문장 자체(같은 가이드 안에서 문장이 겹치지 않는다). */}
         {selectedGuideTab === "USAGE" ? (
           <section className="learning-guide-section">
             <h3>화면 사용 순서</h3>

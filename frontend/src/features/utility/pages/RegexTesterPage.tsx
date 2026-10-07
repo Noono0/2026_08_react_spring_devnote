@@ -1,3 +1,5 @@
+// RegexTesterPage.tsx — 정규식 테스트: 브라우저 JavaScript 또는 서버 Java 중 고른 엔진으로 실행하고, 패턴 설명·위험 패턴 경고·코드 예시를 제공한다.
+
 import { useMemo, useState } from "react";
 import { executeJavaRegex } from "@/features/utility/api/regexApi";
 import { UtilityHelpDialog, UtilityPageTitle } from "@/features/utility/components/UtilityHelpDialog";
@@ -11,6 +13,7 @@ const examples = [
   { label: "날짜", pattern: "(?<year>\\d{4})-(?<month>\\d{2})-(?<day>\\d{2})", flags: "g", input: "작성 2026-08-13 / 수정 2026-08-14" },
 ];
 
+// 입력 글에서 일치한 부분을 <mark>로 감싸 강조해 보여 준다(일치 위치 start·end로 글을 나눈다).
 const HighlightedMatches = ({ input, result }: { input: string; result?: RegexExecutionResult }) => {
   if (!result || result.matches.length === 0) return <pre>{input || "일치 결과가 없습니다."}</pre>;
   const fragments: Array<{ text: string; matched: boolean }> = [];
@@ -39,6 +42,7 @@ export const RegexTesterPage = () => {
   const explanation = useMemo(() => explainRegex(pattern), [pattern]);
   const redosWarning = useMemo(() => hasPotentialRedosRisk(pattern), [pattern]);
 
+  // 고른 엔진으로 실행한다: JavaScript는 브라우저에서 바로, Java는 서버 API(/utilities/regex/java)로. 실패하면 결과를 비우고 오류 문구를 보여 준다.
   const execute = async (): Promise<void> => {
     setIsExecuting(true);
     setErrorMessage("");

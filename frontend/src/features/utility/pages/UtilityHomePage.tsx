@@ -17,7 +17,9 @@
  */
 
 import { Link } from "react-router-dom";
+import { FeatureHelpButton } from "@/features/help/FeatureHelpButton";
 
+// 유틸리티 첫 화면: 도구들을 묶음(API·데이터·코드·운영 등)별 카드로 보여 준다. 새 도구를 만들면 아래 utilityGroups에 카드를 추가한다.
 interface UtilityCard {
   to: string;
   symbol: string;
@@ -237,7 +239,7 @@ export const UtilityHomePage = () => (
   <section className="site-page">
     <div className="page-hero">
       <span className="page-kicker">Developer Utility Board</span>
-      <h1>개발할 때 반복해서 찾는 도구 모음</h1>
+      <div className="page-title-with-guide"><h1>개발할 때 반복해서 찾는 도구 모음</h1><FeatureHelpButton topic="utilities" /></div>
       <p>
         각 도구 화면의 큰 제목 옆 <strong>?</strong> 버튼을 누르면 사용법과 주의사항을 볼 수 있습니다.
       </p>
@@ -251,8 +253,8 @@ export const UtilityHomePage = () => (
     <div className="utility-home-notice">
       <strong>입력한 데이터는 어디로 가나요?</strong>
       <p>
-        대부분의 도구는 브라우저 안에서만 계산합니다. 웹 크롤링 도구는 URL·선택자·로그인 정보를 백엔드의 격리된 Chromium에 보내지만 DB에는 저장하지 않습니다. 다만 계정정보 저장을 직접 선택하면 현재 브라우저의 localStorage에 평문으로 보관합니다.
-        로그인이 필요한 Developer Snippet·투표·Diagram Designer만 내 계정에 저장됩니다.
+        대부분의 변환·분석 도구는 브라우저 안에서만 계산합니다. 웹 크롤링 도구는 URL·선택자·로그인 정보를 백엔드의 Chromium에 보내고, 설정·실행 이력은 DB에 저장합니다. 아이디·비밀번호는 DB에 저장하지 않지만 계정정보 저장을 선택하면 현재 브라우저의 localStorage에 평문으로 보관합니다.
+        API Workspace의 작업 내용은 현재 브라우저에, Developer Snippet·투표·Diagram Designer는 서버에 저장됩니다.
       </p>
     </div>
 

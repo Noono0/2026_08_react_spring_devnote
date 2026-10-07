@@ -1,3 +1,6 @@
+// OpenApiStudioPage.tsx — OpenAPI(Swagger) 문서 뷰어: API 목록·파라미터·예시 확인, 고른 API를 API 작업 공간 컬렉션으로 가져오기
+// 문서는 붙여 넣기·파일(4MB 이하)·주소로 불러온다. 분석은 utils/openApiStudio.ts.
+
 import { useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthSessionQuery } from "@/features/auth/hooks/useAuthSession";
@@ -60,6 +63,7 @@ export const OpenApiStudioPage = () => {
     }
   };
 
+  // 주소로 문서 불러오기(브라우저 fetch). 다른 사이트 문서는 그 서버가 CORS를 허용해야 읽을 수 있어, 실패하면 파일로 올리라고 안내한다.
   const loadFromUrl = async (): Promise<void> => {
     if (!documentUrl.trim()) { setErrorMessage("OpenAPI 문서 URL을 입력해 주세요."); return; }
     setLoadingUrl(true); setErrorMessage("");
@@ -92,6 +96,7 @@ export const OpenApiStudioPage = () => {
     });
   };
 
+  // 고른 API들로 컬렉션을 만들어 이 회원의 API 작업 공간 저장소에 넣는다(로그인 필요).
   const importCollection = (): void => {
     if (!documentSummary || !authenticatedMemberId) return;
     try {

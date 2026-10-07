@@ -7,6 +7,11 @@ import type {
   CrawlerSitePreset,
 } from "@/features/crawler/types/webCrawlerTypes";
 
+/**
+ * 크롤링 실패 패널: 서버가 알려 준 실패 단계(crawlerStage)·이유·해 볼 일과,
+ * "그 단계와 관련된 입력값"을 함께 보여 줘 어느 칸을 고쳐야 할지 바로 알 수 있게 한다.
+ * 아래에는 질문·기록용으로 복사할 수 있는 실패 보고서(crawlerFailureReport.ts)를 만든다.
+ */
 interface CrawlerErrorPanelProps {
   problem: ApiProblemDetails;
   request?: CrawlerRunRequest;
@@ -26,8 +31,10 @@ const loginModeLabel = (request: CrawlerRunRequest): string => {
   return "로그인하지 않음";
 };
 
+// ★ 개인 도구라 입력 실수 확인을 위해 비밀번호를 가리지 않고 보여 준다. 화면 캡처·보고서를 남과 공유할 때는 지워야 한다.
 const passwordState = (password: string): string => password.length > 0 ? password : "(입력하지 않음)";
 
+/** 실패 단계 이름(예: "로그인 완료 확인", "N페이지 목록 확인")을 보고 그 단계에 쓰인 입력값만 골라 보여 준다. 해당하지 않으면 기본 값들. */
 const findFailureInputs = (
   problem: ApiProblemDetails,
   request: CrawlerRunRequest,
@@ -130,7 +137,9 @@ const findFailureInputs = (
 
 export const CrawlerErrorPanel = ({ problem, request, sitePreset }: CrawlerErrorPanelProps) => {
   const failureInputs = request ? findFailureInputs(problem, request, sitePreset) : [];
+  // 실패 순간의 실시간 화면 상태(마지막 단계·로그)도 보고서에 넣기 위해 한 번 받아 온다(주기적 갱신은 하지 않음).
   const liveViewQuery = useCrawlerLiveView(true, false);
+  // 실패 시각은 처음 그릴 때 한 번만 정한다(다시 그려질 때마다 바뀌지 않게 지연 초기화).
   const [occurredAt] = useState(() => new Date());
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
   const report = buildCrawlerFailureReport({

@@ -15,6 +15,8 @@ import {
   sanitizeRequestForStorage,
 } from "@/features/utility/utils/apiWorkspaceUtils";
 
+// apiWorkspaceInterchange.ts — Postman Collection v2.1·Environment JSON 가져오기/내보내기
+// 파일은 2MB·요청 500개·환경 변수 200개까지만 받는다. 지원하지 않는 기능(스크립트 등)은 무시하고 경고 목록으로 알려 준다.
 export const POSTMAN_COLLECTION_SCHEMA = "https://schema.getpostman.com/json/collection/v2.1.0/collection.json";
 export const API_INTERCHANGE_MAX_FILE_BYTES = 2 * 1024 * 1024;
 export const API_INTERCHANGE_MAX_REQUESTS = 500;
@@ -38,6 +40,7 @@ const isRecord = (value: unknown): value is JsonRecord => Boolean(value) && type
 const asArray = (value: unknown): unknown[] => Array.isArray(value) ? value : [];
 const asString = (value: unknown, fallback = ""): string => typeof value === "string" ? value : typeof value === "number" || typeof value === "boolean" ? String(value) : fallback;
 const descriptionText = (value: unknown): string => typeof value === "string" ? value : isRecord(value) ? asString(value.content) : "";
+// 주소 인코딩(%20 등)을 풀되, 잘못된 인코딩이면 원래 글자를 그대로 쓴다(예외로 가져오기가 멈추지 않게).
 const safeDecode = (value: string): string => {
   try { return decodeURIComponent(value.replace(/\+/g, " ")); } catch { return value; }
 };
@@ -80,6 +83,7 @@ const findAuthValue = (auth: JsonRecord, field: string, key: string): string => 
   return isRecord(value) ? asString(value.value) : "";
 };
 
+// Postman 인증 설정(bearer·basic·apikey)을 작업 공간 인증 칸으로 옮긴다. 폴더·컬렉션에서 물려받은 인증도 적용된다.
 const applyPostmanAuthorization = (request: ApiWorkspaceRequest, value: unknown, warnings: string[]): void => {
   if (!isRecord(value)) return;
   const type = asString(value.type).toLocaleLowerCase();
@@ -159,6 +163,7 @@ const parsePostmanRequest = (item: JsonRecord, warnings: string[], inheritedAuth
   return sanitizeRequestForStorage(request);
 };
 
+// 컬렉션 가져오기: item 트리를 재귀로 훑어 폴더와 요청으로 나눈다.
 export const parsePostmanCollection = (source: string): ImportedPostmanCollection => {
   const document = parseJsonDocument(source);
   if (!isRecord(document) || !isRecord(document.info) || !Array.isArray(document.item)) throw new Error("Postman Collection v2.1 형식이 아닙니다.");
@@ -213,6 +218,7 @@ export const parsePostmanCollection = (source: string): ImportedPostmanCollectio
   return { collection, folders, savedRequests, warnings: uniqueWarnings(warnings) };
 };
 
+// ★ 내보낼 때 비밀 값은 {{SECRET_VALUE}}로 바꾼다. 파일을 공유해도 토큰·비밀번호가 새지 않는다.
 const exportKeyValue = (entry: ApiWorkspaceKeyValue): string => isSensitiveKey(entry.key) || entry.secret ? "{{SECRET_VALUE}}" : entry.value;
 const queryString = (request: ApiWorkspaceRequest): string => request.params.filter((entry) => entry.key.trim()).map((entry) => `${entry.key}=${exportKeyValue(entry)}`).join("&");
 
@@ -247,6 +253,7 @@ const exportPostmanRequestItem = (savedRequest: ApiWorkspaceSavedRequest): JsonR
   };
 };
 
+// 컬렉션 내보내기: 삭제(휴지통)된 요청은 빼고, 폴더별로 묶어 Postman v2.1 JSON으로 만든다.
 export const createPostmanCollectionJson = (
   collection: ApiWorkspaceCollection,
   folders: ApiWorkspaceFolder[],
@@ -264,6 +271,7 @@ export const createPostmanCollectionJson = (
   }, null, 2);
 };
 
+// 환경 가져오기/내보내기(values 배열의 key·value·enabled).
 export const parsePostmanEnvironment = (source: string): ImportedPostmanEnvironment => {
   const document = parseJsonDocument(source);
   if (!isRecord(document) || !Array.isArray(document.values)) throw new Error("Postman Environment JSON 형식이 아닙니다.");

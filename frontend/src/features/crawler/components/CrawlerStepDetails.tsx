@@ -10,8 +10,17 @@ interface Props {
   onFieldChange: (patch: Partial<EditableExtractionField>) => void;
 }
 
+/**
+ * 단계 편집기에서 고른 단계(또는 목록 반복 안의 추출 칸) 하나의 세부 설정 입력.
+ *   field가 있으면 : 추출 칸 설정(이름·선택자·텍스트/속성)
+ *   field가 없으면 : 단계 설정 — 단계 종류에 따라 대상(글자·선택자·좌표), 값, 대기 시간 칸이 나타난다.
+ * 어떤 칸이 필요한지는 crawlerSteps.ts의 stepUsesTarget·stepRequiresValue 같은 규칙 함수가 정한다.
+ * <fieldset disabled>: 실행 중에는 안의 입력칸을 한 번에 모두 잠근다.
+ * data-step-* 속성: 저장 전 검사에서 빈 필수 칸을 찾아 포커스를 옮길 때 쓰는 표시다.
+ */
 export const CrawlerStepDetails = ({ step, field, disabled, onChange, onFieldChange }: Props) => {
   const valueLabel = stepValueLabel(step.type);
+  // 숫자 입력칸을 비우면 0이 아니라 null("설정 안 함")로 저장한다.
   const numberOrNull = (value: string): number | null => value.trim() === "" ? null : Number(value);
   return <fieldset disabled={disabled} className="crawler-selected-settings">
     <legend>{field ? `${field.name || "데이터"} 추출 설정` : `${stepTypeOptions.find((option) => option.value === step.type)?.label} 설정`}</legend>

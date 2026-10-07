@@ -13,9 +13,12 @@ import type {
 } from "@/features/utility/types/apiWorkspaceTypes";
 import { createUuid } from "@/shared/lib/createUuid";
 
+// apiWorkspaceUtils.ts — API 작업 공간(브라우저용 Postman 비슷한 도구)의 공통 도우미: 빈 요청 만들기, 컬렉션 트리 거르기,
+// 실제 전송 요청 만들기, 저장 전 비밀 값 가리기, {{환경 변수}} 치환, 응답 크기·상태 설명 등.
 export const API_WORKSPACE_MAX_RESPONSE_BYTES = 1024 * 1024;
 export { API_WORKSPACE_MAX_HISTORY_ITEMS, parseStoredTabs, parseStoredHistory } from "./apiWorkspaceStorage";
 
+// 이름에 이 단어가 들어간 헤더·필드는 비밀 값으로 본다(저장·내보내기 때 가린다).
 const sensitiveKeyPattern = /(authorization|cookie|set-cookie|api[-_]?key|password|passwd|access[-_]?token|refresh[-_]?token|client[-_]?secret|secret)/i;
 
 export const createWorkspaceId = (): string => createUuid();
@@ -103,6 +106,7 @@ export interface ApiWorkspaceCollectionTreeNode {
   folders: ApiWorkspaceCollectionTreeFolder[];
 }
 
+// 사이드바 검색: 컬렉션 이름·설명이 맞으면 그 안의 요청 전부, 아니면 이름·설명·메서드·주소에 검색어가 있는 요청과 그 폴더만 남긴다(휴지통 요청 제외).
 export const filterApiWorkspaceCollectionTree = (
   collections: ApiWorkspaceCollection[],
   folders: ApiWorkspaceFolder[],
@@ -207,6 +211,7 @@ export const createApiWorkspaceActualRequest = (
 
 export const isSensitiveKey = (key: string): boolean => sensitiveKeyPattern.test(key.trim());
 
+// 비밀 값으로 판단된 항목의 값을 ••••••••로 바꾼다.
 const maskKeyValues = (entries: ApiWorkspaceKeyValue[]): ApiWorkspaceKeyValue[] =>
   entries.map((entry) => ({
     ...entry,
@@ -214,6 +219,7 @@ const maskKeyValues = (entries: ApiWorkspaceKeyValue[]): ApiWorkspaceKeyValue[] 
     secret: isSensitiveKey(entry.key) || entry.secret,
   }));
 
+// JSON 본문 안의 비밀 키(password 등)도 중첩까지 찾아 가린다.
 const sanitizeJsonValue = (value: unknown): unknown => {
   if (Array.isArray(value)) return value.map(sanitizeJsonValue);
   if (value && typeof value === "object") {
@@ -237,6 +243,8 @@ const sanitizeBodyText = (request: ApiWorkspaceRequest): string => {
   }
 };
 
+// ★ localStorage에 저장하기 전에 토큰·비밀번호·API 키를 지우고 비밀 헤더·폼 값을 가린다. 파일은 저장할 수 없어 뺀다.
+// (JSON이 아닌 본문은 안에 무엇이 있는지 판단할 수 없어 아예 저장하지 않는다)
 export const sanitizeRequestForStorage = (request: ApiWorkspaceRequest): ApiWorkspaceRequest => ({
   ...request,
   headers: maskKeyValues(request.headers),
@@ -262,6 +270,7 @@ export const serializeTabsForStorage = (tabs: ApiWorkspaceTab[]): string =>
     })),
   );
 
+// 응답 표시 도우미: 바이트 → "1.2 KB", 상태 코드 → 뜻(200 성공, 404 없음 …), JSON 응답 예쁘게 들여쓰기, 글자 응답인지 판단.
 export const formatByteSize = (sizeBytes: number): string => {
   if (sizeBytes < 1024) return `${sizeBytes} B`;
   if (sizeBytes < 1024 * 1024) return `${(sizeBytes / 1024).toFixed(1)} KB`;

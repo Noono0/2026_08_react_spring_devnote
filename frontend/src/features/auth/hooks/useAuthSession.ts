@@ -56,6 +56,9 @@ const resetAuthenticatedQueries = async (queryClient: ReturnType<typeof useQuery
     queryClient.invalidateQueries({ queryKey: ["portfolio", "sections"] }),
     queryClient.invalidateQueries({ queryKey: ["admin"] }),
     queryClient.invalidateQueries({ queryKey: ["documents"] }),
+    // 업무 History는 슈퍼관리자에게만 임시저장 글이 보인다. 로그아웃 뒤 그 글이 캐시에 남으면 정보 노출이다.
+    // (History 캐시 키는 features/history/hooks/useHistoryQueries.ts의 historyQueryKeys.all = ["history"])
+    queryClient.invalidateQueries({ queryKey: ["history"] }),
   ]);
 };
 
