@@ -111,6 +111,6 @@ scripts/    정적 검사·배포·백업 도구
 
 프론트엔드는 `frontend/`에서 `npm run lint`, `npm run typecheck`, `npm run test`, `npm run build`를 실행합니다. 백엔드는 `backend/`에서 Windows는 `gradlew.bat test`, macOS/Linux는 `./gradlew test`를 실행합니다.
 
-정적 검사는 Python 3.10 이상·PyYAML·Node.js·JDK 21·Bash가 필요합니다. 설치와 실행 명령, 외부 크롤러 테스트의 조건은 [검증 가이드](docs/verification.md)에 모았습니다. 실제 완료한 검증과 남은 제한은 [유지보수 기록](docs/maintenance.md)에 기록합니다.
+정적 검사(Python)는 GitHub Actions가 PR과 `main`·`develop` 푸시 때 자동으로 실행하므로 로컬 설치는 선택입니다. 로컬에서 직접 돌리려면 Python 3.10 이상·PyYAML·Node.js·JDK 21·Bash가 필요합니다. 설치와 실행 명령, 외부 크롤러 테스트의 조건은 [검증 가이드](docs/verification.md)에 모았습니다. 실제 완료한 검증과 남은 제한은 [유지보수 기록](docs/maintenance.md)에 기록합니다.
 
 버전의 기준은 `frontend/package.json`, `backend/build.gradle`, Gradle wrapper 설정입니다. 문서에 버전 표를 중복 유지하지 않습니다.
