@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 관리자 화면용 SQL: 회원 등급, 역할 권한, 방문 통계. -->
 <mapper namespace="com.example.devnote.admin.AdminMapper">
     <select id="selectGrades" resultType="com.example.devnote.admin.dao.row.GradeRow">
         SELECT grade_code, grade_name, minimum_points, sort_order, use_yn
@@ -12,6 +13,13 @@
         WHERE grade_code = #{gradeCode}
     </update>
 
+    <!--
+        역할 × 기능 권한 표를 만든다.
+        1. role_list: 역할 3개를 임시 표로 만든다(UNION ALL).
+        2. CROSS JOIN permissions: 역할 3개 × 기능 N개 = 모든 칸을 만든다.
+        3. LEFT JOIN role_permissions: 저장된 허용 값을 붙인다. 아직 저장된 적 없는 칸은 COALESCE로 'N'(불허)이 된다.
+        FIELD(...): USER → ADMIN → SUPER_ADMIN 순서로 정렬한다.
+    -->
     <select id="selectRolePermissions" resultType="com.example.devnote.admin.dao.row.RolePermissionRow">
         SELECT role_list.member_role, permission.permission_code, permission.permission_name,
                permission.permission_description, COALESCE(role_permission.allowed_yn, 'N') AS allowed_yn
@@ -25,6 +33,7 @@
         ORDER BY FIELD(role_list.member_role, 'USER', 'ADMIN', 'SUPER_ADMIN'), permission.permission_code
     </select>
 
+    <!-- ON DUPLICATE KEY UPDATE: (역할, 기능) 키가 이미 있으면 INSERT 대신 allowed_yn만 고친다(MySQL 문법). -->
     <insert id="upsertRolePermission">
         INSERT INTO role_permissions (member_role, permission_code, allowed_yn)
         VALUES (#{memberRole}, #{permissionCode}, #{allowedYn})
@@ -36,6 +45,7 @@
         VALUES (#{visitorKey}, #{memberId}, #{visitedPath})
     </insert>
 
+    <!-- &gt; 는 > 기호(XML에서 안전하게 쓰기 위한 표기). CURRENT_DATE() = 오늘 0시. -->
     <select id="selectTodayVisitorCount" resultType="long">
         SELECT COUNT(DISTINCT visitor_key) FROM visitor_events WHERE visited_at &gt;= CURRENT_DATE()
     </select>
@@ -45,6 +55,7 @@
         WHERE visited_at &gt;= DATE_FORMAT(CURRENT_DATE(), '%Y-%m-01')
     </select>
 
+    <!-- 최근 14일(오늘 포함)을 날짜별로 묶는다. COUNT(DISTINCT visitor_key) = 방문자 수, COUNT(*) = 조회 수. -->
     <select id="selectDailyVisitSeries" resultType="com.example.devnote.admin.dao.row.VisitSeriesRow">
         SELECT DATE_FORMAT(visited_at, '%Y-%m-%d') AS period,
                COUNT(DISTINCT visitor_key) AS visitors, COUNT(*) AS page_views
@@ -52,6 +63,7 @@
         GROUP BY DATE_FORMAT(visited_at, '%Y-%m-%d') ORDER BY period
     </select>
 
+    <!-- 최근 12개월(이번 달 포함)을 월별로 묶는다. 11개월 전 달의 1일부터 센다. -->
     <select id="selectMonthlyVisitSeries" resultType="com.example.devnote.admin.dao.row.VisitSeriesRow">
         SELECT DATE_FORMAT(visited_at, '%Y-%m') AS period,
                COUNT(DISTINCT visitor_key) AS visitors, COUNT(*) AS page_views
@@ -59,6 +71,7 @@
         GROUP BY DATE_FORMAT(visited_at, '%Y-%m') ORDER BY period
     </select>
 
+    <!-- LEFT JOIN: 비회원 방문(member_id가 NULL)도 빠지지 않게 한다. INNER JOIN이면 비회원 방문이 사라진다. -->
     <select id="selectRecentVisits" resultType="com.example.devnote.admin.dao.row.RecentVisitRow">
         SELECT visit.visitor_key, visit.member_id, member.login_id, member.member_name,
                visit.visited_path, visit.visited_at

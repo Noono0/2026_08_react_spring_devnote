@@ -68,6 +68,7 @@ public final class CrawlerListingParser {
     private static final Pattern BASEMENT = Pattern.compile("반지하|반지층|반지(?![가-힣])|지층(?![가-힣])|지하(?!철)\\s*\\d*\\s*층");
     private static final Pattern ROOMS = Pattern.compile("(원룸|투룸|쓰리룸|스리룸|포룸|[1-9](?:\\.5)?\\s*룸|방\\s*[1-9]\\s*개?)");
 
+    // static 메서드만 있는 도구 클래스라 객체를 만들지 못하게 생성자를 private으로 막는다.
     private CrawlerListingParser() {
     }
 
@@ -76,6 +77,7 @@ public final class CrawlerListingParser {
         Map<String, String> result = new LinkedHashMap<>();
         FIELDS.forEach(field -> result.put(field, ""));
         if (text == null || text.isBlank()) return result;
+        // 줄바꿈 없는 공백(NBSP)과 여러 칸 공백을 보통 공백 하나로 바꿔, 정규식이 공백 모양 차이로 실패하지 않게 한다.
         String normalized = text.replace(' ', ' ').replaceAll("\\s+", " ");
 
         parseMoney(normalized, result);
@@ -97,6 +99,13 @@ public final class CrawlerListingParser {
         });
     }
 
+    /**
+     * 보증금·월세를 찾는다(단위: 만원). 시도 순서:
+     *   1. "1억2000/15"처럼 "큰 금액/작은 금액" 표기
+     *   2. "보증금 1000" 같은 라벨 → 3. "월세 50" 라벨, 단위가 붙은 "월15만원"
+     *   4. 보증금만 있고 "전세"라고 적혀 있으면 월세 0
+     *   5. 그래도 보증금이 없으면 300만원 이상인 첫 금액
+     */
     private static void parseMoney(String text, Map<String, String> result) {
         Matcher slash = DEPOSIT_SLASH_MONTHLY.matcher(text);
         while (slash.find()) {
@@ -185,6 +194,7 @@ public final class CrawlerListingParser {
         return (int) Math.round(total);
     }
 
+    /** 방 수: 원룸·투룸·쓰리룸·포룸 → 1~4, "2룸"·"1.5룸"·"방 2개" → 숫자만. */
     private static void parseRooms(String text, Map<String, String> result) {
         Matcher matcher = ROOMS.matcher(text);
         if (!matcher.find()) return;
@@ -199,6 +209,7 @@ public final class CrawlerListingParser {
         if (!rooms.isBlank()) result.put(ROOMS_FIELD, rooms);
     }
 
+    /** 면적: ㎡ 표기를 먼저 찾고, 없으면 평 표기를 ㎡로 바꾼다(1평 ≈ 3.3058㎡). */
     private static void parseArea(String text, Map<String, String> result) {
         Matcher square = AREA_SQUARE.matcher(text);
         if (square.find()) {
@@ -211,6 +222,7 @@ public final class CrawlerListingParser {
         }
     }
 
+    /** 역 이름(최대 3개, 중복 제거)과 도보 시간("도보 5~10분"이면 5~10)을 찾는다. */
     private static void parseStationAndWalk(String text, Map<String, String> result) {
         LinkedHashSet<String> stations = new LinkedHashSet<>();
         Matcher station = STATION.matcher(text);
@@ -246,6 +258,7 @@ public final class CrawlerListingParser {
         return name.isBlank() ? rawName : name;
     }
 
+    /** 층: 여러 표기 규칙을 "현재 층을 정확히 가리킬 가능성이 높은 순서"로 시도하고 처음 맞는 것을 쓴다. */
     private static void parseFloor(String text, Map<String, String> result) {
         // 상세글의 "총 4층 중 3층"이나 "해당층/전체층: 고층/7층"에서 전체 층수를 고르지 않는다.
         for (Pattern pattern : List.of(CURRENT_FLOOR, FLOOR_THEN_TOTAL, TOTAL_THEN_FLOOR_NUMBERS,
@@ -270,6 +283,7 @@ public final class CrawlerListingParser {
         }
     }
 
+    /** 정수면 소수점 없이(33), 아니면 소수 둘째 자리까지(33.06) 글자로 만든다. */
     private static String trimNumber(double value) {
         return value == Math.rint(value) ? String.valueOf((long) value) : String.format(java.util.Locale.ROOT, "%.2f", value);
     }

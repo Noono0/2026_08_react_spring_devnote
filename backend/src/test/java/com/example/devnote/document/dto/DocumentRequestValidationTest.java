@@ -28,6 +28,7 @@ class DocumentRequestValidationTest {
             "이미지 오류 로그",
             4L,
             List.of(),
+            List.of(),
             JsonNodeFactory.instance.objectNode().put("type", "doc"),
             "<img src=\"/api/v1/files/4/content\" alt=\"error-log.png\">",
             "",
@@ -42,6 +43,7 @@ class DocumentRequestValidationTest {
         DocumentUpdateRequest request = new DocumentUpdateRequest(
             "이미지 오류 로그",
             4L,
+            List.of(),
             List.of(),
             JsonNodeFactory.instance.objectNode().put("type", "doc"),
             "<img src=\"/api/v1/files/4/content\" alt=\"error-log.png\">",
@@ -60,9 +62,26 @@ class DocumentRequestValidationTest {
             "잘못된 문서",
             null,
             List.of(),
+            List.of(),
             JsonNodeFactory.instance.objectNode().put("type", "doc"),
             "<p>내용</p>",
             null,
+            DocumentStatus.DRAFT
+        );
+
+        assertFalse(VALIDATOR.validate(request).isEmpty());
+    }
+
+    @Test
+    void tooManyTagsAreRejected() {
+        DocumentCreateRequest request = new DocumentCreateRequest(
+            "태그가 많은 문서",
+            null,
+            List.of(),
+            java.util.stream.IntStream.rangeClosed(1, 11).mapToObj(index -> "태그" + index).toList(),
+            JsonNodeFactory.instance.objectNode().put("type", "doc"),
+            "<p>내용</p>",
+            "내용",
             DocumentStatus.DRAFT
         );
 

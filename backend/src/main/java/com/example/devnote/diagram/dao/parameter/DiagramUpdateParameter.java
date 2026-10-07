@@ -3,6 +3,7 @@ package com.example.devnote.diagram.dao.parameter;
 import lombok.Builder;
 import lombok.Getter;
 
+/** 다이어그램 UPDATE용 값. memberId는 "내 것만 수정" 조건, expectedVersionNumber는 낙관적 잠금 조건으로 WHERE에 쓰인다. */
 @Getter
 @Builder
 public class DiagramUpdateParameter {

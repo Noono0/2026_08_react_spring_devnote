@@ -6,6 +6,7 @@ import lombok.Setter;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+/** 섹션 SELECT 결과 한 행 + PROJECT 상세(LEFT JOIN). Service가 이것을 PortfolioSectionResponse로 바꾼다. */
 @Getter
 @Setter
 public class PortfolioSectionRow {
@@ -30,5 +31,10 @@ public class PortfolioSectionRow {
     private String useYn;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    // portfolio_project_details LEFT JOIN 결과. PROJECT가 아니거나 상세 정보가 없으면 null이다.
+    private String techStackJson;
+    private String roleSummary;
+    private String repositoryUrl;
+    private String demoUrl;
 }
 

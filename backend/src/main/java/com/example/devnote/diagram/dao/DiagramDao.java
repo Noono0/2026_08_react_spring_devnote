@@ -9,6 +9,10 @@ import com.example.devnote.diagram.dto.DiagramSearchCondition;
 
 import java.util.List;
 
+/**
+ * 다이어그램 테이블(diagrams, diagram_versions) 접근 약속.
+ * 목록·단건 조회에 memberId를 함께 넘겨 SQL에서부터 "내 다이어그램"만 읽는다.
+ */
 public interface DiagramDao {
     List<DiagramRow> selectDiagrams(Long memberId, DiagramSearchCondition condition);
 

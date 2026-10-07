@@ -87,6 +87,11 @@ application:
   file-storage:
     root-directory: ${FILE_STORAGE_ROOT:./storage}
     maximum-file-size-bytes: 20971520
+    # 업로드했지만 어디에도 쓰지 않은 임시 파일을 이 기간이 지난 뒤 정리합니다.
+    temporary-file-retention: ${FILE_TEMPORARY_RETENTION:24h}
+    # 정리 작업 실행 시각(초 분 시 일 월 요일)과 시간대. 기본값은 한국 시간 매일 04:30입니다.
+    temporary-file-cleanup-cron: ${FILE_TEMPORARY_CLEANUP_CRON:0 30 4 * * *}
+    temporary-file-cleanup-zone: ${FILE_TEMPORARY_CLEANUP_ZONE:Asia/Seoul}
     allowed-extensions:
       - png
       - jpg

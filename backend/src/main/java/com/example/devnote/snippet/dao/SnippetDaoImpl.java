@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Map;
 
+/** SnippetDao의 MyBatis 구현. SnippetMapper.xml의 같은 id SQL을 실행한다. */
 @Repository
 @RequiredArgsConstructor
 public class SnippetDaoImpl implements SnippetDao {

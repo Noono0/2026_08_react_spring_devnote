@@ -11,6 +11,7 @@ public record CrawlerRecordingRequest(
 
     CrawlerBrowserWindow browserWindow
 ) {
+    // 간결한 생성자(compact constructor): 값이 필드에 들어가기 전에 실행된다. 창 모드를 안 보내면 WEB으로 채운다.
     public CrawlerRecordingRequest {
         browserWindow = browserWindow == null ? CrawlerBrowserWindow.WEB : browserWindow;
     }

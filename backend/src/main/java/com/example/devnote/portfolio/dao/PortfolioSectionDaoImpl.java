@@ -1,5 +1,6 @@
 package com.example.devnote.portfolio.dao;
 
+import com.example.devnote.portfolio.dao.parameter.PortfolioProjectDetailParameter;
 import com.example.devnote.portfolio.dao.parameter.PortfolioSectionSaveParameter;
 import com.example.devnote.portfolio.dao.row.PortfolioSectionRow;
 import lombok.RequiredArgsConstructor;
@@ -9,6 +10,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Map;
 
+/** PortfolioSectionDao의 MyBatis 구현. PortfolioSectionMapper.xml의 같은 id SQL을 실행한다. */
 @Repository
 @RequiredArgsConstructor
 public class PortfolioSectionDaoImpl implements PortfolioSectionDao {
@@ -24,4 +26,6 @@ public class PortfolioSectionDaoImpl implements PortfolioSectionDao {
     @Override public void deleteEditorImages(Long id) { sqlSessionTemplate.delete(NAMESPACE + "deleteEditorImages", id); }
     @Override public void insertSectionFile(Long id, Long fileId, String role, int order) { sqlSessionTemplate.insert(NAMESPACE + "insertSectionFile", Map.of("portfolioSectionId", id, "fileId", fileId, "fileRole", role, "sortOrder", order)); }
     @Override public List<Long> selectEditorImageFileIds(Long id) { return sqlSessionTemplate.selectList(NAMESPACE + "selectEditorImageFileIds", id); }
+    @Override public void upsertProjectDetail(PortfolioProjectDetailParameter parameter) { sqlSessionTemplate.insert(NAMESPACE + "upsertProjectDetail", parameter); }
+    @Override public void deleteProjectDetail(Long id) { sqlSessionTemplate.delete(NAMESPACE + "deleteProjectDetail", id); }
 }

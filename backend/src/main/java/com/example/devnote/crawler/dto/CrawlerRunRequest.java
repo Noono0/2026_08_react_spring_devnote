@@ -9,6 +9,16 @@ import jakarta.validation.constraints.Size;
 
 import java.util.List;
 
+/**
+ * 크롤링 실행 요청(화면의 크롤러 설정 전체).
+ *
+ * [두 가지 실행 방식]
+ *   1. 기존 폼 방식(steps 비어 있음): 로그인 → 사이트 검색 → 목록 수집 → 다음 페이지 순서로 고정 실행
+ *   2. 단계 방식(steps 있음): 사용자가 만든(또는 녹화한) 단계를 위에서부터 차례로 실행
+ *
+ * 숫자 제한(최대 10페이지, 500항목, 대기 30초)은 대상 사이트에 부담을 주지 않고 서버 자원을 지키기 위한 것이다.
+ * @Valid가 붙은 필드는 그 안쪽 객체의 검증 규칙까지 함께 검사한다.
+ */
 public record CrawlerRunRequest(
     @NotNull(message = "브라우저 화면 표시 여부가 필요합니다.")
     Boolean showBrowser,
@@ -25,6 +35,7 @@ public record CrawlerRunRequest(
     @Valid
     CrawlerPageSearchRequest pageSearch,
 
+    // 목록이 iframe 안에 있을 때(예: 네이버 카페 본문) 그 iframe을 가리키는 선택자. 비우면 페이지 본문에서 찾는다.
     @Size(max = 500, message = "콘텐츠 iframe 선택자는 500자 이하여야 합니다.")
     String contentFrameSelector,
 
@@ -75,6 +86,7 @@ public record CrawlerRunRequest(
     /** true면 제목(부족하면 상세내용)에서 보증금·월세·방 수·면적·역·도보·층을 뽑아 칸으로 나눈다. */
     boolean parseListing
 ) {
+    // 간결한 생성자: 빠진 값(null)을 안전한 기본값으로 채운다. 예전에 저장된 설정 JSON에 새 필드가 없어도 실행되게 하기 위해서다.
     public CrawlerRunRequest {
         itemSelector = itemSelector == null ? "" : itemSelector;
         detailSelector = detailSelector == null ? "" : detailSelector;
@@ -100,6 +112,7 @@ public record CrawlerRunRequest(
     }
 
     /** 반복별 대상·추출 설정을 실행 요청으로 옮긴다. 기존 저장 설정은 공통 값을 유지한다. */
+    // record는 값을 바꿀 수 없으므로, 일부 값만 바꾼 "새 요청"을 만들어 돌려준다.
     public CrawlerRunRequest forCollectionStep(CrawlerScenarioStep step) {
         return new CrawlerRunRequest(showBrowser, startUrl, login, pageSearch, contentFrameSelector,
             step.target().isBlank() ? itemSelector : step.target(),
@@ -122,6 +135,7 @@ public record CrawlerRunRequest(
         return Boolean.TRUE.equals(showBrowser) && browserWindow == CrawlerBrowserWindow.PC_WINDOW;
     }
 
+    // 로그(MethodLoggingAspect)에 남길 요약. 로그인 정보는 CrawlerLoginRequest.toString이 가린다.
     @Override
     public String toString() {
         return "CrawlerRunRequest[showBrowser=" + showBrowser

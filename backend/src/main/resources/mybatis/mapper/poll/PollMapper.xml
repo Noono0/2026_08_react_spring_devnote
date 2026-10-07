@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 토픽 투표 SQL. 시각 비교는 UTC_TIMESTAMP(6)(UTC 현재 시각)로 해 Java 쪽 UTC 계산과 맞춘다. -->
 <mapper namespace="com.example.devnote.poll.PollMapper">
     <select id="selectPolls" resultType="com.example.devnote.poll.dao.row.PollRow">
         SELECT poll.poll_id, poll.question, poll.poll_status, poll.allow_multiple, poll.max_selections,
@@ -8,6 +9,10 @@
         FROM polls poll
         JOIN members member ON member.member_id = poll.created_by
         WHERE poll.use_yn = 'Y'
+        <!--
+            상태 필터: DB에는 OPEN이어도 마감 시각이 지났으면 CLOSED로 계산한 뒤 비교한다(PollService.resolveStatus와 같은 규칙).
+            COALESCE(ends_at, created_at + 60분): 마감 시각이 없던 예전 데이터의 기본 마감.
+        -->
         <if test="status != null and status != 'ALL'">
             AND CASE
                 WHEN poll.poll_status = 'OPEN'
@@ -51,9 +56,11 @@
         FROM polls poll
         JOIN members member ON member.member_id = poll.created_by
         WHERE poll.poll_id = #{pollId} AND poll.use_yn = 'Y'
+        <!-- FOR UPDATE: 트랜잭션이 끝날 때까지 이 행을 잠근다. 같은 투표를 잠그려는 다른 요청은 기다린다. -->
         FOR UPDATE
     </select>
 
+    <!-- LEFT JOIN + COUNT: 아직 아무도 고르지 않은 선택지도 0표로 나오게 한다. -->
     <select id="selectPollOptions" resultType="com.example.devnote.poll.dao.row.PollOptionRow">
         SELECT poll_option.poll_option_id, poll_option.option_label, poll_option.sort_order,
                COUNT(selection.poll_ballot_selection_id) AS vote_count
@@ -76,6 +83,7 @@
     <select id="countVote" resultType="int">
         SELECT COUNT(*) FROM poll_ballots
         WHERE poll_id = #{pollId}
+          <!-- 로그인한 회원이면 다른 브라우저에서 투표한 기록(member_id)도 함께 확인한다. -->
           AND (visitor_key = #{visitorKey}<if test="memberId != null"> OR member_id = #{memberId}</if>)
     </select>
 
@@ -125,6 +133,7 @@
     <update id="updatePollStatus">
         UPDATE polls
         SET poll_status = #{status},
+            <!-- 결과 공개로 바꿀 때만 공개 시각을 기록하고, 다른 상태 변경에서는 기존 값을 유지한다. -->
             result_published_at = CASE
                 WHEN #{status} = 'RESULTS_PUBLISHED' THEN CURRENT_TIMESTAMP(6)
                 ELSE result_published_at

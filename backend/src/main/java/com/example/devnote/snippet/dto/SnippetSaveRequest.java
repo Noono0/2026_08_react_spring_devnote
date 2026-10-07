@@ -7,6 +7,10 @@ import jakarta.validation.constraints.Size;
 
 import java.util.List;
 
+/**
+ * 코드 조각 저장 요청. 코드는 최대 20만 자, 태그는 10개(각 30자)까지.
+ * description은 @NotNull이라 빈 문자열("")은 되지만 아예 빠지면 안 된다.
+ */
 public record SnippetSaveRequest(
     @NotBlank @Size(max = 200) String title,
     @NotNull @Size(max = 1000) String description,

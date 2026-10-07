@@ -10,6 +10,8 @@ import java.time.LocalDateTime;
 /**
  * 기존 Docker DB에도 새 컬럼이 반영되도록 테이블 구조를 표현하는 JPA Entity입니다.
  * 실제 투표 조회와 변경은 학습 흐름을 따라 MyBatis DAO가 담당합니다.
+ * (개발: ddl-auto update로 빠진 컬럼 추가 / 운영: validate로 구조 확인 — MemberEntity 설명 참고)
+ * columnDefinition의 default는 update가 컬럼을 다시 정의할 때도 DB 기본값이 지워지지 않게 하려는 것이다.
  */
 @Getter
 @Entity

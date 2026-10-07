@@ -10,6 +10,15 @@ import java.util.List;
 /**
  * 단계별 실행의 한 단계.
  * 예) CLICK · TEXT · "로그인" / FILL · TEXT · "카페글 검색어 입력" · value="LH" / PRESS · value="Enter"
+ *
+ * 필드 설명
+ *   type          : 무엇을 할지(GOTO 이동, CLICK, FILL 입력, PRESS 키, WAIT, WAIT_FOR, MANUAL 직접 처리,
+ *                   COLLECT 목록 반복, SCROLL, NEXT_PAGE, CSV)
+ *   targetMode    : 대상을 찾는 방법(TEXT 화면 글자 / SELECTOR CSS 선택자 / COORDINATE 화면 좌표)
+ *   target, x, y  : 대상(글자·선택자) 또는 좌표
+ *   value         : 입력할 글자·키 이름·대기 시간 등 단계마다 의미가 다른 값
+ *   timeoutMillis : 이 단계에서 기다릴 최대 시간
+ *   fields        : COLLECT(목록 반복) 단계에서 항목마다 추출할 값들
  */
 public record CrawlerScenarioStep(
     @NotNull(message = "단계 종류를 선택해 주세요.")
@@ -40,6 +49,7 @@ public record CrawlerScenarioStep(
     @Size(max = 12, message = "반복 안의 추출 단계는 최대 12개입니다.")
     List<@Valid CrawlerFieldRequest> fields
 ) {
+    // 빠진 값은 빈 문자열·TEXT로 채워, 실행 코드가 null 검사를 반복하지 않게 한다. fields만은 "설정 안 함"을 구분하려고 null을 유지한다.
     public CrawlerScenarioStep {
         targetMode = targetMode == null ? CrawlerTargetMode.TEXT : targetMode;
         target = target == null ? "" : target;
@@ -60,6 +70,7 @@ public record CrawlerScenarioStep(
             case SELECTOR -> target.isBlank() ? "" : "선택자 " + target;
             case TEXT -> target.isBlank() ? "" : "'" + target + "'";
         };
+        // switch 식(Java 14+): 각 경우의 값을 바로 돌려준다. enum의 모든 경우를 다루지 않으면 컴파일 오류가 나서 빠뜨림을 막아 준다.
         String text = switch (type) {
             case GOTO -> "이동 " + value;
             case CLICK -> "클릭 " + where;

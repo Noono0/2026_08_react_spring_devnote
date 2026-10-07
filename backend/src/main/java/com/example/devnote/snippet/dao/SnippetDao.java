@@ -6,6 +6,10 @@ import com.example.devnote.snippet.dto.SnippetSearchCondition;
 
 import java.util.List;
 
+/**
+ * developer_snippets 테이블 접근 약속.
+ * 모든 조회·변경에 memberId가 함께 들어가, SQL 단계에서부터 "내 코드 조각"만 다루게 한다.
+ */
 public interface SnippetDao {
     List<SnippetRow> selectSnippets(SnippetSearchCondition condition);
     long countSnippets(SnippetSearchCondition condition);

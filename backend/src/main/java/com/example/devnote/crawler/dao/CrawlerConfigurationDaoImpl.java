@@ -11,6 +11,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Map;
 
+/** CrawlerConfigurationDao의 MyBatis 구현. CrawlerConfigurationMapper.xml의 같은 id SQL을 실행한다. */
 @Repository
 @RequiredArgsConstructor
 public class CrawlerConfigurationDaoImpl implements CrawlerConfigurationDao {
@@ -27,6 +28,7 @@ public class CrawlerConfigurationDaoImpl implements CrawlerConfigurationDao {
         return sqlSessionTemplate.update(NAMESPACE + "completeRunHistorySuccess", Map.of("historyId", historyId, "resultJson", resultJson, "durationMillis", durationMillis, "itemCount", itemCount));
     }
     @Override public int completeRunHistoryFailure(Long historyId, String failureStage, String failureMessage, long durationMillis) {
+        // Map.of는 null을 받지 않으므로 빈 문자열로 넘기고, SQL의 NULLIF가 다시 NULL로 바꿔 저장한다.
         return sqlSessionTemplate.update(NAMESPACE + "completeRunHistoryFailure", Map.of("historyId", historyId, "failureStage", failureStage == null ? "" : failureStage, "failureMessage", failureMessage, "durationMillis", durationMillis));
     }
     @Override public List<CrawlerRunHistoryRow> selectRunHistories(Long configurationId) { return sqlSessionTemplate.selectList(NAMESPACE + "selectRunHistories", configurationId); }

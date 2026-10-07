@@ -6,6 +6,10 @@ import com.example.devnote.crawler.dto.CrawlerRecordingRequest;
 import com.example.devnote.crawler.dto.CrawlerRunRequest;
 import com.example.devnote.crawler.dto.CrawlerRunResponse;
 
+/**
+ * 실제 브라우저로 크롤링하는 엔진의 약속. 구현은 PlaywrightCrawlerEngine(Chromium 자동 조작).
+ * default 메서드: 구현 클래스가 녹화 기능을 만들지 않아도 컴파일되도록 기본 동작을 정해 둔다.
+ */
 public interface WebCrawlerEngine {
     CrawlerRunResponse crawl(CrawlerRunRequest request);
 

@@ -5,6 +5,11 @@ import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
+/**
+ * 로그인 설정. FORM 방식일 때만 URL·계정·선택자가 모두 필요하다(isFormConfigurationValid).
+ * ★ username·password는 실행할 때만 쓰고 DB에는 저장하지 않는다(CrawlerConfigurationService.withoutCredentials).
+ * toString을 직접 만든 이유: 기본 toString은 모든 값을 찍어 로그(MethodLoggingAspect)에 비밀번호가 남을 수 있다.
+ */
 public record CrawlerLoginRequest(
     @NotNull(message = "로그인 방식을 선택해 주세요.")
     CrawlerLoginMode mode,

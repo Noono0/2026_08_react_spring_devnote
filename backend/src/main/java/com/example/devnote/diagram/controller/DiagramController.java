@@ -34,12 +34,14 @@ import java.util.List;
 public class DiagramController {
     private final DiagramService diagramService;
 
+    // GET /api/v1/diagrams?searchKeyword=회원&diagramType=ERD&pageNumber=0 → 내 다이어그램 목록(모델 JSON 제외)
     @GetMapping
     public ApiResponse<PageResponse<DiagramListItemResponse>> getDiagrams(
         @Valid DiagramSearchCondition condition, HttpServletRequest request) {
         return ApiResponse.success(diagramService.getDiagrams(condition, request));
     }
 
+    // 상세: 편집기에 다시 그릴 모델 JSON까지 포함
     @GetMapping("/{diagramId}")
     public ApiResponse<DiagramDetailResponse> getDiagram(
         @PathVariable Long diagramId, HttpServletRequest request) {
@@ -52,6 +54,7 @@ public class DiagramController {
         return ApiResponse.created(diagramService.create(saveRequest, request));
     }
 
+    // 저장: 본문의 versionNumber가 DB 버전과 다르면 409(다른 탭에서 먼저 저장함)
     @PutMapping("/{diagramId}")
     public ApiResponse<DiagramDetailResponse> update(
         @PathVariable Long diagramId, @Valid @RequestBody DiagramSaveRequest saveRequest, HttpServletRequest request) {
@@ -64,6 +67,7 @@ public class DiagramController {
         return ApiResponse.success(null);
     }
 
+    // 버전 목록(모델 제외, 최근 30개 보관) / 특정 버전 열어 보기(모델 포함)
     @GetMapping("/{diagramId}/versions")
     public ApiResponse<List<DiagramVersionResponse>> getVersions(
         @PathVariable Long diagramId, HttpServletRequest request) {

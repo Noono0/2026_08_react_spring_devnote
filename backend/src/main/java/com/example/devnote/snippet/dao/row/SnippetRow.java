@@ -5,6 +5,7 @@ import lombok.Setter;
 
 import java.time.LocalDateTime;
 
+/** developer_snippets 한 행. useYn = 'N'이면 휴지통에 있는 코드 조각이다. */
 @Getter
 @Setter
 public class SnippetRow {

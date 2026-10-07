@@ -48,7 +48,7 @@ class HistoryControllerTest {
     void guestCannotOpenDraftHistoryDirectly() {
         MockHttpServletRequest request = new MockHttpServletRequest();
         DocumentDetailResponse draft = new DocumentDetailResponse(1L, 1L, "관리자", "임시 글",
-            new ObjectMapper().createObjectNode(), "<p></p>", "", null, null, List.of(), "DRAFT",
+            new ObjectMapper().createObjectNode(), "<p></p>", "", null, null, List.of(), List.of(), "DRAFT",
             1L, 0L, LocalDateTime.now(), LocalDateTime.now());
         when(documentService.getDocumentDetail(1L, DocumentScope.HISTORY)).thenReturn(draft);
         HistoryController controller = new HistoryController(documentService, authenticationService);
