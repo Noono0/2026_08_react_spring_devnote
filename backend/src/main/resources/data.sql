@@ -68,15 +68,20 @@ JOIN poll_ballots poll_ballot
 
 -- 예시 문서. 1~3번은 React 연습장(PRACTICE), 101·102번은 포트폴리오 업무 History(HISTORY) 글이다.
 -- JSON_OBJECT·JSON_ARRAY: 에디터 본문 JSON을 SQL에서 만드는 MySQL 함수.
+-- ★ content_json·content_html·content_text 세 벌은 같은 본문이어야 한다.
+--   예전에는 content_json이 빈 문서라 수정 화면 에디터가 빈 칸으로 보였다(상세 화면은 HTML이라 정상).
+--   그래서 HTML과 같은 문단 하나짜리 JSON(doc → paragraph → text)으로 맞췄다.
+--   INSERT IGNORE라 이미 만들어진 DB의 행은 바뀌지 않는다. 그런 예전 행은 프론트엔드 에디터가
+--   "JSON이 비면 HTML로 채운다"(rich-text-editor/utils/editorInitialContent.ts)로 대비한다.
 INSERT IGNORE INTO documents (
     document_id, member_id, document_title, content_json, content_html, content_text,
     document_scope, document_status, version_number, view_count, use_yn
 ) VALUES
-    (1, 1, 'React 상태 관리 연습', JSON_OBJECT('type','doc','content',JSON_ARRAY()), '<p>React 상태 관리 연습 문서입니다.</p>', 'React 상태 관리 연습 문서입니다.', 'PRACTICE', 'PUBLISHED', 1, 32, 'Y'),
-    (2, 1, 'Spring Boot와 MyBatis 연동', JSON_OBJECT('type','doc','content',JSON_ARRAY()), '<p>MyBatis XML과 SQL 로그를 확인합니다.</p>', 'MyBatis XML과 SQL 로그를 확인합니다.', 'PRACTICE', 'DRAFT', 1, 15, 'Y'),
-    (3, 2, 'Tiptap 이미지 붙여넣기', JSON_OBJECT('type','doc','content',JSON_ARRAY()), '<p>클립보드 이미지를 서버에 업로드합니다.</p>', 'Tiptap 이미지 붙여넣기', 'PRACTICE', 'PUBLISHED', 1, 51, 'Y'),
-    (101, 1, '포트폴리오와 React 연습장을 하나의 프로젝트로 분리한 과정', JSON_OBJECT('type','doc','content',JSON_ARRAY()), '<p>공개 포트폴리오와 React 학습 라우트를 분리하면서 공통 메뉴와 권한 경계를 정리했습니다.</p>', '공개 포트폴리오와 React 학습 라우트를 분리한 과정', 'HISTORY', 'PUBLISHED', 1, 0, 'Y'),
-    (102, 1, '세션 로그인과 슈퍼관리자 편집 권한 트러블슈팅', JSON_OBJECT('type','doc','content',JSON_ARRAY()), '<p>화면에서 버튼만 숨기지 않고 Controller와 Service에서도 권한을 검증한 내용을 정리할 예정입니다.</p>', '세션 로그인과 슈퍼관리자 편집 권한 트러블슈팅', 'HISTORY', 'DRAFT', 1, 0, 'Y');
+    (1, 1, 'React 상태 관리 연습', JSON_OBJECT('type','doc','content',JSON_ARRAY(JSON_OBJECT('type','paragraph','content',JSON_ARRAY(JSON_OBJECT('type','text','text','React 상태 관리 연습 문서입니다.'))))), '<p>React 상태 관리 연습 문서입니다.</p>', 'React 상태 관리 연습 문서입니다.', 'PRACTICE', 'PUBLISHED', 1, 32, 'Y'),
+    (2, 1, 'Spring Boot와 MyBatis 연동', JSON_OBJECT('type','doc','content',JSON_ARRAY(JSON_OBJECT('type','paragraph','content',JSON_ARRAY(JSON_OBJECT('type','text','text','MyBatis XML과 SQL 로그를 확인합니다.'))))), '<p>MyBatis XML과 SQL 로그를 확인합니다.</p>', 'MyBatis XML과 SQL 로그를 확인합니다.', 'PRACTICE', 'DRAFT', 1, 15, 'Y'),
+    (3, 2, 'Tiptap 이미지 붙여넣기', JSON_OBJECT('type','doc','content',JSON_ARRAY(JSON_OBJECT('type','paragraph','content',JSON_ARRAY(JSON_OBJECT('type','text','text','클립보드 이미지를 서버에 업로드합니다.'))))), '<p>클립보드 이미지를 서버에 업로드합니다.</p>', '클립보드 이미지를 서버에 업로드합니다.', 'PRACTICE', 'PUBLISHED', 1, 51, 'Y'),
+    (101, 1, '포트폴리오와 React 연습장을 하나의 프로젝트로 분리한 과정', JSON_OBJECT('type','doc','content',JSON_ARRAY(JSON_OBJECT('type','paragraph','content',JSON_ARRAY(JSON_OBJECT('type','text','text','공개 포트폴리오와 React 학습 라우트를 분리하면서 공통 메뉴와 권한 경계를 정리했습니다.'))))), '<p>공개 포트폴리오와 React 학습 라우트를 분리하면서 공통 메뉴와 권한 경계를 정리했습니다.</p>', '공개 포트폴리오와 React 학습 라우트를 분리하면서 공통 메뉴와 권한 경계를 정리했습니다.', 'HISTORY', 'PUBLISHED', 1, 0, 'Y'),
+    (102, 1, '세션 로그인과 슈퍼관리자 편집 권한 트러블슈팅', JSON_OBJECT('type','doc','content',JSON_ARRAY(JSON_OBJECT('type','paragraph','content',JSON_ARRAY(JSON_OBJECT('type','text','text','화면에서 버튼만 숨기지 않고 Controller와 Service에서도 권한을 검증한 내용을 정리할 예정입니다.'))))), '<p>화면에서 버튼만 숨기지 않고 Controller와 Service에서도 권한을 검증한 내용을 정리할 예정입니다.</p>', '화면에서 버튼만 숨기지 않고 Controller와 Service에서도 권한을 검증한 내용을 정리할 예정입니다.', 'HISTORY', 'DRAFT', 1, 0, 'Y');
 
 -- 예시 포트폴리오 섹션(자기소개, 대표 프로젝트, 기술)
 INSERT IGNORE INTO portfolio_sections (

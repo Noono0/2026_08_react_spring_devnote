@@ -41,6 +41,7 @@ import {
 } from "../hooks/useDocumentQueries";
 import type { DocumentFormValues, DocumentSaveRequest } from "../types/documentTypes";
 import { RichTextEditor } from "@/features/rich-text-editor/components/RichTextEditor";
+import { resolveEditorInitialContent } from "@/features/rich-text-editor/utils/editorInitialContent";
 import { AttachmentFileUploader } from "@/features/file/components/AttachmentFileUploader";
 import { ThumbnailImageUploader } from "@/features/file/components/ThumbnailImageUploader";
 import { applicationNotification } from "@/shared/notification/applicationNotification";
@@ -381,7 +382,9 @@ export const DocumentEditorPage = () => {
               handleContentChange : 자식 → 부모, 내용이 바뀔 때마다 알림
               handleImageUploaded : 자식 → 부모, 이미지를 올렸을 때 알림 */}
         <RichTextEditor
-          initialContent={documentDetailQuery.data?.contentJson}
+          // ★ 보통은 JSON으로 채우지만, JSON이 빈 문서인데 HTML에 본문이 있는 예전 데이터는 HTML로 채운다.
+          //   그대로 빈 JSON을 넣으면 에디터가 빈 칸으로 보이고, 거기에 새로 쓴 글이 원래 본문을 덮어쓴다.
+          initialContent={resolveEditorInitialContent(documentDetailQuery.data?.contentJson, documentDetailQuery.data?.contentHtml)}
           handleImageUploaded={(uploadedFileId, uploadedImageUrl) => {
             /* 첫 번째 본문 이미지를 대표 이미지로 자동 제안합니다. */
             // ★ 작지만 사용자를 배려한 기능이다.

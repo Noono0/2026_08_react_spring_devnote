@@ -70,6 +70,30 @@ describe("RichTextEditor", () => {
     expect(insertedTableHtml.match(/<td/g)).toHaveLength(12);
   });
 
+  it("문서 작성 form 안에서 표 크기 입력칸에 Enter를 누르면 표만 넣고 바깥 form은 제출하지 않는다", async () => {
+    const changedHtml: string[] = [];
+    // 실제 문서 작성 화면처럼 에디터를 바깥 <form> 안에 둔다.
+    const handleOuterSubmit = vi.fn((submitEvent: React.FormEvent<HTMLFormElement>) => submitEvent.preventDefault());
+    const { container } = render(
+      <form onSubmit={handleOuterSubmit}>
+        <RichTextEditor handleContentChange={(content) => changedHtml.push(content.contentHtml)} />
+      </form>,
+    );
+
+    // 에디터 안에 또 다른 <form>이 없어야 한다(form 중첩은 HTML 규칙 위반이고 submit 이벤트가 바깥까지 전달된다).
+    expect(container.querySelectorAll("form form")).toHaveLength(0);
+
+    fireEvent.click(screen.getByLabelText("표 도구"));
+    const columnInput = screen.getByRole("spinbutton", { name: "열" });
+    fireEvent.change(columnInput, { target: { value: "2" } });
+    fireEvent.keyDown(columnInput, { key: "Enter" });
+
+    await waitFor(() =>
+      expect(changedHtml.some((contentHtml) => contentHtml.includes("<table"))).toBe(true),
+    );
+    expect(handleOuterSubmit).not.toHaveBeenCalled();
+  });
+
   it("현재 표 셀의 배경색을 적용하고 저장 HTML에 유지한다", async () => {
     const changedHtml: string[] = [];
     render(

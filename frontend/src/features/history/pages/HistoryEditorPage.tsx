@@ -32,6 +32,7 @@ import {
 } from "../hooks/useHistoryQueries";
 import type { HistoryFormValues, HistorySaveRequest } from "../types/historyTypes";
 import { RichTextEditor } from "@/features/rich-text-editor/components/RichTextEditor";
+import { resolveEditorInitialContent } from "@/features/rich-text-editor/utils/editorInitialContent";
 import { AttachmentFileUploader } from "@/features/file/components/AttachmentFileUploader";
 import { ThumbnailImageUploader } from "@/features/file/components/ThumbnailImageUploader";
 import type { DocumentAttachment } from "@/features/file/types/fileTypes";
@@ -253,7 +254,8 @@ export const HistoryEditorPage = () => {
           }}
         />
         <RichTextEditor
-          initialContent={historyDetailQuery.data?.contentJson}
+          // JSON이 비어 있는 예전 글은 HTML로 채운다. (빈 에디터에 새로 쓰면 원래 본문이 덮어써지는 문제 방지)
+          initialContent={resolveEditorInitialContent(historyDetailQuery.data?.contentJson, historyDetailQuery.data?.contentHtml)}
           handleImageUploaded={(uploadedFileId, uploadedImageUrl) => {
             // 대표 이미지가 아직 없을 때만 첫 본문 이미지를 대표 이미지로 제안한다(이미 고른 것은 덮어쓰지 않는다).
             if (!thumbnailFileId) {

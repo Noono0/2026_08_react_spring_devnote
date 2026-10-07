@@ -36,7 +36,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
-import type { JSONContent } from "@tiptap/core";
+import type { Content, JSONContent } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import CharacterCount from "@tiptap/extension-character-count";
 import Color from "@tiptap/extension-color";
@@ -68,7 +68,9 @@ import {
 import { TableRowWithHeight } from "@/features/rich-text-editor/extensions/tableRowHeight";
 
 interface RichTextEditorProperties {
-  initialContent?: JSONContent;
+  // 처음 채울 내용. 보통은 JSON이지만, 예전 데이터처럼 JSON이 비어 있으면 HTML 문자열이 올 수 있다.
+  // (어느 쪽을 쓸지는 utils/editorInitialContent.ts의 resolveEditorInitialContent가 정한다)
+  initialContent?: Content;
   editorLabel?: string;
 
   // ★ 이미지 업로드 "함수 자체"를 props로 받을 수 있게 열어 뒀다.

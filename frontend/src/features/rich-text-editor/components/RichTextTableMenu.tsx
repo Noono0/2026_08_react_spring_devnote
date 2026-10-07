@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type KeyboardEvent, type MouseEvent } from "react";
+import { useState, type KeyboardEvent, type MouseEvent } from "react";
 import type { Editor } from "@tiptap/core";
 import {
   clampTableRowHeight,
@@ -102,9 +102,25 @@ export const RichTextTableMenu = ({ editor, isInsideTable }: RichTextTableMenuPr
     focusGridCell(keyboardEvent.currentTarget, nextRows, nextColumns);
   };
 
-  const handleDirectTableSubmit = (formEvent: FormEvent<HTMLFormElement>): void => {
-    formEvent.preventDefault();
-    insertTable(directRows, directColumns, formEvent.currentTarget);
+  /**
+   * 직접 입력한 크기로 표를 넣는다.
+   *
+   * ★ 왜 <form onSubmit>을 쓰지 않을까?
+   *   이 에디터는 문서 작성 화면의 <form> 안에 들어간다. HTML은 form 안에 form을 허용하지 않고,
+   *   React의 submit 이벤트는 컴포넌트 트리를 따라 바깥 form까지 올라간다.
+   *   그래서 예전처럼 안쪽 form을 쓰면 표 크기 입력칸에서 Enter를 눌렀을 때
+   *   바깥 문서의 "저장"까지 함께 실행될 수 있었다.
+   *   ✓ 그래서 일반 버튼(type="button") + 입력칸의 Enter 처리로 바꿨다.
+   */
+  const insertDirectTable = (triggerElement: HTMLElement): void => {
+    insertTable(directRows, directColumns, triggerElement);
+  };
+
+  /** 입력칸에서 Enter를 누르면 표를 넣는다. preventDefault로 바깥 form 제출을 막는다. */
+  const handleDirectInputKeyDown = (keyboardEvent: KeyboardEvent<HTMLInputElement>): void => {
+    if (keyboardEvent.key !== "Enter") return;
+    keyboardEvent.preventDefault();
+    insertDirectTable(keyboardEvent.currentTarget);
   };
 
   /** 행·열 추가·삭제 같은 표 편집 명령을 실행하고 메뉴를 닫는다. */
@@ -196,8 +212,9 @@ export const RichTextTableMenu = ({ editor, isInsideTable }: RichTextTableMenuPr
             첫 행을 머리글로 사용
           </label>
 
-          <form className="editor-table-direct-form" onSubmit={handleDirectTableSubmit}>
-            <strong>직접 입력</strong>
+          {/* form 대신 role="group"으로 "관련 입력칸 묶음"임을 화면 낭독기에 알린다(위 insertDirectTable 설명 참고). */}
+          <div className="editor-table-direct-form" role="group" aria-labelledby="editor-table-direct-title">
+            <strong id="editor-table-direct-title">직접 입력</strong>
             <label>
               열
               <input
@@ -206,6 +223,7 @@ export const RichTextTableMenu = ({ editor, isInsideTable }: RichTextTableMenuPr
                 max={TABLE_DIRECT_INPUT_MAXIMUM}
                 value={directColumns}
                 onChange={(event) => setDirectColumns(Math.min(TABLE_DIRECT_INPUT_MAXIMUM, Math.max(1, Number(event.target.value) || 1)))}
+                onKeyDown={handleDirectInputKeyDown}
               />
             </label>
             <span aria-hidden="true">×</span>
@@ -217,10 +235,11 @@ export const RichTextTableMenu = ({ editor, isInsideTable }: RichTextTableMenuPr
                 max={TABLE_DIRECT_INPUT_MAXIMUM}
                 value={directRows}
                 onChange={(event) => setDirectRows(Math.min(TABLE_DIRECT_INPUT_MAXIMUM, Math.max(1, Number(event.target.value) || 1)))}
+                onKeyDown={handleDirectInputKeyDown}
               />
             </label>
-            <button type="submit">입력한 크기로 표 삽입</button>
-          </form>
+            <button type="button" onClick={(event) => insertDirectTable(event.currentTarget)}>입력한 크기로 표 삽입</button>
+          </div>
         </section>
 
         <section className="editor-table-edit-section" aria-labelledby="editor-table-edit-title">
