@@ -1,3 +1,5 @@
+// JsonCsvConverterPage.tsx — JSON ↔ CSV 변환 화면(입력 2MB 이하, 미리보기 50행). 변환은 utils/jsonCsvConverter.ts.
+
 import { useMemo, useState, type ChangeEvent } from "react";
 import { applicationNotification } from "@/shared/notification/applicationNotification";
 import { ModalDialog } from "@/shared/ui/ModalDialog";
@@ -67,6 +69,7 @@ export const JsonCsvConverterPage = () => {
     }
   };
 
+  // 결과를 입력으로 옮기고 방향을 뒤집어 되돌려 변환해 볼 수 있게 한다.
   const swapInputAndOutput = (): void => {
     if (!conversionResult) {
       applicationNotification.warning("먼저 변환을 실행해 주세요.");
@@ -103,6 +106,7 @@ export const JsonCsvConverterPage = () => {
     URL.revokeObjectURL(downloadUrl);
   };
 
+  // 파일을 글자로 읽어 입력칸에 넣는다(크기 제한을 넘으면 거부). 같은 파일을 다시 고를 수 있도록 입력값을 비운다.
   const importFile = async (fileChangeEvent: ChangeEvent<HTMLInputElement>): Promise<void> => {
     const selectedFile = fileChangeEvent.target.files?.[0];
     fileChangeEvent.target.value = "";

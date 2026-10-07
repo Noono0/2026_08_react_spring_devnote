@@ -1,3 +1,5 @@
+// snippetApi.ts — 개인 코드 조각 보관함 API(서버 SnippetController와 1:1). 로그인한 회원 자신의 조각만 다룬다.
+
 import type { ApiResponse } from "@/shared/api/apiResponseTypes";
 import { selectedHttpClient } from "@/shared/api/http/selectedHttpClient";
 import type { Snippet, SnippetPageResponse, SnippetSaveRequest, SnippetSearchCondition } from "@/features/utility/types/snippetTypes";
@@ -11,6 +13,7 @@ export const updateSnippet = async (snippetId: number, request: SnippetSaveReque
 export const deleteSnippet = async (snippetId: number): Promise<void> => { await selectedHttpClient.delete<ApiResponse<void>>(`/snippets/${snippetId}`); };
 export const restoreSnippet = async (snippetId: number): Promise<Snippet> =>
   (await selectedHttpClient.post<Record<string, never>, ApiResponse<Snippet>>(`/snippets/${snippetId}/restore`, {})).data;
+// 여러 개를 한 번에 휴지통으로/복구. 응답은 실제로 처리된 개수다.
 export const bulkDeleteSnippets = async (snippetIds: number[]): Promise<number> =>
   (await selectedHttpClient.post<{ snippetIds: number[] }, ApiResponse<number>>("/snippets/bulk-delete", { snippetIds })).data;
 export const bulkRestoreSnippets = async (snippetIds: number[]): Promise<number> =>

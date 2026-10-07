@@ -1,5 +1,12 @@
 package com.example.devnote.crawler.service;
 
+/**
+ * 네이버 로그인이 끝나지 않았을 때 화면 글자를 보고 원인을 추정합니다.
+ * 원인마다 단계 이름·설명·해 볼 일과 "사람이 화면에서 직접 처리하면 이어서 진행할 수 있는지"(manualActionRequired)를 정한다.
+ *   보호조치·비밀번호 오류 → 자동으로 더 시도하지 않음(false)
+ *   보안 질문·캡차·2단계 인증 → 사람이 실시간 화면에서 직접 풀면 계속(true)
+ * ★ 크롤러는 캡차를 자동으로 풀지 않는다. 사람이 직접 처리하도록 안내만 한다.
+ */
 final class NaverLoginFailureAnalyzer {
     record Diagnosis(String stage, String reason, String action, boolean manualActionRequired) {
     }
@@ -9,6 +16,14 @@ final class NaverLoginFailureAnalyzer {
 
     static Diagnosis diagnose(String bodyText) {
         String text = bodyText == null ? "" : bodyText.replaceAll("\\s+", " ").trim();
+        if (text.contains("보호조치 해제") || text.contains("아이디가 보호조치")) {
+            return new Diagnosis(
+                "네이버 계정 보호조치",
+                "네이버가 이 아이디에 보호조치를 적용했습니다. 크롤러에서 추가 로그인을 시도하지 않습니다.",
+                "네이버 공식 화면에서 본인 확인과 로그인 기록 확인을 마친 뒤, 수집 허용 범위를 검토해 주세요.",
+                false
+            );
+        }
         if (text.contains("보안을 위해 추가 확인") || text.contains("정답을 입력해 주세요")) {
             return new Diagnosis(
                 "네이버 추가 보안 확인",

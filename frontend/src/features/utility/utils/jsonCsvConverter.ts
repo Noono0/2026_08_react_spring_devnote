@@ -1,3 +1,5 @@
+// jsonCsvConverter.ts — JSON 배열 ↔ CSV 변환(최대 1만 행). 구분자는 쉼표·세미콜론·탭 중에서 고른다.
+
 export type JsonCsvDirection = "JSON_TO_CSV" | "CSV_TO_JSON";
 export type CsvDelimiter = "," | ";" | "\t";
 
@@ -37,6 +39,7 @@ const stringifyJsonValue = (value: unknown): string => {
   return "";
 };
 
+// JSON → CSV: 모든 객체의 키를 모아 열 이름으로 쓰고, 중첩 객체·배열 값은 JSON 글자로 한 칸에 넣는다.
 const convertJsonToCsv = (
   source: string,
   delimiter: CsvDelimiter,
@@ -159,6 +162,7 @@ export const parseCsvRows = (source: string, delimiter: CsvDelimiter): string[][
   return rows;
 };
 
+// CSV → JSON에서 "값 종류 추론"을 켜면: null·true·false·숫자 모양을 실제 값으로 바꾼다.
 const inferCsvValue = (value: string): string | number | boolean | null => {
   const trimmedValue = value.trim();
   if (trimmedValue === "null") return null;
@@ -213,6 +217,7 @@ const convertCsvToJson = (
   };
 };
 
+// 화면에서 고른 방향으로 변환하는 입구.
 export const convertJsonCsv = (
   source: string,
   options: JsonCsvConversionOptions,

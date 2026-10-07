@@ -17,6 +17,7 @@ interface CrawlerLegacyFormFieldsProps {
   onRememberCredentialsChange: (rememberCredentials: boolean) => void;
 }
 
+// 단계 방식이 생기기 전의 고정 흐름(로그인 → 사이트 검색 → 목록 수집)용 입력칸. 단계 방식으로 완전히 옮기면 [LEGACY-FORM] 표시가 붙은 코드와 함께 지운다.
 /** [LEGACY-FORM] 기존 설정 방식의 로그인·사이트 검색 입력칸. */
 export const CrawlerLegacyFormFields = ({
   form,

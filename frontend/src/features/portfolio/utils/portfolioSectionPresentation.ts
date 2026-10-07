@@ -1,11 +1,19 @@
+/**
+ * portfolioSectionPresentation.ts — 포트폴리오 섹션을 "어떻게 보여 줄지" 정하는 규칙 모음(순수 함수·상수)
+ * 화면 컴포넌트에서 분리해 두면 테스트하기 쉽고, 여러 화면(홈·상세·편집기)이 같은 규칙을 쓴다.
+ */
+
+import { parseCommaSeparatedValues } from "@/shared/lib/parseCommaSeparatedValues";
 import type {
   PortfolioSection,
   PortfolioSectionSaveRequest,
   PortfolioSectionType,
 } from "@/features/portfolio/types/portfolioTypes";
 
+// 블록 선택창에서 고를 수 있는 종류(지금은 모든 섹션 종류와 같다).
 export type PortfolioBlockSectionType = PortfolioSectionType;
 
+/** 블록 종류 하나의 안내 정보. anchorId는 페이지 안 이동 주소(#about 등), eyebrow는 제목 위 작은 영문 문구. */
 export interface PortfolioSectionGroupDefinition {
   sectionType: PortfolioBlockSectionType;
   anchorId: string;
@@ -96,6 +104,7 @@ export const portfolioSectionGroups: readonly PortfolioSectionGroupDefinition[] 
   },
 ] as const;
 
+// 카드 위쪽에 작게 표시하는 종류 이름.
 export const portfolioSectionTypeLabels: Record<PortfolioSectionType, string> = {
   PROFILE: "소개",
   RICH_TEXT: "자유 글",
@@ -108,12 +117,14 @@ export const portfolioSectionTypeLabels: Record<PortfolioSectionType, string> = 
   CONTACT: "연락처",
 };
 
+// 날짜 기준으로 정렬할 종류(경력·교육·자격).
 const datedSectionTypes = new Set<PortfolioSectionType>([
   "EXPERIENCE",
   "EDUCATION",
   "CERTIFICATE",
 ]);
 
+/** 기간 표시: "2024-03-01" → "2024.03". 진행 중이면 끝을 "현재"로. 시작일이 없으면 기간을 표시하지 않는다. */
 export const formatPortfolioPeriod = (section: PortfolioSection): string | undefined => {
   if (!section.startDate) return undefined;
   const start = section.startDate.slice(0, 7).replace("-", ".");
@@ -123,6 +134,10 @@ export const formatPortfolioPeriod = (section: PortfolioSection): string | undef
   return `${start} — ${end}`;
 };
 
+/**
+ * 종류별 정렬: 날짜가 있는 종류는 진행 중 → 최근 시작 순, 나머지는 사용자가 정한 순서(sortOrder).
+ * [...sections]로 복사한 뒤 정렬한다. sort는 원본 배열을 바꾸기 때문에 서버 캐시 배열을 직접 정렬하면 안 된다.
+ */
 export const sortPortfolioSections = (
   sectionType: PortfolioSectionType,
   sections: PortfolioSection[],
@@ -143,6 +158,7 @@ export const sortPortfolioBlocks = (sections: PortfolioSection[]): PortfolioSect
 );
 
 /** 공개 상태 빠른 전환에서도 에디터 저장과 동일한 API 계약을 사용한다. */
+// 응답(PortfolioSection) → 저장 요청으로 바꾼다. 공개 여부·순서만 바꾸고 나머지는 그대로 다시 보낼 때 쓴다(서버 API는 전체 값을 받는다).
 export const toPortfolioSectionSaveRequest = (
   section: PortfolioSection,
   changes: Partial<Pick<PortfolioSectionSaveRequest, "visibility" | "sortOrder">> = {},
@@ -163,5 +179,21 @@ export const toPortfolioSectionSaveRequest = (
   sortOrder: changes.sortOrder ?? section.sortOrder,
   visibility: changes.visibility ?? section.visibility,
   editorImageFileIds: section.editorImageFileIds,
+  techStack: section.techStack,
+  roleSummary: section.roleSummary,
+  repositoryUrl: section.repositoryUrl,
+  demoUrl: section.demoUrl,
   versionNumber: section.versionNumber,
 });
+
+/** "React, spring boot ,React" → ["React", "spring boot"]. 규칙은 업무 History 태그와 같은 공통 함수를 쓴다. */
+export const parseTechStackText = (techStackText: string): string[] => parseCommaSeparatedValues(techStackText);
+
+/** 홈 카드에 보여 줄 짧은 요약. 전체 내용은 프로젝트 상세 화면에서 본다. */
+export const createSummaryText = (text: string, maxLength = 140): string => {
+  const normalizedText = text.replace(/\s+/g, " ").trim();
+  return normalizedText.length > maxLength ? `${normalizedText.slice(0, maxLength).trimEnd()}…` : normalizedText;
+};
+
+// 프로젝트 상세 화면 주소. 주소 모양을 한 곳에서 정해 링크와 라우트가 어긋나지 않게 한다.
+export const portfolioProjectPath = (portfolioSectionId: number): string => `/projects/${portfolioSectionId}`;

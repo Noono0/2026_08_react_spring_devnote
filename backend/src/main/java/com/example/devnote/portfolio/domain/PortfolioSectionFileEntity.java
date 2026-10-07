@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
+/** portfolio_section_files 테이블 구조(섹션 ↔ 파일 연결). file_role = EDITOR_IMAGE(본문 이미지). */
 @Getter
 @Entity
 @Table(name = "portfolio_section_files")

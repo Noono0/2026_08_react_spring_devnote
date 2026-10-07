@@ -1,3 +1,7 @@
+/**
+ * pollTypes.ts — 토픽 투표 타입(서버 poll/dto의 record와 같은 모양)
+ * 상태: OPEN(진행 중) → CLOSED(마감, 시간이 지나면 자동) → RESULTS_PUBLISHED(결과 공개)
+ */
 export type PollStatus = "OPEN" | "CLOSED" | "RESULTS_PUBLISHED";
 
 export interface PollOption {
@@ -37,6 +41,11 @@ export interface PollPageResponse {
   pageInformation: PollPageInformation;
 }
 
+/**
+ * 투표 한 건. 서버가 "지금 사용자 기준"으로 계산한 값을 함께 준다.
+ *   participated·selectedOptionIds: 내가 투표했는지·무엇을 골랐는지 / resultsVisible: 결과를 보여도 되는지
+ *   manageableByCurrentUser·deletableByCurrentUser: 수정·마감·삭제 버튼 표시 여부(최종 권한 검사는 서버)
+ */
 export interface Poll {
   pollId: number;
   question: string;

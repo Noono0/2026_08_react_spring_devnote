@@ -16,11 +16,19 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.Set;
 
+/**
+ * 네이버 로그인 세션(Playwright storageState JSON = 쿠키·로컬 저장소)을 파일로 보관합니다.
+ * 세션은 crawlerSessionLogin 도구로 사람이 직접 로그인해 만든다. 크롤러는 이 파일을 불러와 로그인된 상태로 시작한다.
+ *
+ * ★ 이 파일은 사실상 "로그인 열쇠"다. 저장소 폴더(storage/crawler-sessions)는 Git·백업 공유 대상에서 빼고,
+ *   Linux에서는 소유자만 읽고 쓸 수 있게 권한을 줄인다(restrictToCurrentUser).
+ */
 @Component
 public class CrawlerSessionStore {
     private static final String NAVER_SESSION_FILE = "naver.json";
     private final Path sessionDirectory;
 
+    // 저장 위치: CRAWLER_SESSION_ROOT 환경변수 → 없으면 파일 저장 루트(application.file-storage.root-directory) → 없으면 ./storage
     public CrawlerSessionStore(@Value("${CRAWLER_SESSION_ROOT:${application.file-storage.root-directory:./storage}}") String storageRoot) {
         this.sessionDirectory = Path.of(storageRoot).toAbsolutePath().normalize().resolve("crawler-sessions");
     }
@@ -39,6 +47,7 @@ public class CrawlerSessionStore {
     public void saveNaverSession(String storageState) {
         try {
             Files.createDirectories(sessionDirectory);
+            // 임시 파일에 다 쓴 뒤 이름을 바꿔 덮어쓴다(원자적 교체). 쓰는 도중 실패해도 기존 세션 파일이 반쯤 깨진 채 남지 않는다.
             Path temporaryFile = Files.createTempFile(sessionDirectory, "naver-", ".tmp");
             Files.writeString(temporaryFile, storageState, StandardCharsets.UTF_8);
             restrictToCurrentUser(temporaryFile);

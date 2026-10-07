@@ -1,3 +1,15 @@
+/**
+ * PortfolioHomePage.tsx — 공개 포트폴리오 홈 (방문자: 읽기 / 슈퍼관리자: 블록 편집)
+ *
+ * [편집 기능]
+ *   블록 추가 : 블록 사이의 + 버튼 또는 / 키 → 블록 종류 고르기 → 편집 대화상자
+ *   순서 변경 : ↑↓ 버튼 또는 핸들(⠿) 드래그. 바뀐 블록들의 sortOrder(10, 20, 30 …)를 서버에 저장한다.
+ *   공개 전환·복제·삭제: 각 카드의 관리 도구
+ *
+ * [서버 상태] 섹션 목록은 TanStack Query(usePortfolioSectionsQuery)가 관리한다.
+ *   변경이 끝나면 목록 캐시를 무효화해 다시 받는다 → 화면은 항상 서버 값을 기준으로 그린다.
+ * 편집 대화상자는 lazy로 필요할 때만 내려받아, 방문자는 에디터 코드를 받지 않는다(첫 화면이 가벼워진다).
+ */
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
@@ -24,7 +36,9 @@ import {
 import { convertRequestErrorToProblemDetails } from "@/shared/api/error/apiErrorHelpers";
 import { applicationNotification } from "@/shared/notification/applicationNotification";
 import { ConfirmDialog } from "@/shared/ui/ConfirmDialog";
+import { FeatureHelpButton } from "@/features/help/FeatureHelpButton";
 
+// 블록 선택 목록에 보여 줄 종류별 아이콘 글자.
 const blockIconMap: Record<PortfolioBlockSectionType, string> = {
   PROFILE: "P",
   RICH_TEXT: "T",
@@ -37,8 +51,10 @@ const blockIconMap: Record<PortfolioBlockSectionType, string> = {
   CONTACT: "@",
 };
 
+// usePortfolioQueries.ts와 같은 캐시 키. 순서 변경 뒤 목록을 직접 무효화할 때 쓴다.
 const portfolioQueryKey = ["portfolio", "sections"] as const;
 
+// lazy: 처음 그려질 때 그 파일을 따로 내려받는다. 이름 있는 내보내기(named export)라 { default: … } 모양으로 감싸 준다.
 const PortfolioSectionEditor = lazy(async () => ({
   default: (await import("@/features/portfolio/components/PortfolioSectionEditor")).PortfolioSectionEditor,
 }));
@@ -56,6 +72,7 @@ export const PortfolioHomePage = () => {
   const deleteMutation = useDeletePortfolioSectionMutation();
   const blockSearchInputReference = useRef<HTMLInputElement>(null);
 
+  // 화면 전용 상태(UI State): 대화상자 열림, 편집 중인 섹션, 삭제 확인 대상, 블록 선택창, 드래그 중인 블록 등.
   const [isSectionEditorOpen, setSectionEditorOpen] = useState(false);
   const [editingSection, setEditingSection] = useState<PortfolioSection>();
   const [initialSectionType, setInitialSectionType] = useState<PortfolioSectionType>("RICH_TEXT");
@@ -68,10 +85,13 @@ export const PortfolioHomePage = () => {
   const [dragOverSectionId, setDragOverSectionId] = useState<number>();
   const [isReordering, setReordering] = useState(false);
 
+  // 슈퍼관리자로 로그인했을 때만 편집 도구를 보여 준다(실제 권한 검사는 서버가 다시 한다).
   const isEditMode = authSessionQuery.data?.superAdministrator === true;
+  // sortOrder 순으로 정렬한 목록. 서버 데이터가 바뀔 때만 다시 정렬한다.
   const sections = useMemo(() => sortPortfolioBlocks(
     sectionsQuery.data ?? [],
   ), [sectionsQuery.data]);
+  // 새 블록의 기본 순서 = 마지막 블록 + 10. 10씩 띄워 두면 사이에 끼워 넣기 쉽다. at(-1) = 배열의 마지막 요소.
   const nextSortOrder = (sections.at(-1)?.sortOrder ?? 0) + 10;
 
   const filteredBlockGroups = useMemo(() => {
@@ -87,6 +107,8 @@ export const PortfolioHomePage = () => {
     blockSearchInputReference.current?.focus();
   }, [isBlockPickerOpen]);
 
+  // 편집 모드에서 / 키를 누르면 블록 선택창을 연다(Notion 같은 단축키).
+  // 입력칸·에디터에서 /를 칠 때는 글자 입력이어야 하므로 무시한다. 정리 함수로 리스너를 반드시 지운다.
   useEffect(() => {
     if (!isEditMode) return;
     const openPickerWithSlash = (keyboardEvent: KeyboardEvent): void => {
@@ -120,6 +142,10 @@ export const PortfolioHomePage = () => {
     setSectionEditorOpen(true);
   };
 
+  /**
+   * 화면에 보이는 순서대로 sortOrder를 10, 20, 30 …으로 다시 매기고, 값이 바뀐 블록만 서버에 저장한다.
+   * Promise.all: 여러 저장 요청을 동시에 보내고 모두 끝날 때까지 기다린다.
+   */
   const persistBlockOrder = async (orderedSections: PortfolioSection[]): Promise<void> => {
     const changedSections = orderedSections.filter((section, index) => section.sortOrder !== (index + 1) * 10);
     if (changedSections.length === 0) return;
@@ -139,6 +165,7 @@ export const PortfolioHomePage = () => {
         await updateMutation.mutateAsync({ id: editingSection.portfolioSectionId, request: saveRequest });
         applicationNotification.success("포트폴리오 블록을 수정했습니다.");
       } else {
+        // 새 블록은 일단 맨 뒤에 만들고, 사용자가 고른 위치(pendingInsertIndex)로 옮겨 순서를 다시 저장한다.
         const createdSection = await createMutation.mutateAsync({ ...saveRequest, sortOrder: nextSortOrder });
         const insertIndex = Math.min(pendingInsertIndex ?? sections.length, sections.length);
         const nextSections = [...sections];
@@ -152,6 +179,7 @@ export const PortfolioHomePage = () => {
     }
   };
 
+  // 공개 ↔ 비공개 전환. 처리 중인 카드만 스위치를 잠그기 위해 어떤 블록이 처리 중인지 기억한다.
   const toggleVisibility = async (section: PortfolioSection): Promise<void> => {
     setVisibilityPendingId(section.portfolioSectionId);
     try {
@@ -169,6 +197,7 @@ export const PortfolioHomePage = () => {
     }
   };
 
+  // 복제: 같은 내용으로 새 블록을 만든다. versionNumber를 지워야 "수정"이 아니라 "새로 만들기" 요청이 된다.
   const duplicateSection = async (section: PortfolioSection): Promise<void> => {
     try {
       const duplicatedSection = await createMutation.mutateAsync({
@@ -186,10 +215,12 @@ export const PortfolioHomePage = () => {
     }
   };
 
+  /** 블록 하나를 targetIndex 위치로 옮긴다. 저장에 실패하면 서버 목록을 다시 받아 화면을 원래대로 돌린다. */
   const moveSection = async (sourceId: number, targetIndex: number): Promise<void> => {
     const sourceIndex = sections.findIndex((section) => section.portfolioSectionId === sourceId);
     if (sourceIndex < 0 || targetIndex < 0 || targetIndex >= sections.length || sourceIndex === targetIndex || isReordering) return;
     const reorderedSections = [...sections];
+    // splice(위치, 1): 그 자리의 요소 하나를 빼서 배열로 돌려준다. 복사본(reorderedSections)에서만 바꾸므로 원본은 그대로다.
     const [movedSection] = reorderedSections.splice(sourceIndex, 1);
     if (!movedSection) return;
     reorderedSections.splice(targetIndex, 0, movedSection);
@@ -235,15 +266,20 @@ export const PortfolioHomePage = () => {
       <header className="portfolio-document-heading">
         <div>
           <span className="portfolio-section-kicker">My portfolio · Custom blocks</span>
-          <h1>포트폴리오</h1>
+          <div className="page-title-with-guide"><h1>포트폴리오</h1><FeatureHelpButton topic="portfolio" /></div>
         </div>
-        {isEditMode ? (
-          <div className="portfolio-owner-toolbar">
-            <span className="portfolio-edit-badge">슈퍼관리자 편집 가능</span>
-            <span className="portfolio-owner-summary">{sections.length}개 블록</span>
-            <button type="button" onClick={() => openBlockPicker()}>+ 블록 추가</button>
-          </div>
-        ) : null}
+        <div className="portfolio-heading-actions">
+          {isEditMode ? (
+            <div className="portfolio-owner-toolbar">
+              <span className="portfolio-edit-badge">슈퍼관리자 편집 가능</span>
+              <span className="portfolio-owner-summary">{sections.length}개 블록</span>
+              <button type="button" onClick={() => openBlockPicker()}>+ 블록 추가</button>
+            </div>
+          ) : null}
+          {/* 브라우저 인쇄 창을 연다. 대상에서 "PDF로 저장"을 고르면 이력서처럼 내려받을 수 있다.
+              인쇄용 모양(메뉴·버튼 숨김, 흰 배경)은 global.css의 @media print가 맡는다. */}
+          <button type="button" className="ghost-button portfolio-print-button" onClick={() => window.print()}>PDF로 저장</button>
+        </div>
       </header>
 
       {isEditMode ? (
@@ -277,6 +313,7 @@ export const PortfolioHomePage = () => {
               ) : null}
               <div
                 className={`portfolio-block-shell${dragOverSectionId === section.portfolioSectionId ? " portfolio-block-drag-over" : ""}`}
+                // HTML 드래그 앤 드롭: dragover에서 preventDefault를 해야 drop이 허용된다.
                 onDragOver={(event) => { if (isEditMode) { event.preventDefault(); setDragOverSectionId(section.portfolioSectionId); } }}
                 onDrop={(event) => { event.preventDefault(); if (draggedSectionId !== undefined) void moveSection(draggedSectionId, index); }}
               >
@@ -288,6 +325,7 @@ export const PortfolioHomePage = () => {
                       draggable={!isReordering}
                       onDragStart={() => setDraggedSectionId(section.portfolioSectionId)}
                       onDragEnd={() => { setDraggedSectionId(undefined); setDragOverSectionId(undefined); }}
+                      // span이지만 role="button"·tabIndex로 키보드 포커스를 받게 한다. 키보드 사용자는 옆의 ↑↓ 버튼으로 순서를 바꾼다.
                       role="button"
                       tabIndex={0}
                       aria-label={`${section.sectionTitle} 드래그하여 이동`}
@@ -327,6 +365,7 @@ export const PortfolioHomePage = () => {
         </div>
       </section>
 
+      {/* 블록 선택창. 열릴 때 검색칸에 포커스가 가고(위 Effect), Esc로 닫는다. */}
       {isBlockPickerOpen ? (
         <div className="portfolio-block-picker" role="dialog" aria-modal="true" aria-label="포트폴리오 블록 선택">
           <div className="portfolio-block-picker-search">
@@ -354,6 +393,7 @@ export const PortfolioHomePage = () => {
         </div>
       ) : null}
 
+      {/* 편집기는 열 때만 그린다. 파일을 내려받는 동안 Suspense가 "불러오는 중"을 보여 준다. */}
       {isSectionEditorOpen ? <Suspense fallback={<div role="status">편집기를 불러오는 중입니다.</div>}><PortfolioSectionEditor
         isOpen={isSectionEditorOpen}
         section={editingSection}

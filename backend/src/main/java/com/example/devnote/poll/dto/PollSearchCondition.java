@@ -6,6 +6,10 @@ import jakarta.validation.constraints.Pattern;
 import lombok.Getter;
 import lombok.Setter;
 
+/**
+ * 투표 목록 조건(쿼리 문자열). status는 정규식으로 네 값만 허용한다: ALL(전체), OPEN, CLOSED, RESULTS_PUBLISHED.
+ * getOffset(): SQL OFFSET = 페이지 번호 × 페이지 크기.
+ */
 @Getter
 @Setter
 public class PollSearchCondition {

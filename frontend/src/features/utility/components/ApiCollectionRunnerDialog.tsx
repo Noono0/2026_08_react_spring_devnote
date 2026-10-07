@@ -19,6 +19,13 @@ import { createWorkspaceId } from "@/features/utility/utils/apiWorkspaceUtils";
 import { applicationNotification } from "@/shared/notification/applicationNotification";
 import { ModalDialog } from "@/shared/ui/ModalDialog";
 
+/*
+ * ApiCollectionRunnerDialog.tsx — 컬렉션 실행기: 컬렉션의 요청들을 고른 순서대로 여러 번(반복 횟수) 보내고 결과를 기록한다.
+ *   탭: 실행(RUN) / 예약(SCHEDULES, 매일 HH:mm) / 실행 기록(HISTORY, 최근 30건)
+ * 예약은 서버가 아니라 이 브라우저에서 동작한다: API 작업 공간 화면이 열려 있는 동안 30초마다 "시간이 된 예약"이 있는지 확인해 실행한다.
+ * 예약·기록은 로그인 회원별 localStorage 키에 저장한다.
+ */
+
 type RunnerView = "RUN" | "SCHEDULES" | "HISTORY";
 
 interface RunnerConfiguration {
@@ -49,6 +56,7 @@ const formatDateTime = (dateValue?: string): string => {
   return new Intl.DateTimeFormat("ko-KR", { dateStyle: "short", timeStyle: "short" }).format(parsedDate);
 };
 
+// 요청 사이 대기. 실행을 중단하면(abort) 기다리지 않고 바로 넘어간다(예외 대신 resolve — 중단 처리는 실행 반복문이 한다).
 const waitForDelay = (delayMilliseconds: number, signal: AbortSignal): Promise<void> => new Promise((resolve) => {
   if (delayMilliseconds <= 0 || signal.aborted) {
     resolve();
@@ -95,11 +103,13 @@ export const ApiCollectionRunnerDialog = ({
   const pendingRequestSelectionReference = useRef<string[] | undefined>(undefined);
   const runnerStoragePrefixReference = useRef(storagePrefix);
 
+  // 고른 컬렉션의 저장 요청(휴지통 제외). 컬렉션이 바뀌면 아래 Effect가 모두 선택된 상태로 초기화한다.
   const activeCollectionRequests = useMemo(
     () => savedRequests.filter((savedRequest) => savedRequest.collectionId === selectedCollectionId && !savedRequest.deletedAt),
     [savedRequests, selectedCollectionId],
   );
 
+  // 회원 범위가 바뀌면 진행 중 실행을 멈추고 그 회원의 예약·기록을 불러온다. 비회원은 저장하지 않는다.
   useEffect(() => {
     if (runnerStoragePrefixReference.current !== storagePrefix) {
       runnerAbortReference.current?.abort("MEMBER_SCOPE_CHANGED");
@@ -117,6 +127,7 @@ export const ApiCollectionRunnerDialog = ({
     setLoadedStoragePrefix(storagePrefix);
   }, [authenticated, storagePrefix]);
 
+  // 예약·기록이 바뀔 때마다 저장한다(불러오기가 끝난 범위에서만 — 빈 값으로 덮어쓰기 방지).
   useEffect(() => {
     if (!authenticated || loadedStoragePrefix !== storagePrefix) return;
     localStorage.setItem(`${storagePrefix}:runner-schedules`, JSON.stringify(schedules));
@@ -143,6 +154,11 @@ export const ApiCollectionRunnerDialog = ({
     if (!selectedEnvironmentId && defaultEnvironmentId) setSelectedEnvironmentId(defaultEnvironmentId);
   }, [defaultEnvironmentId, selectedEnvironmentId]);
 
+  /**
+   * 컬렉션 실행: 고른 요청들을 반복 횟수만큼 차례로 보낸다(요청 사이 대기 시간 적용). 실행 상태·결과를 기록에 남긴다.
+   * 동시에 하나만 실행한다(runnerBusyReference). 수동 실행이면 경고를 띄우고, 예약 실행이면 조용히 건너뛴다.
+   * 예약 Effect가 이 함수를 의존성으로 쓰므로 useCallback으로 같은 함수를 유지한다(매 렌더링마다 interval이 다시 만들어지지 않게).
+   */
   const runCollection = useCallback(async (
     configuration: RunnerConfiguration,
     trigger: ApiCollectionRun["trigger"],
@@ -294,6 +310,8 @@ export const ApiCollectionRunnerDialog = ({
     runnerBusyReference.current = false;
   }, [collections, environments, executeRequest, savedRequests, storagePrefix]);
 
+  // 예약 실행기: 지금 바로 한 번, 그 뒤 30초마다 확인한다. 이미 실행 중이면 건너뛰고, 실행할 예약은 다음 날 같은 시각으로 미룬 뒤 실행한다.
+  // 정리 함수로 interval을 지워 화면을 떠나면 확인을 멈춘다.
   useEffect(() => {
     if (!authenticated || loadedStoragePrefix !== storagePrefix) return;
     const runDueSchedule = (): void => {
@@ -321,8 +339,10 @@ export const ApiCollectionRunnerDialog = ({
     return () => window.clearInterval(intervalId);
   }, [authenticated, loadedStoragePrefix, runCollection, schedules, storagePrefix]);
 
+  // 화면을 떠나면 진행 중인 실행을 취소한다.
   useEffect(() => () => runnerAbortReference.current?.abort("COMPONENT_UNMOUNTED"), []);
 
+  // 지금 화면에서 고른 실행 설정(컬렉션·환경·요청·반복 횟수·대기 시간)을 한 객체로 모은다.
   const currentConfiguration = (): RunnerConfiguration => ({
     collectionId: selectedCollectionId,
     environmentId: selectedEnvironmentId || undefined,
@@ -337,6 +357,7 @@ export const ApiCollectionRunnerDialog = ({
     setScheduleTime("02:00");
   };
 
+  // 예약 저장(새로 만들기 또는 수정). 다음 실행 시각은 calculateNextDailyRun으로 계산한다.
   const saveSchedule = (): void => {
     if (!scheduleName.trim() || !selectedCollectionId || selectedRequestIds.size === 0) return;
     const now = new Date();
@@ -387,6 +408,7 @@ export const ApiCollectionRunnerDialog = ({
     });
   };
 
+  // 아래 render… 함수들은 실행 탭의 화면 조각(요청 고르기·설정·진행 상황)을 나눠 그린다.
   const renderRequestSelection = () => (
     <fieldset className="api-runner-request-fieldset">
       <legend>실행할 요청 <span>{selectedRequestIds.size}/{activeCollectionRequests.length}</span></legend>

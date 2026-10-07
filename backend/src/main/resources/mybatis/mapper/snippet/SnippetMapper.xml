@@ -1,13 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 개인 코드 조각 SQL. 모든 SQL이 member_id 조건을 가져 다른 회원의 행은 읽거나 바꿀 수 없다. -->
 <mapper namespace="com.example.devnote.snippet.SnippetMapper">
     <sql id="snippetFilters">
         WHERE member_id = #{memberId}
+          <!-- status가 TRASH면 휴지통('N'), 아니면 보관함('Y') 행만. -->
           AND use_yn = CASE WHEN #{status} = 'TRASH' THEN 'N' ELSE 'Y' END
         <if test="keyword != null and keyword != ''">
             AND (snippet_title LIKE CONCAT('%', #{keyword}, '%')
               OR snippet_description LIKE CONCAT('%', #{keyword}, '%')
               OR snippet_code LIKE CONCAT('%', #{keyword}, '%')
+              <!-- JSON 컬럼을 문자열로 바꿔 태그 안의 글자도 검색되게 한다. -->
               OR CAST(tags_json AS CHAR) LIKE CONCAT('%', #{keyword}, '%'))
         </if>
         <if test="language != null and language != '' and language != 'ALL'">
@@ -24,6 +27,7 @@
                deleted_at, created_at, updated_at
         FROM developer_snippets
         <include refid="snippetFilters" />
+        <!-- 정렬은 #{}로 넣을 수 없어 정해진 ORDER BY 중 하나를 고른다(SQL 인젝션 방지). -->
         <choose>
             <when test="sort == 'TITLE'">ORDER BY snippet_title, developer_snippet_id DESC</when>
             <when test="sort == 'FAVORITE'">ORDER BY favorite_yn DESC, updated_at DESC, developer_snippet_id DESC</when>
@@ -73,6 +77,7 @@
     <update id="softDeleteSnippets">
         UPDATE developer_snippets SET use_yn = 'N', deleted_at = CURRENT_TIMESTAMP(6)
         WHERE member_id = #{memberId} AND use_yn = 'Y' AND developer_snippet_id IN
+        <!-- (1, 2, 3) 모양으로 펼친다. member_id 조건 덕분에 남의 번호가 섞여 있어도 그 행은 바뀌지 않는다. -->
         <foreach collection="snippetIds" item="snippetId" open="(" separator="," close=")">#{snippetId}</foreach>
     </update>
 

@@ -9,6 +9,11 @@ import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 
+/**
+ * document_histories 테이블 구조(JPA 엔티티, 구조 확인용).
+ * 문서를 수정할 때마다 "수정 전" 내용이 한 행씩 쌓인다. 문서 본문 컬럼을 그대로 복사해 두므로 예전 버전을 다시 볼 수 있다.
+ * schema.sql에서 (document_id, version_number)가 UNIQUE라서 같은 버전 이력이 두 번 저장되지 않는다.
+ */
 @Getter
 @Entity
 @Table(name = "document_histories")

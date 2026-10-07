@@ -26,7 +26,9 @@ class PlaywrightCrawlerExternalTest {
             new CrawlerTargetPolicy(),
             new CrawlerItemMatcher(),
             new CrawlerSessionStore(temporaryDirectory.toString()),
-            new CrawlerLiveViewStore()
+            new CrawlerLiveViewStore(),
+            // 이 테스트는 이 컴퓨터에서 Chromium을 직접 띄워 확인하므로 local 모드를 쓴다.
+            new CrawlerBrowserSettings("local", "", "http://127.0.0.1:9222")
         );
         CrawlerRunRequest request = new CrawlerRunRequest(
             true,

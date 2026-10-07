@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 업로드 파일 정보(file_resources) SQL 모음. 파일 내용은 디스크에 있고, 여기서는 위치·이름·상태만 다룬다. -->
 <mapper namespace="com.example.devnote.file.FileResourceMapper">
     <insert id="insertFile"
             parameterType="com.example.devnote.file.dao.parameter.FileCreateParameter"
@@ -41,12 +42,59 @@
         WHERE file_id = #{fileId}
     </select>
 
+    <!-- 올린 사람만 상태를 바꿀 수 있고, 이미 DELETED인 파일은 되살리지 않는다. -->
     <update id="updateFileStatus">
         UPDATE file_resources
         SET file_status = #{fileStatus}
         WHERE file_id = #{fileId}
           AND uploader_id = #{uploaderId}
           AND file_status != 'DELETED'
+    </update>
+
+    <!--
+        아무 곳에서도 쓰지 않는 임시(TEMP) 업로드 파일 조건입니다. 별칭 f는 file_resources입니다.
+        문서 본문 이미지는 저장 후에도 TEMP로 남으므로 본문 HTML의 /files/{id}/ 주소까지 확인합니다.
+        뒤에 붙인 '/' 덕분에 1번 파일이 12번 주소에 잘못 일치하지 않습니다.
+    -->
+    <sql id="unusedTemporaryFileCondition">
+        f.file_status = 'TEMP'
+        <!-- &lt; 는 < 기호다. XML에서 < 를 그대로 쓰면 태그 시작으로 읽혀 오류가 나므로 바꿔 쓴다. -->
+        AND f.created_at &lt; CURRENT_TIMESTAMP(6) - INTERVAL #{retentionMinutes} MINUTE
+        AND NOT EXISTS (SELECT 1 FROM documents d WHERE d.thumbnail_file_id = f.file_id)
+        AND NOT EXISTS (SELECT 1 FROM document_histories h WHERE h.thumbnail_file_id = f.file_id)
+        AND NOT EXISTS (SELECT 1 FROM document_files df WHERE df.file_id = f.file_id)
+        AND NOT EXISTS (SELECT 1 FROM portfolio_sections p WHERE p.thumbnail_file_id = f.file_id)
+        AND NOT EXISTS (SELECT 1 FROM portfolio_section_files pf WHERE pf.file_id = f.file_id)
+        AND NOT EXISTS (SELECT 1 FROM documents d WHERE d.content_html LIKE CONCAT('%/files/', f.file_id, '/%'))
+        AND NOT EXISTS (SELECT 1 FROM document_histories h WHERE h.content_html LIKE CONCAT('%/files/', f.file_id, '/%'))
+        AND NOT EXISTS (SELECT 1 FROM portfolio_sections p WHERE p.content_html LIKE CONCAT('%/files/', f.file_id, '/%'))
+    </sql>
+
+    <select id="selectUnusedTemporaryFiles" resultType="com.example.devnote.file.dao.row.FileResourceRow">
+        SELECT
+            f.file_id,
+            f.uploader_id,
+            f.original_file_name,
+            f.stored_file_name,
+            f.file_extension,
+            f.mime_type,
+            f.file_size,
+            f.storage_path,
+            f.file_status
+        FROM file_resources f
+        WHERE <include refid="unusedTemporaryFileCondition"/>
+        ORDER BY f.file_id
+        <!-- 한 번에 너무 많이 지우지 않도록 개수를 제한한다(나머지는 다음 정리 때). -->
+        LIMIT #{limit}
+    </select>
+
+    <!-- 조회와 삭제 사이에 문서가 이 파일을 쓰기 시작했을 수 있으므로 같은 조건을 다시 확인합니다. -->
+    <update id="markUnusedTemporaryFileDeleted">
+        UPDATE file_resources f
+        SET f.file_status = 'DELETED',
+            f.deleted_at = CURRENT_TIMESTAMP(6)
+        WHERE f.file_id = #{fileId}
+          AND <include refid="unusedTemporaryFileCondition"/>
     </update>
 
 </mapper>

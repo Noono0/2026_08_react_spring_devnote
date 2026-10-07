@@ -34,9 +34,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.net.InetAddress;
 import java.net.URI;
-import java.net.UnknownHostException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -52,10 +50,26 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Playwright(브라우저 자동 조작 라이브러리)로 Chromium을 열어 실제 사람처럼 페이지를 이동·클릭·읽는 크롤링 엔진입니다.
+ *
+ * [한 번 실행의 큰 흐름] crawl() → runOnBrowserThread()
+ *   1. 주소 검사(CrawlerTargetPolicy) → 2. 브라우저·컨텍스트 열기(저장 세션이 있으면 불러오기)
+ *   3-a. 단계 방식: runSteps()로 단계를 차례로 실행
+ *   3-b. 기존 폼 방식: 로그인 → 수집 페이지 이동 → 사이트 검색 → collectPages()로 목록 수집
+ *   4. 성공이면 결과 반환 / 실패면 원인을 기록하고, 화면 보기가 켜져 있으면 브라우저를 최대 10분 열어 둠
+ *
+ * [동시 실행 제한] CRAWL_SLOT(세마포어 1개)로 한 번에 한 실행만 허용한다(저사양 서버 보호, 같은 계정 동시 로그인 방지).
+ * [스레드] Playwright 객체는 만든 스레드에서만 써야 해서, 브라우저 작업은 전용 스레드(BROWSER_THREAD) 하나에서 한다.
+ * [실시간 화면] 진행 중 화면 캡처·로그·수동 조작 대기열은 CrawlerLiveViewStore가 관리한다.
+ *
+ * 파일이 길어 구획마다 ═══ 줄로 나눠 두었다: 기본 실행 → 단계별 실행 → 녹화 → 자동 목록 감지 → 상세글 수집.
+ */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class PlaywrightCrawlerEngine implements WebCrawlerEngine {
+    // 시간 제한: 요소 동작 15초, 페이지 이동 25초. 검사 항목 최대 5,000개, 사람이 로그인 보안 확인을 처리할 시간 10분.
     private static final double ELEMENT_TIMEOUT_MILLISECONDS = 15_000;
     private static final double NAVIGATION_TIMEOUT_MILLISECONDS = 25_000;
     private static final int MAX_SCANNED_ITEMS = 5_000;
@@ -82,11 +96,13 @@ public class PlaywrightCrawlerEngine implements WebCrawlerEngine {
         "input[id*='search' i]",
         "input[class*='search' i]"
     );
+    // 실패 후 원인 확인용으로 브라우저를 열어 두는 최대 시간.
     private static final Duration FAILED_BROWSER_HOLD = Duration.ofMinutes(10);
     /** 단계별 실행 전체 제한 시간(막힌 단계에서 사용자를 기다리는 시간 포함). */
     private static final Duration SCENARIO_TIMEOUT = Duration.ofMinutes(60);
     private static final Duration RECORDING_TIMEOUT = Duration.ofMinutes(15);
     private static final ObjectMapper JSON = new ObjectMapper();
+    // 동시에 하나만 실행하도록 막는 "입장권" 1장. 실행이 끝나면(finally) 반드시 돌려준다(release).
     private static final Semaphore CRAWL_SLOT = new Semaphore(1);
     /**
      * Playwright 객체는 만든 스레드에서만 사용해야 한다. 브라우저 작업을 전용 스레드 하나에서 실행하면
@@ -102,23 +118,29 @@ public class PlaywrightCrawlerEngine implements WebCrawlerEngine {
     private final CrawlerItemMatcher itemMatcher;
     private final CrawlerSessionStore sessionStore;
     private final CrawlerLiveViewStore liveViewStore;
+    /** 브라우저를 이 서버에서 띄울지(local), 원격 Chrome에 연결할지(remote)와 원격 주소. */
+    private final CrawlerBrowserSettings browserSettings;
 
     /**
      * true: 백엔드가 사용자 PC에서 실행돼 Chromium 창이 화면에 직접 보인다(gradlew bootRun).
      * false: Docker의 Xvfb처럼 창이 보이지 않아 웹 화면의 원격 조작을 사용한다.
+     * remote 모드에서는 이 값과 관계없이 "직접 띄운 창"이 없다(canUseDirectWindow 참고).
      */
     @Value("${CRAWLER_DIRECT_WINDOW:true}")
     private boolean directWindowAvailable;
 
-    /** Docker 백엔드가 'PC에 새 창' 모드에서 연결할 PC Chrome의 원격 디버깅 주소(start-pc-chrome.cmd로 실행). */
-    @Value("${CRAWLER_PC_BROWSER_URL:http://host.docker.internal:9222}")
-    private String pcBrowserUrl;
+    /** 이 서버가 띄운 Chromium 창을 사용자가 직접 볼 수 있는지. remote 모드면 브라우저가 다른 컴퓨터에 있으므로 false. */
+    private boolean canUseDirectWindow() {
+        return directWindowAvailable && !browserSettings.isRemoteMode();
+    }
 
     @Override
     public CrawlerRunResponse crawl(CrawlerRunRequest request) {
         // 이전 실행의 실패 화면이 열려 있으면 닫고 새 실행을 시작한다.
         liveViewStore.requestCloseInspection();
         if (!acquireCrawlSlot()) throw new BusinessException(ErrorCode.CRAWLER_BUSY);
+        // CompletableFuture: 다른 스레드가 나중에 결과를 채워 넣을 "빈 상자". 요청 스레드는 join()으로 결과가 들어올 때까지 기다린다.
+        // 실패하면 응답을 먼저 돌려주고, 브라우저 스레드는 남아서 실패 화면을 계속 열어 둘 수 있다.
         CompletableFuture<CrawlerRunResponse> result = new CompletableFuture<>();
         try {
             BROWSER_THREAD.execute(() -> runOnBrowserThread(request, result));
@@ -129,11 +151,13 @@ public class PlaywrightCrawlerEngine implements WebCrawlerEngine {
         try {
             return result.join();
         } catch (CompletionException exception) {
+            // 다른 스레드의 예외는 CompletionException에 싸여 오므로 원래 예외(CrawlerFailure 등)를 꺼내 다시 던진다.
             if (exception.getCause() instanceof RuntimeException cause) throw cause;
             throw exception;
         }
     }
 
+    /** 입장권을 최대 10초 기다려 얻는다. 다른 실행이 계속 진행 중이면 false → CRAWLER_BUSY 오류. */
     private boolean acquireCrawlSlot() {
         try {
             return CRAWL_SLOT.tryAcquire(10, TimeUnit.SECONDS);
@@ -143,6 +167,10 @@ public class PlaywrightCrawlerEngine implements WebCrawlerEngine {
         }
     }
 
+    /**
+     * 브라우저 전용 스레드에서 실제 크롤링을 한다. 결과·실패는 result 상자에 담아 요청 스레드에 전달한다.
+     * finally에서 브라우저를 닫고 입장권을 반드시 돌려준다(돌려주지 않으면 다음 실행이 영원히 BUSY가 된다).
+     */
     private void runOnBrowserThread(CrawlerRunRequest request, CompletableFuture<CrawlerRunResponse> result) {
         Instant startedAt = Instant.now();
         Playwright playwright = null;
@@ -158,6 +186,7 @@ public class PlaywrightCrawlerEngine implements WebCrawlerEngine {
             progress.at("브라우저 시작", "백엔드의 Playwright·Chromium 설치 상태와 실행 메모리를 확인해 주세요.");
             playwright = Playwright.create();
             browser = openBrowser(playwright, request.showBrowser(), request.usesPcWindow(), progress);
+            // 컨텍스트 = 쿠키·저장소가 분리된 "브라우저 프로필" 하나. 다운로드·서비스 워커를 막아 의도하지 않은 파일 저장·백그라운드 요청을 줄인다.
             Browser.NewContextOptions contextOptions = new Browser.NewContextOptions()
                 .setAcceptDownloads(false)
                 .setServiceWorkers(ServiceWorkerPolicy.BLOCK)
@@ -178,11 +207,13 @@ public class PlaywrightCrawlerEngine implements WebCrawlerEngine {
                 sessionStore.readNaverSession().ifPresent(contextOptions::setStorageState);
             }
             context = browser.newContext(contextOptions);
+            // 페이지가 내부망 주소로 몰래 요청을 보내지 못하게 모든 네트워크 요청을 검사한다(SSRF 방어).
             protectNetwork(context);
 
             page = context.newPage();
             page.setDefaultTimeout(ELEMENT_TIMEOUT_MILLISECONDS);
             page.setDefaultNavigationTimeout(NAVIGATION_TIMEOUT_MILLISECONDS);
+            // alert·confirm 창이 뜨면 자동으로 닫는다(닫지 않으면 페이지가 멈춰 다음 동작이 진행되지 않는다).
             page.onDialog(dialog -> dialog.dismiss());
             liveViewStore.capture(page, "브라우저 시작");
 
@@ -245,6 +276,7 @@ public class PlaywrightCrawlerEngine implements WebCrawlerEngine {
             liveViewStore.completeSuccess("수집 완료");
             result.complete(response);
             // ─── [LEGACY-FORM] 기존 설정 방식 끝 ─────────────────────────────────
+        // 어떤 예외든 "어느 단계에서 왜"를 담은 CrawlerFailure로 바꿔 화면에 알리고, 가능하면 브라우저를 열어 둔다.
         } catch (BusinessException exception) {
             CrawlerFailure failure = progress.failure(exception);
             failAndKeepBrowserOpen(result, failure, failure.getStage(), failure.getMessage(), failure.getAction(), page, request);
@@ -288,6 +320,10 @@ public class PlaywrightCrawlerEngine implements WebCrawlerEngine {
         if (keepOpen) holdFailedBrowser(page, stage);
     }
 
+    /**
+     * 실패한 화면을 최대 10분 동안 열어 두고, 사용자가 실시간 화면에서 보낸 클릭·입력을 브라우저에 전달한다.
+     * 0.7초마다 화면을 캡처해 갱신하고, "브라우저 닫기"·중단·시간 초과 중 하나가 오면 끝낸다.
+     */
     private void holdFailedBrowser(Page page, String stage) {
         Instant deadline = Instant.now().plus(FAILED_BROWSER_HOLD);
         Instant nextCapture = Instant.now();
@@ -313,6 +349,7 @@ public class PlaywrightCrawlerEngine implements WebCrawlerEngine {
             : "10분이 지나 Chromium을 자동으로 종료했습니다.");
     }
 
+    /** 실시간 화면에서 온 수동 조작을 실제 브라우저에 그대로 재현한다(좌표 클릭, 글자 입력, 키 누르기). */
     private void applyManualCommand(Page page, CrawlerLiveViewStore.ManualCommand command) {
         switch (command.action()) {
             case CLICK -> page.mouse().click(command.x(), command.y());
@@ -322,6 +359,7 @@ public class PlaywrightCrawlerEngine implements WebCrawlerEngine {
         page.waitForTimeout(250);
     }
 
+    /** 실패 메시지에 붙일 현재 주소. 브라우저가 이미 닫혔으면 빈 문자열. */
     private String currentUrl(Page page) {
         try {
             return page == null || page.isClosed() ? "" : page.url();
@@ -332,25 +370,22 @@ public class PlaywrightCrawlerEngine implements WebCrawlerEngine {
 
     /**
      * 브라우저 표시 방식에 맞게 브라우저를 준비한다.
-     * - 화면 보기 끔: headless
-     * - 웹 화면(WEB): Docker(Xvfb)에서는 headless: false, PC에서 실행 중이면 창을 띄우지 않도록 headless
-     * - PC에 새 창(PC_WINDOW): PC에서 실행 중이면 Chromium 창을 직접 띄우고,
-     *   Docker라면 PC에 열어 둔 Chrome(start-pc-chrome.cmd)에 원격 디버깅으로 연결한다.
+     * - remote 모드(CRAWLER_BROWSER_MODE=remote): 표시 방식과 관계없이 항상 원격 Chrome에 연결한다.
+     *   이 서버에서는 Chromium을 절대 띄우지 않는다(운영 서버 메모리 보호).
+     * - local 모드
+     *   - 화면 보기 끔: headless
+     *   - 웹 화면(WEB): Docker(Xvfb)에서는 headless: false, PC에서 실행 중이면 창을 띄우지 않도록 headless
+     *   - PC에 새 창(PC_WINDOW): PC에서 실행 중이면 Chromium 창을 직접 띄우고,
+     *     Docker라면 PC에 열어 둔 Chrome(start-pc-chrome.cmd)에 원격 디버깅으로 연결한다.
      */
     private Browser openBrowser(Playwright playwright, boolean showBrowser, boolean pcWindow, CrawlerProgress progress) {
+        if (browserSettings.isRemoteMode()) {
+            progress.at("원격 브라우저 연결", "크롤링용 PC에서 start-pc-chrome.cmd로 Chrome을 열고 Tailscale이 켜져 있는지 확인해 주세요.");
+            return connectToRemoteChrome(playwright, "원격 브라우저");
+        }
         if (pcWindow && !directWindowAvailable) {
             progress.at("PC 브라우저 연결", "PC에서 start-pc-chrome.cmd를 실행해 Chrome 창을 먼저 열어 두었는지 확인해 주세요.");
-            String endpoint = pcBrowserEndpoint();
-            try {
-                return playwright.chromium().connectOverCDP(endpoint, new BrowserType.ConnectOverCDPOptions()
-                    .setSlowMo(120)
-                    .setTimeout(10_000));
-            } catch (PlaywrightException exception) {
-                throw new BusinessException(
-                    ErrorCode.CRAWLER_EXECUTION_FAILED,
-                    "PC의 Chrome(" + endpoint + ")에 연결하지 못했습니다. 프로젝트 폴더의 start-pc-chrome.cmd로 Chrome을 먼저 열어 두었는지 확인해 주세요."
-                );
-            }
+            return connectToRemoteChrome(playwright, "PC의 Chrome");
         }
         boolean headless = !showBrowser || (!pcWindow && directWindowAvailable);
         return playwright.chromium().launch(new BrowserType.LaunchOptions()
@@ -359,21 +394,26 @@ public class PlaywrightCrawlerEngine implements WebCrawlerEngine {
             .setTimeout(NAVIGATION_TIMEOUT_MILLISECONDS));
     }
 
-    /** Chrome 원격 디버깅은 localhost·IP가 아닌 Host 헤더를 거부하므로 호스트 이름을 IP 주소로 바꿔 연결한다. */
-    private String pcBrowserEndpoint() {
-        URI uri = URI.create(pcBrowserUrl.trim());
+    /**
+     * 이미 열려 있는 Chrome에 원격 디버깅(CDP)으로 붙는다.
+     * ★ 이렇게 연결한 브라우저는 browser.close()를 불러도 Chrome 자체가 꺼지지 않고 "연결만" 끊긴다.
+     *   (우리가 만든 컨텍스트·탭만 정리된다) 그래서 사용자가 열어 둔 Chrome을 다음 실행에도 계속 쓸 수 있다.
+     */
+    private Browser connectToRemoteChrome(Playwright playwright, String browserLabel) {
+        String endpoint = browserSettings.browserEndpoint();
         try {
-            String address = InetAddress.getByName(uri.getHost()).getHostAddress();
-            String host = address.contains(":") ? "[" + address + "]" : address;
-            return uri.getScheme() + "://" + host + (uri.getPort() == -1 ? "" : ":" + uri.getPort());
-        } catch (UnknownHostException exception) {
+            return playwright.chromium().connectOverCDP(endpoint, new BrowserType.ConnectOverCDPOptions()
+                .setSlowMo(120)
+                .setTimeout(10_000));
+        } catch (PlaywrightException exception) {
             throw new BusinessException(
                 ErrorCode.CRAWLER_EXECUTION_FAILED,
-                "PC 브라우저 주소(" + uri.getHost() + ")를 찾지 못했습니다. CRAWLER_PC_BROWSER_URL 설정을 확인해 주세요."
+                browserLabel + "(" + endpoint + ")에 연결하지 못했습니다. 크롤링용 PC에서 start-pc-chrome.cmd로 Chrome을 먼저 열어 두었는지 확인해 주세요."
             );
         }
     }
 
+    /** 로그인 방식별 주소 규칙: 저장 세션은 네이버 카페에서만, 폼 로그인은 같은 사이트(또는 네이버 공식 로그인)에서만. */
     private void validateLoginOrigin(CrawlerRunRequest request, URI startUri) {
         if (request.login().mode() == CrawlerLoginMode.SAVED_SESSION) {
             targetPolicy.requireNaverCafeForSavedSession(startUri);
@@ -382,6 +422,11 @@ public class PlaywrightCrawlerEngine implements WebCrawlerEngine {
         }
     }
 
+    /**
+     * 브라우저가 보내는 모든 요청(이미지·스크립트 포함)을 가로채 주소를 검사한다.
+     * 페이지 안의 스크립트가 내부망(예: 192.168.x.x)으로 요청을 보내려 하면 abort()로 막는다.
+     * http/https가 아닌 요청(data:, blob: 등)은 외부로 나가지 않으므로 그대로 둔다.
+     */
     private void protectNetwork(BrowserContext context) {
         context.route("**/*", route -> {
             String requestUrl = route.request().url();
@@ -451,7 +496,7 @@ public class PlaywrightCrawlerEngine implements WebCrawlerEngine {
                 if (diagnosis.manualActionRequired()) {
                     // PC에서 직접 띄운 창: page.pause()로 멈추고 Inspector의 Resume으로 이어간다.
                     // PC Chrome 연결(Docker)·웹 화면: 로그인 쿠키가 생길 때까지 기다렸다가 자동으로 이어간다.
-                    boolean passed = request.usesPcWindow() && directWindowAvailable
+                    boolean passed = request.usesPcWindow() && canUseDirectWindow()
                         ? waitForManualLoginInDirectWindow(page, diagnosis)
                         : waitForManualLogin(page, diagnosis, request.usesPcWindow());
                     if (passed) return;
@@ -542,6 +587,10 @@ public class PlaywrightCrawlerEngine implements WebCrawlerEngine {
         return false;
     }
 
+    /**
+     * 네이버가 캡차·2단계 인증 등을 요구하면, 사람이 실시간 화면에서 직접 처리하길 최대 10분 기다린다.
+     * 기다리는 동안 수동 조작을 전달하고 화면을 갱신하며, 네이버 로그인 쿠키가 생기면 통과로 보고 true를 돌려준다.
+     */
     private boolean waitForManualLogin(Page page, NaverLoginFailureAnalyzer.Diagnosis diagnosis, boolean pcWindow) {
         liveViewStore.requireManualAction(diagnosis.stage(), pcWindow
             ? diagnosis.action() + " PC에 열린 Chrome 창에서 직접 인증하면 자동으로 다음 작업을 이어갑니다."
@@ -576,6 +625,7 @@ public class PlaywrightCrawlerEngine implements WebCrawlerEngine {
             && "nid.naver.com".equalsIgnoreCase(loginUri.getHost());
     }
 
+    /** 네이버 로그인 성공의 표시: NID_AUT·NID_SES 쿠키가 있는가. */
     private boolean hasNaverSession(Page page) {
         return page.context().cookies().stream().anyMatch(cookie ->
             "NID_AUT".equals(cookie.name) || "NID_SES".equals(cookie.name)
@@ -670,6 +720,12 @@ public class PlaywrightCrawlerEngine implements WebCrawlerEngine {
         return "<input " + (text.length() > 160 ? text.substring(0, 160) + "…" : text) + ">";
     }
 
+    /**
+     * [LEGACY-FORM·COLLECT 공용] 목록 페이지를 넘기며 항목을 수집한다.
+     *   페이지마다: 접근 제한 확인 → 목록 찾기(선택자 또는 자동 감지) → 항목별 값 추출 → 키워드 필터 → (선택) 상세글 수집
+     *   → 요청 간격만큼 쉬고 → 다음 페이지로 이동
+     * 멈추는 조건: 최대 페이지·최대 항목·최대 검사 수 도달, 목록 없음, 다음 페이지로 넘어가지 않음(첫 줄이 이전 페이지와 같음).
+     */
     private CollectionSummary collectPages(
         Page page,
         URI startUri,
@@ -688,6 +744,7 @@ public class PlaywrightCrawlerEngine implements WebCrawlerEngine {
         int[] detailFailures = {0, 0};
         try {
         for (int pageNumber = 1; pageNumber <= request.maxPages() && items.size() < request.maxItems(); pageNumber++) {
+            stopIfNaverAccessBlocked(page, startUri, progress);
             progress.at(pageNumber + "페이지 목록 확인", "반복 항목 선택자, iframe 설정, 게시판 접근 권한을 확인해 주세요.");
             // 2페이지부터는 다음 페이지로 넘기기 전에 이미 '페이지 대기'만큼 쉬었다(politeDelay).
             if (pageNumber == 1) page.waitForTimeout(request.waitAfterNavigationMillis());
@@ -707,6 +764,7 @@ public class PlaywrightCrawlerEngine implements WebCrawlerEngine {
             }
             String pageProgress = pageNumber + "/" + request.maxPages() + "페이지";
             liveViewStore.updateRunningStepDetail(pageProgress + " · 목록 " + itemCount + "건 확인 · 지금까지 모은 항목 " + items.size() + "건");
+            // 다음 페이지 버튼을 눌렀는데 첫 줄이 그대로면 실제로 넘어가지 않은 것이므로 같은 페이지를 반복 수집하지 않고 멈춘다.
             String firstRow = safeInnerText(itemLocator.first());
             if (previousFirstRow != null && previousFirstRow.equals(firstRow)) {
                 warnings.add((pageNumber - 1) + "페이지에서 다음 페이지로 넘어가지 않아 수집을 멈췄습니다. 마지막 페이지이거나 다음 페이지 버튼을 찾지 못했을 수 있습니다.");
@@ -742,7 +800,7 @@ public class PlaywrightCrawlerEngine implements WebCrawlerEngine {
 
             liveViewStore.updateRunningStepDetail(pageProgress + " · 목록 " + itemCount + "건 확인 완료 · 지금까지 모은 항목 " + items.size() + "건");
             if (detailPage != null) {
-                collectDetailsOfPage(detailPage, request, items.subList(firstItemOfPage, items.size()), pageProgress, detailFailures, progress);
+                collectDetailsOfPage(detailPage, request, startUri, items.subList(firstItemOfPage, items.size()), pageProgress, detailFailures, progress);
             }
 
             progress.at(pageNumber + "페이지 다음 버튼 클릭", "다음 페이지 버튼 선택자와 버튼의 활성 상태를 확인해 주세요.");
@@ -764,6 +822,7 @@ public class PlaywrightCrawlerEngine implements WebCrawlerEngine {
         return new CollectionSummary(crawledPages, scannedItems);
     }
 
+    /** 사용자가 정한 필드대로 항목 하나에서 값을 읽는다. 내부 정보(_pageUrl·_pageNumber)도 함께 붙인다. */
     private Map<String, String> extractItem(
         Locator item,
         List<CrawlerFieldRequest> fields,
@@ -785,6 +844,10 @@ public class PlaywrightCrawlerEngine implements WebCrawlerEngine {
         return result;
     }
 
+    /**
+     * 값 읽기: TEXT면 글자, ATTRIBUTE면 속성 값.
+     * href·src는 상대 주소(/post/1)일 수 있어 브라우저의 URL 계산으로 전체 주소(https://site/post/1)로 바꾼다.
+     */
     private String readValue(Locator locator, CrawlerFieldRequest field) {
         if (field.valueSource() == CrawlerValueSource.TEXT) {
             String text = locator.textContent();
@@ -802,6 +865,7 @@ public class PlaywrightCrawlerEngine implements WebCrawlerEngine {
         return value == null ? "" : value;
     }
 
+    /** 다음 페이지 버튼을 누른다. 선택자가 없으면 자동 탐색, 버튼이 없거나 비활성(disabled)이면 false(= 마지막 페이지). */
     private boolean moveToNextPage(Page page, CrawlerRunRequest request, String nextPageSelector) {
         if (nextPageSelector == null || nextPageSelector.isBlank()) return autoMoveToNextPage(page, request);
         Locator nextButton = locateContent(page, request, nextPageSelector).first();
@@ -813,6 +877,7 @@ public class PlaywrightCrawlerEngine implements WebCrawlerEngine {
         return true;
     }
 
+    /** 선택자로 요소를 찾되, iframe 선택자가 설정돼 있으면 그 iframe 안에서 찾는다. */
     private Locator locateContent(Page page, CrawlerRunRequest request, String selector) {
         if (request.contentFrameSelector() == null || request.contentFrameSelector().isBlank()) {
             return page.locator(selector.trim());
@@ -825,6 +890,7 @@ public class PlaywrightCrawlerEngine implements WebCrawlerEngine {
         return page.frameLocator(request.contentFrameSelector().trim()).locator(selector.trim());
     }
 
+    /** 주소로 이동하고 HTML 로딩(DOMContentLoaded)까지 기다린다. 서버가 400 이상 상태를 돌려주면 실패로 처리한다. */
     private void navigate(Page page, String url) {
         com.microsoft.playwright.Response response = page.navigate(url, new Page.NavigateOptions()
             .setWaitUntil(WaitUntilState.DOMCONTENTLOADED)
@@ -840,6 +906,7 @@ public class PlaywrightCrawlerEngine implements WebCrawlerEngine {
         return value.replaceAll("\\s+", " ").trim();
     }
 
+    /** 브라우저 자원을 안쪽부터(컨텍스트 → 브라우저 → Playwright) 닫는다. 하나가 실패해도 나머지는 계속 닫는다. */
     private void closeQuietly(BrowserContext context, Browser browser, Playwright playwright) {
         try {
             if (context != null) context.close();
@@ -912,6 +979,7 @@ public class PlaywrightCrawlerEngine implements WebCrawlerEngine {
                                 decision == null ? "직접 처리 단계에서 10분 동안 '계속'을 누르지 않아 중단했습니다." : "사용자가 실행을 중단했습니다.");
                         }
                     } else if (step.type() == CrawlerStepType.COLLECT) {
+                        stopIfNaverAccessBlocked(page, startUri, progress);
                         URI origin = targetPolicy.requireAllowedHttpUrl(page.url());
                         CrawlerRunRequest collectionRequest = request.forCollectionStep(step);
                         CollectionSummary summary = collectPages(page, origin, collectionRequest, items, warnings, progress);
@@ -979,6 +1047,12 @@ public class PlaywrightCrawlerEngine implements WebCrawlerEngine {
         }
     }
 
+    /**
+     * 단계 하나를 실제 브라우저 동작으로 바꿔 실행한다.
+     *   GOTO 이동 / CLICK·NEXT_PAGE 클릭 / FILL 입력(값이 안 들어가면 한 글자씩 다시 입력) / PRESS 키
+     *   WAIT 시간 대기 / WAIT_FOR 요소가 나타날 때까지 / SCROLL 휠 / CSV 기록만(다운로드는 화면이 함)
+     * 대상을 못 찾는 등 "사용자가 판단할 문제"는 StepBlockedException으로 알려 runSteps가 사용자의 선택을 기다리게 한다.
+     */
     private void executeStep(Page page, CrawlerScenarioStep step, CrawlerRunRequest request) {
         switch (step.type()) {
             case GOTO -> {
@@ -1041,6 +1115,7 @@ public class PlaywrightCrawlerEngine implements WebCrawlerEngine {
         }
     }
 
+    /** FILL 단계에 대상이 비어 있으면 화면에서 검색창을 자동으로 찾는다. */
     private Locator findSearchInputForStep(Page page) {
         try {
             return findSearchInput(page, "").locator();
@@ -1062,6 +1137,7 @@ public class PlaywrightCrawlerEngine implements WebCrawlerEngine {
         liveViewStore.addLog("실행 재개", "RUNNING", "멈춘 위치에서 이어서 실행합니다.");
     }
 
+    /** 좌표 방식 단계인데 좌표가 비어 있으면 막힌 단계로 알린다. */
     private double requireCoordinate(Double value, String axis) {
         if (value == null) throw new StepBlockedException("좌표 방식인데 " + axis + " 좌표가 비어 있습니다.");
         return value;
@@ -1084,6 +1160,7 @@ public class PlaywrightCrawlerEngine implements WebCrawlerEngine {
         return value.replace("{{username}}", username).replace("{{password}}", password);
     }
 
+    /** 대기 시간 글자를 숫자로 바꾼다(0~10분으로 제한). 숫자가 아니면 기본값을 쓴다. */
     private double parseMillis(String value, double fallback) {
         try {
             return Math.max(0, Math.min(Double.parseDouble(value.trim()), 600_000));
@@ -1110,6 +1187,7 @@ public class PlaywrightCrawlerEngine implements WebCrawlerEngine {
             + Math.round(timeout / 1000) + "초 동안 화면(본문과 iframe)에서 찾지 못했습니다.");
     }
 
+    /** 지금 화면의 모든 frame에서 후보 순서대로 "보이는" 요소를 찾는다(입력용이면 입력 가능한 요소만). 없으면 empty. */
     private Optional<Locator> findTargetNow(Page page, CrawlerScenarioStep step, boolean forInput) {
         for (Frame frame : page.frames()) {
             for (Locator candidate : targetCandidates(frame, step, forInput)) {
@@ -1128,6 +1206,11 @@ public class PlaywrightCrawlerEngine implements WebCrawlerEngine {
         return Optional.empty();
     }
 
+    /**
+     * 대상 글자로 요소를 찾을 후보 목록(앞쪽일수록 우선).
+     * getByRole·getByLabel 등은 화면에 보이는 이름·접근성 정보로 찾는 Playwright 방식이라, CSS 구조가 바뀌어도 잘 버틴다.
+     * 정확히 일치하는 버튼·링크·글자를 먼저, 그다음 포함하는 것을 찾는다.
+     */
     private List<Locator> targetCandidates(Frame frame, CrawlerScenarioStep step, boolean forInput) {
         String target = step.target().trim();
         if (step.targetMode() == CrawlerTargetMode.SELECTOR) return List.of(frame.locator(target));
@@ -1195,6 +1278,7 @@ public class PlaywrightCrawlerEngine implements WebCrawlerEngine {
         return null;
     }
 
+    /** 단계 실패 이유를 한 줄로 요약한다(Playwright의 긴 로그 중 첫 줄과 기다린 요소만). */
     private String describeStepError(RuntimeException exception) {
         if (exception instanceof StepBlockedException) return exception.getMessage();
         String message = exception.getMessage() == null ? "" : exception.getMessage();
@@ -1206,6 +1290,7 @@ public class PlaywrightCrawlerEngine implements WebCrawlerEngine {
         return "브라우저 동작 실패: " + firstLine + (waited.isBlank() ? "" : " 기다린 요소: " + waited);
     }
 
+    /** 단계 종류별로 사용자가 확인해 볼 일. */
     private String stepAction(CrawlerScenarioStep step) {
         return switch (step.type()) {
             case GOTO -> "이동할 주소가 올바른지 확인해 주세요.";
@@ -1223,6 +1308,21 @@ public class PlaywrightCrawlerEngine implements WebCrawlerEngine {
     private boolean isNaverHost(URI uri) {
         String host = uri.getHost() == null ? "" : uri.getHost().toLowerCase(java.util.Locale.ROOT);
         return "https".equalsIgnoreCase(uri.getScheme()) && (host.equals("naver.com") || host.endsWith(".naver.com"));
+    }
+
+    /** 네이버 사이트라면 화면 글자를 확인해 보호조치·로그인 요구가 보이면 즉시 멈춘다(계정 보호, 자동 재시도 방지). */
+    private void stopIfNaverAccessBlocked(Page page, URI startUri, CrawlerProgress progress) {
+        if (!isNaverHost(startUri)) return;
+        String bodyText;
+        try {
+            bodyText = page.locator("body").innerText(new Locator.InnerTextOptions().setTimeout(1_000));
+        } catch (PlaywrightException exception) {
+            bodyText = "";
+        }
+        NaverAccessGuard.interruptionReason(page.url(), bodyText).ifPresent(reason -> {
+            progress.at("네이버 접근 제한 감지", "네이버 계정의 보호조치·로그인 상태를 직접 확인하고, 허용된 수집 범위를 검토해 주세요. 같은 설정으로 자동 재시도하지 마세요.");
+            throw new BusinessException(ErrorCode.CRAWLER_LOGIN_FAILED, reason);
+        });
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -1307,6 +1407,11 @@ public class PlaywrightCrawlerEngine implements WebCrawlerEngine {
         liveViewStore.stopRecording();
     }
 
+    /**
+     * 녹화용 브라우저를 열고, 모든 페이지에 RECORDER_SCRIPT를 넣어 사용자의 클릭·입력·Enter를 받아 단계로 기록한다.
+     * exposeBinding: 페이지 JavaScript에서 window.__crawlerRecord(...)를 부르면 이 Java 코드가 실행되게 연결한다.
+     * 사용자가 녹화 중지를 누르거나 15분이 지나면 끝난다.
+     */
     private void recordOnBrowserThread(URI startUri, boolean pcWindow) {
         Playwright playwright = null;
         Browser browser = null;
@@ -1402,6 +1507,7 @@ public class PlaywrightCrawlerEngine implements WebCrawlerEngine {
         return currentCookies;
     }
 
+    /** 네이버 로그인 쿠키를 비교용 문자열 목록으로 만든다(로그인 상태가 바뀌었는지 확인할 때 쓴다). */
     List<String> naverLoginCookieSignatures(BrowserContext context) {
         return context.cookies().stream()
             .filter(cookie -> "NID_AUT".equals(cookie.name) || "NID_SES".equals(cookie.name))
@@ -1648,6 +1754,7 @@ public class PlaywrightCrawlerEngine implements WebCrawlerEngine {
         page.waitForTimeout(delay);
     }
 
+    /** 요소의 글자를 읽되, 요소가 사라지는 등 오류가 나면 빈 문자열(비교용이라 실패해도 수집은 계속). */
     private String safeInnerText(Locator locator) {
         try {
             return locator.innerText();
@@ -1677,6 +1784,7 @@ public class PlaywrightCrawlerEngine implements WebCrawlerEngine {
     private static final int DETAIL_FAILURE_BACKOFF_AFTER = 3;
     private static final int DETAIL_FAILURE_BACKOFF_MILLIS = 30_000;
 
+    /** 같은 로그인 상태(같은 컨텍스트)의 새 탭을 연다. 목록 탭을 그대로 두어 페이지 위치를 잃지 않는다. */
     private Page openDetailPage(Page listPage) {
         Page detailPage = listPage.context().newPage();
         detailPage.setDefaultTimeout(ELEMENT_TIMEOUT_MILLISECONDS);
@@ -1699,10 +1807,11 @@ public class PlaywrightCrawlerEngine implements WebCrawlerEngine {
      * detailFailures[0]: 시도한 글 수, [1]: 실패한 글 수(누적)
      */
     private void collectDetailsOfPage(
-        Page detailPage, CrawlerRunRequest request, List<Map<String, String>> pageItems,
+        Page detailPage, CrawlerRunRequest request, URI startUri, List<Map<String, String>> pageItems,
         String pageProgress, int[] detailFailures, CrawlerProgress progress
     ) {
         int consecutiveFailures = 0;
+        int attemptLimit = isNaverHost(startUri) ? 1 : DETAIL_ATTEMPTS;
         for (int index = 0; index < pageItems.size(); index++) {
             Map<String, String> item = pageItems.get(index);
             String stage = pageProgress + " 상세글 " + (index + 1) + "/" + pageItems.size();
@@ -1716,12 +1825,12 @@ public class PlaywrightCrawlerEngine implements WebCrawlerEngine {
                 detailFailures[1]++;
                 continue;
             }
-            // 본문이 늦게 그려지거나 요청이 막히는 경우가 있어 최대 3번까지 다시 연다.
+            // 네이버는 차단 뒤 같은 글을 다시 열지 않는다. 그 외 사이트만 최대 3번 시도한다.
             DetailContent detail = null;
             String lastReason = "";
-            for (int attempt = 1; attempt <= DETAIL_ATTEMPTS && detail == null; attempt++) {
+            for (int attempt = 1; attempt <= attemptLimit && detail == null; attempt++) {
                 if (attempt > 1) {
-                    liveViewStore.updateRunningStepDetail(stage + " 다시 시도 " + attempt + "/" + DETAIL_ATTEMPTS
+                    liveViewStore.updateRunningStepDetail(stage + " 다시 시도 " + attempt + "/" + attemptLimit
                         + " · 실패 " + detailFailures[1] + "건");
                     detailPage.waitForTimeout(1_000L * attempt);
                 }
@@ -1729,24 +1838,41 @@ public class PlaywrightCrawlerEngine implements WebCrawlerEngine {
                     URI uri = targetPolicy.requireAllowedHttpUrl(link);
                     politeDelay(detailPage, request, stage + (attempt > 1 ? " 다시 열기 전" : " 열기 전"));
                     navigate(detailPage, uri.toString());
+                    stopIfNaverAccessBlocked(detailPage, startUri, progress);
                     DetailContent read = readDetail(detailPage, request.detailSelector());
+                    stopIfNaverAccessBlocked(detailPage, startUri, progress);
                     liveViewStore.capture(detailPage, stage);
                     if (!read.text().isBlank()) {
                         detail = read;
                     } else {
                         lastReason = "본문을 찾지 못함";
                     }
-                } catch (BusinessException | PlaywrightException exception) {
+                } catch (BusinessException exception) {
+                    if (exception.getErrorCode() == ErrorCode.CRAWLER_LOGIN_FAILED) throw exception;
+                    if (isNaverHost(startUri) && exception.getMessage() != null
+                        && exception.getMessage().startsWith("대상 사이트가 HTTP ")) {
+                        progress.at("네이버 페이지 응답 오류", "추가 요청을 멈췄습니다. 계정 상태와 사이트 응답을 확인한 뒤 같은 설정으로 자동 재시도하지 마세요.");
+                        throw exception;
+                    }
+                    lastReason = exception.getMessage() == null ? exception.getClass().getSimpleName()
+                        : exception.getMessage().lines().findFirst().orElse("");
+                } catch (PlaywrightException exception) {
+                    stopIfNaverAccessBlocked(detailPage, startUri, progress);
                     lastReason = exception.getMessage() == null ? exception.getClass().getSimpleName()
                         : exception.getMessage().lines().findFirst().orElse("");
                 }
             }
 
             if (detail == null) {
-                item.put(DETAIL_FIELD, "(상세글을 가져오지 못함: " + lastReason + " · " + DETAIL_ATTEMPTS + "번 시도)");
+                item.put(DETAIL_FIELD, "(상세글을 가져오지 못함: " + lastReason + " · " + attemptLimit + "번 시도)");
                 item.putIfAbsent(DETAIL_IMAGE_FIELD, "");
                 detailFailures[1]++;
                 consecutiveFailures++;
+                if (consecutiveFailures >= DETAIL_FAILURE_BACKOFF_AFTER && isNaverHost(startUri)) {
+                    progress.at("네이버 상세글 연속 실패", "추가 요청을 멈췄습니다. 계정 상태와 수집 허용 범위를 확인한 뒤 설정을 줄여 주세요.");
+                    throw new BusinessException(ErrorCode.CRAWLER_EXECUTION_FAILED,
+                        "네이버 상세글을 연속 " + consecutiveFailures + "건 읽지 못해 추가 페이지 요청을 중단했습니다.");
+                }
                 if (consecutiveFailures >= DETAIL_FAILURE_BACKOFF_AFTER && index < pageItems.size() - 1) {
                     // 연속 실패는 요청 제한일 수 있다. 한 번 길게 쉬고 이어서 진행한다.
                     liveViewStore.updateRunningStepDetail(stage + " 연속 실패로 "
@@ -1879,6 +2005,7 @@ public class PlaywrightCrawlerEngine implements WebCrawlerEngine {
             .trim();
     }
 
+    /** 목록 수집 요약: 실제로 읽은 페이지 수와 검사한 항목 수(필터 전). */
     private record CollectionSummary(int crawledPageCount, int scannedItemCount) {
     }
 }

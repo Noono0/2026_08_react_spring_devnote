@@ -1,3 +1,5 @@
+// CronGeneratorPage.tsx — Cron 표현식 만들기: 칸별 입력 → 표현식·한국어 설명·다음 실행 시각 5개 미리보기(utils/cronUtils.ts)
+
 import { useMemo, useState } from "react";
 import { UtilityHelpDialog, UtilityPageTitle } from "@/features/utility/components/UtilityHelpDialog";
 import { copyText } from "@/features/utility/utils/browserFileUtils";
@@ -22,6 +24,7 @@ export const CronGeneratorPage = () => {
       return { expression, description: describeCron(dialect, fields), runs: nextCronRuns(dialect, fields), error: "" };
     } catch (error) { return { expression: "", description: "", runs: [], error: error instanceof Error ? error.message : "Cron을 만들지 못했습니다." }; }
   }, [dialect, fields]);
+  // 칸 하나만 바꾼 새 객체로 교체한다([field]: 계산된 속성 이름 문법).
   const update = (field: keyof CronFields, value: string): void => setFields((current) => ({ ...current, [field]: value }));
   const springCode = `@Scheduled(cron = "${generated.expression}", zone = "Asia/Seoul")\npublic void runTask() {\n    // 반복 작업\n}`;
 

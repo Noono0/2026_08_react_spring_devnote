@@ -18,6 +18,7 @@ const responseSections: Array<{ value: ResponseViewerSection; label: string }> =
   { value: "BODY", label: "Body" }, { value: "HEADERS", label: "Headers" }, { value: "ACTUAL_REQUEST", label: "Actual Request" }, { value: "STATUS", label: "Status" },
 ];
 
+// 응답 보기 영역: 본문(예쁘게·원문·미리보기)·헤더·실제 보낸 요청·상태 설명 탭. 보내는 중·오류·응답 없음 상태도 함께 처리한다.
 export const ApiWorkspaceResponseViewer = ({ response, actualRequest, errorMessage, isSending, activeSection, bodyView, onSectionChange, onBodyViewChange, onCopy, onDownload }: ApiWorkspaceResponseViewerProps) => {
   const showingActualRequest = !isSending && Boolean(actualRequest) && activeSection === "ACTUAL_REQUEST";
 

@@ -4,7 +4,7 @@
 
 ## 준비
 
-- 프론트엔드: Node.js 22.12 이상, npm, `frontend/`에서 설치한 의존성
+- 프론트엔드: Node.js 22.13 이상(Corepack 포함), `frontend/`에서 `pnpm-lock.yaml` 기준으로 설치한 의존성
 - 백엔드: JDK 21과 실행 중인 Docker. `ArchitectureSmokeTest`는 독립적인 Testcontainers MySQL을 사용합니다.
 - 정적 검사: Python 3.10 이상, PyYAML, Node.js, JDK 21, Bash. Windows에서는 Git for Windows의 Bash를 사용합니다.
 
@@ -14,7 +14,7 @@
 
 ```sh
 cd frontend
-npm install
+corepack pnpm install --frozen-lockfile
 npm run lint
 npm run typecheck
 npm run test
@@ -34,7 +34,11 @@ macOS/Linux에서는 `./gradlew test`를 사용합니다. 테스트는 MySQL 스
 
 ## 저장소 정적 검사
 
-저장소 루트에서 실행합니다. macOS/Linux에서는 아래 `python`을 `python3`로 바꿔 사용할 수 있습니다.
+> **Python은 로컬 설치가 필수가 아닙니다.** 아래 검사는 GitHub Actions(`.github/workflows/continuous-integration.yml`)가 Python 3.12를 설치해 자동으로 실행합니다. 앱 실행·개발에는 Python이 쓰이지 않습니다.
+>
+> 자동 실행 시점은 `main`·`develop` 브랜치에 푸시할 때와 Pull Request를 열거나 갱신할 때입니다. 그 밖의 작업 브랜치에 푸시만 하면 실행되지 않으므로, 검사 결과가 필요하면 PR을 엽니다. 푸시 전에 직접 확인하고 싶을 때만 로컬에 Python을 설치해 아래 명령을 실행합니다.
+
+로컬에서 실행할 때는 저장소 루트에서 실행합니다. macOS/Linux에서는 아래 `python`을 `python3`로 바꿔 사용할 수 있습니다.
 
 ```sh
 python -m pip install -r scripts/requirements.txt

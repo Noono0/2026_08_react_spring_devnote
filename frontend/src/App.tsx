@@ -29,6 +29,7 @@ import { ApplicationLayout } from "@/app/ApplicationLayout";
 import { PortfolioHomePage } from "@/features/portfolio/pages/PortfolioHomePage";
 import { PortfolioLayout } from "@/features/portfolio/layouts/PortfolioLayout";
 import { VisitTracker } from "@/app/components/VisitTracker";
+import { DocumentTitle } from "@/app/components/DocumentTitle";
 import { UtilityLayout } from "@/features/utility/layouts/UtilityLayout";
 import { RoleProtectedRoute } from "@/features/auth/components/RoleProtectedRoute";
 
@@ -54,15 +55,19 @@ const developmentScenarioEnabled = import.meta.env.VITE_ENABLE_DEVELOPMENT_MENU 
 // 규칙: lazy는 반드시 `default` 키를 가진 객체를 돌려줘야 한다.
 //       이 프로젝트는 `export const XxxPage` (named export) 방식이라
 //       아래처럼 직접 `{ default: ... }` 모양으로 바꿔서 넘겨 준다.
-const AdminUserPracticePage = lazy(async () => ({ default: (await import("@/features/practice/14-admin-users/pages/AdminUserPracticePage")).AdminUserPracticePage }));
+const AdminUserPracticePage = lazy(async () => ({ default: (await import("@/features/practice/13-admin-users/pages/AdminUserPracticePage")).AdminUserPracticePage }));
 const GeneralBoardPracticePage = lazy(async () => ({ default: (await import("@/features/practice/06-board/pages/GeneralBoardPracticePage")).GeneralBoardPracticePage }));
 const CategoryTreePracticePage = lazy(async () => ({ default: (await import("@/features/practice/12-category/pages/CategoryTreePracticePage")).CategoryTreePracticePage }));
 const CommentPracticePage = lazy(async () => ({ default: (await import("@/features/practice/08-comment/pages/CommentPracticePage")).CommentPracticePage }));
 const ContactPracticePage = lazy(async () => ({ default: (await import("@/features/practice/03-contact/pages/ContactPracticePage")).ContactPracticePage }));
 const DevelopmentScenarioPage = lazy(async () => ({ default: (await import("@/features/development/pages/DevelopmentScenarioPage")).DevelopmentScenarioPage }));
-const DocumentDetailPage = lazy(async () => ({ default: (await import("@/features/document/pages/DocumentDetailPage")).DocumentDetailPage }));
-const DocumentEditorPage = lazy(async () => ({ default: (await import("@/features/document/pages/DocumentEditorPage")).DocumentEditorPage }));
-const DocumentListPage = lazy(async () => ({ default: (await import("@/features/document/pages/DocumentListPage")).DocumentListPage }));
+const DocumentDetailPage = lazy(async () => ({ default: (await import("@/features/practice/14-documents/pages/DocumentDetailPage")).DocumentDetailPage }));
+const DocumentEditorPage = lazy(async () => ({ default: (await import("@/features/practice/14-documents/pages/DocumentEditorPage")).DocumentEditorPage }));
+const DocumentListPage = lazy(async () => ({ default: (await import("@/features/practice/14-documents/pages/DocumentListPage")).DocumentListPage }));
+// 포트폴리오의 업무 History. 14단계 학습용 문서 화면과 코드를 공유하지 않는 별도 기능이다.
+const HistoryDetailPage = lazy(async () => ({ default: (await import("@/features/history/pages/HistoryDetailPage")).HistoryDetailPage }));
+const HistoryEditorPage = lazy(async () => ({ default: (await import("@/features/history/pages/HistoryEditorPage")).HistoryEditorPage }));
+const HistoryListPage = lazy(async () => ({ default: (await import("@/features/history/pages/HistoryListPage")).HistoryListPage }));
 const GalleryPracticePage = lazy(async () => ({ default: (await import("@/features/practice/07-gallery/pages/GalleryPracticePage")).GalleryPracticePage }));
 const InquiryPracticePage = lazy(async () => ({ default: (await import("@/features/practice/11-inquiry/pages/InquiryPracticePage")).InquiryPracticePage }));
 const LearningRoadmapPage = lazy(async () => ({ default: (await import("@/features/practice/00-roadmap/pages/LearningRoadmapPage")).LearningRoadmapPage }));
@@ -72,6 +77,22 @@ const ReservationPracticePage = lazy(async () => ({ default: (await import("@/fe
 const SearchAutocompletePracticePage = lazy(async () => ({ default: (await import("@/features/practice/05-search/pages/SearchAutocompletePracticePage")).SearchAutocompletePracticePage }));
 const TaskManagementPage = lazy(async () => ({ default: (await import("@/features/practice/10-task/pages/TaskManagementPage")).TaskManagementPage }));
 const TodoPracticePage = lazy(async () => ({ default: (await import("@/features/practice/02-todo/pages/TodoPracticePage")).TodoPracticePage }));
+const PortfolioProjectDetailPage = lazy(async () => ({ default: (await import("@/features/portfolio/pages/PortfolioProjectDetailPage")).PortfolioProjectDetailPage }));
+const InfiniteFeedPracticePage = lazy(async () => ({ default: (await import("@/features/practice/15-infinite-feed/pages/InfiniteFeedPracticePage")).InfiniteFeedPracticePage }));
+const DynamicQuoteFormPage = lazy(async () => ({ default: (await import("@/features/practice/16-dynamic-form/pages/DynamicQuoteFormPage")).DynamicQuoteFormPage }));
+// 한 파일에서 여러 화면을 내보내면 각각 lazy로 만들어도 내려받는 파일은 하나다.
+const ContextAuthPracticeLayout = lazy(async () => ({ default: (await import("@/features/practice/17-context-auth/pages/ContextAuthPracticePages")).ContextAuthPracticeLayout }));
+const ContextAuthHomePage = lazy(async () => ({ default: (await import("@/features/practice/17-context-auth/pages/ContextAuthPracticePages")).ContextAuthHomePage }));
+const ContextAuthLoginPage = lazy(async () => ({ default: (await import("@/features/practice/17-context-auth/pages/ContextAuthPracticePages")).ContextAuthLoginPage }));
+const ContextAuthProtectedMyPage = lazy(async () => ({ default: (await import("@/features/practice/17-context-auth/pages/ContextAuthPracticePages")).ContextAuthProtectedMyPage }));
+const ReactActionsGuestbookPage = lazy(async () => ({ default: (await import("@/features/practice/18-react19-actions/pages/ReactActionsGuestbookPage")).ReactActionsGuestbookPage }));
+const CustomHooksPracticePage = lazy(async () => ({ default: (await import("@/features/practice/19-custom-hooks/pages/CustomHooksPracticePage")).CustomHooksPracticePage }));
+const PerformancePracticePage = lazy(async () => ({ default: (await import("@/features/practice/20-performance/pages/PerformancePracticePage")).PerformancePracticePage }));
+const ZustandCartPracticePage = lazy(async () => ({ default: (await import("@/features/practice/21-zustand/pages/ZustandCartPracticePage")).ZustandCartPracticePage }));
+const UrlStatePracticePage = lazy(async () => ({ default: (await import("@/features/practice/22-url-state/pages/UrlStatePracticePage")).UrlStatePracticePage }));
+const RefsFocusPracticePage = lazy(async () => ({ default: (await import("@/features/practice/23-refs-focus/pages/RefsFocusPracticePage")).RefsFocusPracticePage }));
+const UseSuspensePracticePage = lazy(async () => ({ default: (await import("@/features/practice/24-use-suspense/pages/UseSuspensePracticePage")).UseSuspensePracticePage }));
+const TestingPracticePage = lazy(async () => ({ default: (await import("@/features/practice/25-testing/pages/TestingPracticePage")).TestingPracticePage }));
 const LearningLevelPage = lazy(async () => ({ default: (await import("@/features/practice/00-roadmap/pages/LearningLevelPage")).LearningLevelPage }));
 const UtilityHomePage = lazy(async () => ({ default: (await import("@/features/utility/pages/UtilityHomePage")).UtilityHomePage }));
 const DeveloperToolsPage = lazy(async () => ({ default: (await import("@/features/utility/pages/DeveloperToolsPage")).DeveloperToolsPage }));
@@ -160,6 +181,8 @@ export const App = () => (
       {/* 화면에 아무것도 그리지 않고, 주소가 바뀔 때마다 방문 기록만 서버에 남기는 컴포넌트.
           이렇게 "화면 없이 동작만 하는 컴포넌트"도 React에서는 흔한 패턴이다. */}
       <VisitTracker />
+      {/* 주소에 맞춰 브라우저 탭 제목을 바꾼다. 이것도 화면에는 아무것도 그리지 않는다. */}
+      <DocumentTitle />
       <Routes>
         {/* ── 영역 1: 포트폴리오 (주소 앞에 아무 접두사가 없는 "/" 계열) ──────────
             path 없이 element만 있는 Route = "레이아웃 라우트".
@@ -168,15 +191,17 @@ export const App = () => (
         <Route element={<PortfolioLayout />}>
           {/* index = "부모 주소 그 자체". 여기서는 "/" 에 해당한다. */}
           <Route index element={<PortfolioHomePage />} />
-          <Route path="history" element={<DocumentListPage />} />
+          {/* 프로젝트 카드의 "자세히 보기" 화면 */}
+          <Route path="projects/:sectionId" element={<PortfolioProjectDetailPage />} />
+          <Route path="history" element={<HistoryListPage />} />
           {/* RoleProtectedRoute로 감싸면 "권한 있는 사람만 통과" 시키는 문지기가 붙는다.
               글쓰기/수정처럼 아무나 하면 안 되는 화면에 사용한다. */}
-          <Route path="history/new" element={<RoleProtectedRoute superAdminOnly><DocumentEditorPage /></RoleProtectedRoute>} />
+          <Route path="history/new" element={<RoleProtectedRoute superAdminOnly><HistoryEditorPage /></RoleProtectedRoute>} />
           {/* `:documentId` 처럼 콜론이 붙으면 "여기는 값이 바뀌는 자리"라는 뜻이다.
               /history/7 로 들어오면 documentId = "7" 이 되고,
               화면 쪽에서는 useParams()로 그 값을 꺼내 쓴다. (항상 문자열로 들어온다!) */}
-          <Route path="history/:documentId" element={<DocumentDetailPage />} />
-          <Route path="history/:documentId/edit" element={<RoleProtectedRoute superAdminOnly><DocumentEditorPage /></RoleProtectedRoute>} />
+          <Route path="history/:documentId" element={<HistoryDetailPage />} />
+          <Route path="history/:documentId/edit" element={<RoleProtectedRoute superAdminOnly><HistoryEditorPage /></RoleProtectedRoute>} />
           {/* 레이아웃 라우트는 이렇게 중첩(nested)해서 여러 겹으로 쌓을 수도 있다.
               최종 주소는 부모 path들이 이어 붙은 결과다: "/" + "utilities" + "regex" */}
           <Route path="utilities" element={<UtilityLayout />}>
@@ -207,7 +232,13 @@ export const App = () => (
             <Route path="diagrams" element={<Suspense fallback={<UtilityLazyFallback name="Diagram Designer" />}><DiagramListPage /></Suspense>} />
             <Route path="diagrams/:diagramId" element={<Suspense fallback={<UtilityLazyFallback name="Diagram Designer" />}><DiagramEditorPage /></Suspense>} />
             <Route path="dependencies" element={<Suspense fallback={<UtilityLazyFallback name="Dependency Analyzer" />}><DependencyAnalyzerPage /></Suspense>} />
-            <Route path="crawler" element={<Suspense fallback={<UtilityLazyFallback name="웹 크롤링 도구" />}><WebCrawlerPage /></Suspense>} />
+            {/* 크롤러는 서버(또는 연결된 원격 브라우저)로 다른 사이트에 접속하므로 슈퍼관리자 전용이다.
+                서버도 CrawlerAccessInterceptor로 막고, 화면은 권한이 없으면 홈으로 튕기지 않고 이유를 알려 준다. */}
+            <Route path="crawler" element={
+              <RoleProtectedRoute superAdminOnly fallback={<div className="portfolio-state-panel" role="alert">웹 크롤링 도구는 슈퍼관리자만 사용할 수 있습니다. 슈퍼관리자로 로그인한 뒤 다시 열어 주세요.</div>}>
+                <Suspense fallback={<UtilityLazyFallback name="웹 크롤링 도구" />}><WebCrawlerPage /></Suspense>
+              </RoleProtectedRoute>
+            } />
           </Route>
           {/* 관리자 화면 묶음. 전부 RoleProtectedRoute로 감싸서 비관리자는 못 들어간다. */}
           <Route path="admin" element={<RoleProtectedRoute><AdminHomePage /></RoleProtectedRoute>} />
@@ -237,12 +268,30 @@ export const App = () => (
           <Route path="tasks" element={<TaskManagementPage />} />
           <Route path="inquiries" element={<InquiryPracticePage />} />
           <Route path="categories" element={<CategoryTreePracticePage />} />
-          {/* 고급: 진짜 백엔드 API와 TanStack Query를 쓰는 문서 CRUD */}
+          {/* 고급 13단계: 대형 관리 테이블의 다중 선택·일괄 처리 (React State) */}
+          <Route path="admin-users" element={<AdminUserPracticePage />} />
+          {/* 고급 14단계(기본 과정 마지막): 진짜 백엔드 API와 TanStack Query를 쓰는 문서 CRUD */}
           <Route path="documents" element={<DocumentListPage />} />
           <Route path="documents/new" element={<DocumentEditorPage />} />
           <Route path="documents/:documentId" element={<DocumentDetailPage />} />
           <Route path="documents/:documentId/edit" element={<DocumentEditorPage />} />
-          <Route path="admin-users" element={<AdminUserPracticePage />} />
+          {/* 심화: 무한 스크롤·동적 폼·Context 보호 라우트·React 19 Actions */}
+          <Route path="infinite-feed" element={<InfiniteFeedPracticePage />} />
+          <Route path="dynamic-form" element={<DynamicQuoteFormPage />} />
+          {/* 중첩 라우트: 레이아웃(Provider) 안의 Outlet 자리에 아래 화면이 들어간다. */}
+          <Route path="context-auth" element={<ContextAuthPracticeLayout />}>
+            <Route index element={<ContextAuthHomePage />} />
+            <Route path="login" element={<ContextAuthLoginPage />} />
+            <Route path="mypage" element={<ContextAuthProtectedMyPage />} />
+          </Route>
+          <Route path="react19-actions" element={<ReactActionsGuestbookPage />} />
+          <Route path="custom-hooks" element={<CustomHooksPracticePage />} />
+          <Route path="performance" element={<PerformancePracticePage />} />
+          <Route path="zustand" element={<ZustandCartPracticePage />} />
+          <Route path="url-state" element={<UrlStatePracticePage />} />
+          <Route path="refs-focus" element={<RefsFocusPracticePage />} />
+          <Route path="use-suspense" element={<UseSuspensePracticePage />} />
+          <Route path="testing" element={<TestingPracticePage />} />
           {/* 삼항 연산자(조건 ? A : B)로 라우트를 켜고 끈다.
               개발 메뉴가 꺼져 있으면 페이지 대신 "/react"로 되돌려 보낸다. */}
           <Route path="development/scenarios" element={developmentScenarioEnabled ? <DevelopmentScenarioPage /> : <Navigate to="/react" replace />} />

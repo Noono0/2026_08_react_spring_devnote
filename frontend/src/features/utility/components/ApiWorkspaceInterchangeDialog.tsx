@@ -30,12 +30,14 @@ interface ApiWorkspaceInterchangeDialogProps {
   onCurlShareOpen: () => void;
 }
 
+// 내려받을 파일 이름에서 쓸 수 없는 문자(제어 문자, < > : " / \ | ? *)를 -로 바꾸고 80자로 자른다.
 const safeFileName = (value: string): string => Array.from(value.trim())
   .map((character) => character.charCodeAt(0) < 32 || /[<>:"/\\|?*]/.test(character) ? "-" : character)
   .join("")
   .replace(/\s+/g, "-")
   .slice(0, 80) || "devnote-api";
 
+// Postman 가져오기/내보내기 대화상자(컬렉션·환경). 변환 규칙은 utils/apiWorkspaceInterchange.ts, 내보낼 때 비밀 값은 자리표시자로 바뀐다.
 export const ApiWorkspaceInterchangeDialog = ({
   isOpen,
   authenticated,

@@ -8,6 +8,11 @@ import com.microsoft.playwright.TimeoutError;
 import java.time.Duration;
 import java.time.Instant;
 
+/*
+ * 크롤링 한 번의 "지금 어느 단계인가"를 기억하는 작은 기록장.
+ * 엔진이 단계를 시작할 때마다 at(단계, 해 볼 일)로 갱신하고, 오류가 나면 failure(...)로
+ * "이 단계에서 이런 이유로 실패했고 이걸 해 보라"는 CrawlerFailure를 만든다.
+ */
 /** 요청마다 생성하며 입력값이나 Playwright 원문 로그는 진단 응답에 넣지 않습니다. */
 final class CrawlerProgress {
     private final Instant startedAt = Instant.now();
@@ -23,6 +28,11 @@ final class CrawlerProgress {
         return new CrawlerFailure(error.getErrorCode(), error.getMessage(), stage, action, elapsed());
     }
 
+    /**
+     * Playwright 오류 메시지의 특징 문구로 원인을 분류해 사람이 읽을 수 있는 설명으로 바꾼다.
+     * (Chromium 미설치, DNS 실패, 인증서 오류, 네트워크 오류, 시간 초과, 선택자 문법 오류)
+     * 로그인 단계에서 났으면 CRAWLER_LOGIN_FAILED, 그 외에는 CRAWLER_EXECUTION_FAILED 코드를 쓴다.
+     */
     CrawlerFailure failure(PlaywrightException error) {
         String message = error.getMessage() == null ? "" : error.getMessage();
         String reason;
@@ -57,6 +67,7 @@ final class CrawlerProgress {
         );
     }
 
+    /** 원본 메시지가 너무 길면 4,000자에서 자른다(응답·이력 저장 크기 제한). */
     private static String limit(String message) {
         return message.length() > 4_000 ? message.substring(0, 4_000) + "\n…(이하 생략)" : message;
     }

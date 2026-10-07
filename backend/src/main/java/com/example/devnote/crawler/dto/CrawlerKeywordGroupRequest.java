@@ -7,6 +7,7 @@ import jakarta.validation.constraints.Size;
 
 import java.util.List;
 
+/** 키워드 그룹 하나. matchMode = ALL(모두 포함) / ANY(하나라도 포함), 키워드 1~20개. */
 public record CrawlerKeywordGroupRequest(
     @NotNull(message = "키워드 그룹의 결합 방식을 선택해 주세요.")
     CrawlerMatchMode matchMode,

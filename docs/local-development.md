@@ -285,6 +285,9 @@ DATABASE_URL
 DATABASE_USERNAME
 DATABASE_PASSWORD
 FILE_STORAGE_ROOT
+FILE_TEMPORARY_RETENTION
+FILE_TEMPORARY_CLEANUP_CRON
+FILE_TEMPORARY_CLEANUP_ZONE
 SERVER_PORT
 INITIAL_SUPER_ADMIN_PASSWORD_HASH
 AUTH_SESSION_TIMEOUT
@@ -293,22 +296,24 @@ SESSION_COOKIE_SECURE
 
 ### React 의존성 설치
 
-새 터미널에서:
+의존성은 커밋된 `pnpm-lock.yaml` 기준으로 설치합니다. pnpm 버전은 `package.json`의 `packageManager`에 고정되어 있어 Node.js에 포함된 Corepack이 맞춰 줍니다. 새 터미널에서:
 
 ```bash
 cd frontend
-npm install
+corepack pnpm install --frozen-lockfile
 ```
+
+`corepack enable`을 한 번 실행해 두면 이후에는 `pnpm install`처럼 짧게 쓸 수 있습니다. 설치 뒤 `npm run dev`, `npm run test` 같은 스크립트 실행 명령은 그대로 사용할 수 있습니다.
 
 의존성 설치가 끝나면 브라우저 Mock API를 위한 Service Worker를 생성합니다.
 
 ```bash
-npx --no-install msw init public --save
+corepack pnpm exec msw init public --save
 ```
 
 이 명령으로 `frontend/public/mockServiceWorker.js`가 만들어집니다.
 
-처음 `npm install` 후 생성되는 `package-lock.json`은 Git에 커밋하는 것을 권장합니다. Dockerfile은 제공 환경에서 lock 파일이 없어도 시작할 수 있도록 `npm install`을 사용하지만, 팀 프로젝트에서는 `package-lock.json`을 만든 뒤 `npm ci`로 변경하는 편이 좋습니다.
+Dockerfile과 CI도 같은 `pnpm install --frozen-lockfile`을 사용하므로 로컬·CI·배포 이미지의 의존성 버전이 같습니다. 의존성을 추가하거나 바꿀 때는 `pnpm add <패키지>@<버전>`으로 `package.json`과 `pnpm-lock.yaml`을 함께 갱신하고 두 파일을 같이 커밋합니다. `npm install`은 이 lock 파일을 읽지 않으므로 사용하지 않습니다.
 
 ### React 실행
 
@@ -428,7 +433,9 @@ await startMockServerWhenEnabled();
 
 로그인 모달에서 `아이디 기억`을 선택하면 비밀번호가 아닌 로그인 ID만 `localStorage`에 저장합니다. `자동 로그인`을 선택하면 서버가 HttpOnly·SameSite 세션 쿠키를 최대 30일간 유지하며, 로그아웃할 때 쿠키와 자동 로그인 선택을 해제합니다. 기간은 `AUTH_REMEMBER_ME_DURATION`으로 조정할 수 있습니다.
 
-`/react/documents`의 소유권 오류 실습은 로그인과 별개로 기존 `X-Member-Id` 헤더 전환 기능을 유지합니다. 이 헤더는 React 학습 API에서만 사용하는 개발 편의 기능이며 포트폴리오·업무 History·관리자 권한을 부여하지 않습니다.
+같은 IP에서 같은 아이디로 15분 안에 5번 로그인에 실패하면 15분 동안 맞는 비밀번호로도 로그인할 수 없고 `429 LOGIN_TEMPORARILY_LOCKED`와 남은 시간이 표시됩니다(`LoginAttemptLimiter`). 로컬 실습 중 잠겼다면 15분을 기다리거나 백엔드를 재시작합니다. 횟수와 시간은 `AUTH_LOGIN_MAX_FAILURES`(기본 5), `AUTH_LOGIN_FAILURE_WINDOW`(기본 15m), `AUTH_LOGIN_LOCK_DURATION`(기본 15m)으로 바꿀 수 있습니다.
+
+`/react/documents`의 소유권 오류 실습은 로그인과 별개로 기존 `X-Member-Id` 헤더 전환 기능을 유지합니다. 로그인하지 않은 요청에만 적용되며, 헤더가 없으면 1번 회원으로 처리합니다. 이 방식을 쓰는 API는 학습 문서(`/api/v1/documents`), 다이어그램(`/api/v1/diagrams`), 파일 업로드(`/api/v1/files`)입니다. 포트폴리오·업무 History·관리자 권한은 부여하지 않습니다. 개발 편의 기능이므로 외부 공개 전에는 [배포 가이드의 공개 전 체크리스트](deployment.md#12-외부-공개-전-체크리스트)에 따라 정리합니다.
 
 | Member ID | 이메일 | 학습 데이터 역할 |
 |---:|---|---|
@@ -566,7 +573,8 @@ http://localhost:8080/swagger-ui.html
 |---|---|---|
 | GET | `/api/v1/documents` | 목록·검색·페이징 |
 | GET | `/api/v1/documents/{documentId}` | 상세 조회 |
-| GET | `/api/v1/history` | 공개 업무 History 목록(슈퍼관리자는 임시글 포함) |
+| GET | `/api/v1/history` | 공개 업무 History 목록(슈퍼관리자는 임시글 포함). `?tag=태그`로 태그 필터 |
+| GET | `/api/v1/history/tags` | 태그별 글 수(방문자는 공개 글 기준, 많이 쓴 순 30개) |
 | GET | `/api/v1/history/{documentId}` | 공개 업무 History 상세 |
 | POST | `/api/v1/history` | 슈퍼관리자 전용 업무 History 작성 |
 | PUT/DELETE | `/api/v1/history/{documentId}` | 슈퍼관리자 전용 업무 History 수정·삭제 |
@@ -580,7 +588,7 @@ http://localhost:8080/swagger-ui.html
 | GET | `/api/v1/files/{fileId}/download` | 파일 다운로드 |
 | GET | `/api/v1/files/{fileId}/content` | 이미지 등 브라우저 인라인 표시 |
 | GET | `/api/v1/portfolio/sections` | 공개 또는 편집용 포트폴리오 섹션 목록 |
-| POST | `/api/v1/portfolio/sections` | 포트폴리오 섹션 생성 |
+| POST | `/api/v1/portfolio/sections` | 포트폴리오 섹션 생성. PROJECT는 `techStack`·`roleSummary`·`repositoryUrl`·`demoUrl`도 저장 |
 | PUT | `/api/v1/portfolio/sections/{sectionId}` | 포트폴리오 섹션 수정 |
 | DELETE | `/api/v1/portfolio/sections/{sectionId}` | 포트폴리오 섹션 소프트 삭제 |
 | POST | `/api/v1/portfolio/editor-images` | 포트폴리오 이미지 업로드 |
@@ -603,11 +611,21 @@ http://localhost:8080/swagger-ui.html
 | GET | `/api/v1/admin/grades` | 관리자 등급 목록 조회 |
 | PUT | `/api/v1/admin/grades/{gradeCode}` | 슈퍼관리자 등급 기준 변경 |
 | GET | `/api/v1/admin/permissions` | 관리자 역할별 권한 조회 |
-| PUT | `/api/v1/admin/permissions/{role}/{permission}` | 슈퍼관리자 역할별 권한 변경 |
+| PUT | `/api/v1/admin/permissions/{role}/{permission}` | 슈퍼관리자 역할별 권한 변경(표시용 값만 저장하며 실제 접근 권한에는 반영하지 않음) |
 | GET | `/api/v1/admin/analytics` | 일간·월간 방문자, 페이지뷰와 최근 이용 이력 조회 |
 | POST | `/api/v1/visits` | 세션 기반 페이지 방문 기록 |
 
 포트폴리오 변경·이미지 업로드 요청은 슈퍼관리자 로그인 세션과 `X-Portfolio-Editor: true` 헤더가 모두 필요합니다. 브라우저 화면에서는 Axios·Fetch 공통 클라이언트가 이를 처리합니다.
+
+### 미사용 업로드 파일 자동 정리
+
+업로드한 파일은 `TEMP` 상태로 저장되고, 문서·포트폴리오에 연결하면 `ACTIVE`가 됩니다. 편집 중 이미지를 올렸다가 지우거나 저장하지 않고 나가면 `TEMP` 파일이 디스크에 남습니다. `TemporaryFileCleanupService`가 매일 한국 시간 04:30에 이런 파일을 정리합니다.
+
+- 지우는 대상: 업로드 후 24시간이 지났고, 문서·문서 이력의 썸네일과 본문 HTML, 문서 첨부, 포트폴리오 썸네일·이미지 어디에도 쓰이지 않는 `TEMP` 파일
+- 문서 본문 이미지는 저장 후에도 `TEMP`로 남으므로 본문 HTML의 `/files/{id}/` 주소까지 확인합니다. `ACTIVE` 파일은 지우지 않습니다.
+- DB 행은 `DELETED`와 삭제 시각으로 남기고 디스크 파일만 지웁니다. 한 번에 최대 500개씩 처리합니다.
+- 편집 화면을 24시간 넘게 열어 둔 채 저장하면 그 사이 올린 이미지가 정리될 수 있습니다.
+- `FILE_TEMPORARY_RETENTION`(예: `48h`)으로 보관 기간을, `FILE_TEMPORARY_CLEANUP_CRON`(예: `0 0 3 * * *`)으로 실행 시각을 바꿀 수 있습니다.
 
 ---
 
@@ -647,7 +665,7 @@ Vite 로컬 실행 시 Spring Boot가 8080에서 실행되는지 확인합니다
 
 ```bash
 cd frontend
-npx --no-install msw init public --save
+corepack pnpm exec msw init public --save
 ```
 
 그리고:

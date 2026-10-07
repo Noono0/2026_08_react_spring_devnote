@@ -1,8 +1,14 @@
+// jsonPathExplorer.ts — JSONPath(JSON 안의 값을 가리키는 주소)를 해석하고 실행하는 도구
+//   $.store.book[0].title   → 첫 번째 책 제목       $..price           → 깊이와 관계없이 모든 price
+//   $.store.book[?(@.price < 10)] → 가격 10 미만인 책  $.items[0:5]      → 0~4번째(슬라이스)
+// 식을 먼저 토큰(조각) 목록으로 나눈 뒤(parseJsonPath), 루트에서 시작해 토큰마다 후보 값들을 좁혀 간다(evaluateJsonPath).
+
 export interface JsonPathMatch {
   path: string;
   value: unknown;
 }
 
+// 토큰 종류: 자식(.이름) · 번호([0]) · 전체(*) · 재귀(..) · 슬라이스([시작:끝:간격]) · 여러 개([0,2] 또는 ['a','b']) · 필터([?(@.키 연산자 값)])
 type JsonPathToken =
   | { type: "CHILD"; key: string }
   | { type: "INDEX"; index: number }
@@ -16,6 +22,7 @@ type JsonPathFilterOperator = Extract<JsonPathToken, { type: "FILTER" }>["operat
 
 const isRecord = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === "object" && !Array.isArray(value);
 const identifierPattern = /^[A-Za-z_$][\w$]*$/;
+// 결과 경로 표시: 식별자 모양 키는 .key, 공백·특수문자가 있으면 ["key"]로 쓴다.
 const appendChildPath = (path: string, key: string): string => identifierPattern.test(key) ? `${path}.${key}` : `${path}[${JSON.stringify(key)}]`;
 
 const parseLiteral = (source: string): unknown => {
@@ -63,6 +70,7 @@ const splitUnion = (content: string): string[] => {
   return parts;
 };
 
+// 식 글자를 앞에서부터 한 글자씩 읽어 토큰으로 나눈다. 반드시 $(루트)로 시작해야 한다.
 export const parseJsonPath = (expression: string): JsonPathToken[] => {
   const source = expression.trim();
   if (!source.startsWith("$")) throw new Error("JSONPath는 루트를 뜻하는 $로 시작해야 합니다.");
@@ -117,6 +125,7 @@ export const parseJsonPath = (expression: string): JsonPathToken[] => {
   return tokens;
 };
 
+// 필터 비교. =~는 /패턴/플래그 모양의 정규식과 비교한다(g 플래그는 test 결과를 흔들어 제거).
 const compareFilter = (actual: unknown, operator: JsonPathFilterOperator, expected: unknown): boolean => {
   if (operator === "==") return actual === expected;
   if (operator === "!=") return actual !== expected;
@@ -133,6 +142,7 @@ const compareFilter = (actual: unknown, operator: JsonPathFilterOperator, expect
   return actual <= expected;
 };
 
+// 실행: 현재 후보 목록(nodes)에 토큰을 하나씩 적용해 다음 후보 목록을 만든다. 결과가 너무 많아지지 않게 최대 5,000개로 자른다.
 export const evaluateJsonPath = (root: unknown, expression: string, maximumMatches = 5000): JsonPathMatch[] => {
   const tokens = parseJsonPath(expression);
   let nodes: JsonPathMatch[] = [{ path: "$", value: root }];

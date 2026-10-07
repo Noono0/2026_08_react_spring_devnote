@@ -157,12 +157,15 @@ export const requestHandlers = [
     //   DocumentListPage가 URL에 넣어 보낸 값이 그대로 여기 도착한다.
     const requestUrl = new URL(request.url);
     const searchKeyword = requestUrl.searchParams.get("searchKeyword")?.toLowerCase() ?? "";
+    // 태그 필터: 서버의 EXISTS (document_tags) 조건을 흉내 낸다.
+    const tag = requestUrl.searchParams.get("tag") ?? "";
     const pageNumber = Number(requestUrl.searchParams.get("pageNumber") ?? 0);
     const pageSize = Number(requestUrl.searchParams.get("pageSize") ?? 10);
     const scenario = getScenario();
     const filteredDocuments = scenario === "empty-data"
       ? []
-      : mockDocuments.filter((document) => document.documentTitle.toLowerCase().includes(searchKeyword));
+      : mockDocuments.filter((document) => document.documentTitle.toLowerCase().includes(searchKeyword)
+        && (!tag || document.tags.includes(tag)));
     // ★ slice로 "이번 페이지 몫"만 잘라 낸다. 서버 페이징의 핵심이다.
     //   0페이지·10개면 slice(0,10), 1페이지면 slice(10,20).
     //   프론트가 전체를 받아 자르는 게 아니라 서버가 잘라서 보내야

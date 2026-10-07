@@ -1,6 +1,9 @@
+// DeveloperSnippetPage.tsx — 개인 코드 조각 보관함: 검색·언어·즐겨찾기 필터, 정렬, 보관함/휴지통, 여러 개 선택 후 일괄 삭제·복구
+// 로그인한 회원만 쓸 수 있고(목록 요청도 로그인 후에만), 서버가 회원 자신의 조각만 돌려준다.
+
 import { useMemo, useState } from "react";
 import { useAuthSessionQuery } from "@/features/auth/hooks/useAuthSession";
-import { DocumentPagination } from "@/features/document/components/DocumentPagination";
+import { Pagination } from "@/shared/ui/Pagination";
 import { SnippetEditor } from "@/features/utility/components/SnippetEditor";
 import { UtilityHelpDialog, UtilityPageTitle } from "@/features/utility/components/UtilityHelpDialog";
 import { useBulkDeleteSnippetsMutation, useBulkRestoreSnippetsMutation, useCreateSnippetMutation, useDeleteSnippetMutation, useRestoreSnippetMutation, useSnippetsQuery, useUpdateSnippetMutation } from "@/features/utility/hooks/useSnippetQueries";
@@ -10,6 +13,7 @@ import { convertRequestErrorToProblemDetails } from "@/shared/api/error/apiError
 import { applicationNotification } from "@/shared/notification/applicationNotification";
 import { ConfirmDialog } from "@/shared/ui/ConfirmDialog";
 
+// 확인 대화상자에서 실행할 동작(삭제 또는 복구)과 대상 번호들.
 type PendingAction = { type: "DELETE" | "RESTORE"; snippetIds: number[]; title: string };
 
 export const DeveloperSnippetPage = () => {
@@ -36,6 +40,7 @@ export const DeveloperSnippetPage = () => {
   const snippets = snippetsQuery.data?.content ?? [];
   const allCurrentPageSelected = snippets.length > 0 && snippets.every((snippet) => selectedIds.includes(snippet.snippetId));
   const languages = ["JavaScript", "TypeScript", "React", "Java", "SQL", "HTML", "CSS", "Shell", "JSON", "YAML", "기타"];
+  // 검색 조건이 바뀌면 첫 페이지로 돌아가고 선택을 비운다(다른 목록의 번호가 선택에 남지 않게).
   const resetListSelection = (): void => { setPageNumber(0); setSelectedIds([]); };
 
   const handleError = (error: unknown): void => applicationNotification.apiError(convertRequestErrorToProblemDetails(error));
@@ -76,7 +81,7 @@ export const DeveloperSnippetPage = () => {
         <div className="snippet-selection-bar"><label className="checkbox-label"><input type="checkbox" checked={allCurrentPageSelected} disabled={snippets.length === 0} onChange={(event) => setSelectedIds(event.target.checked ? snippets.map((snippet) => snippet.snippetId) : [])} />현재 페이지 전체 선택</label><span>{selectedIds.length}개 선택</span>{selectedIds.length > 0 ? <button type="button" className="ghost-button" onClick={() => setPendingAction({ type: status === "ACTIVE" ? "DELETE" : "RESTORE", snippetIds: selectedIds, title: `${selectedIds.length}개 코드 조각` })}>{status === "ACTIVE" ? "선택 항목 휴지통 이동" : "선택 항목 복구"}</button> : null}</div>
         {snippetsQuery.isPending ? <div className="portfolio-state-panel">코드 조각을 불러오는 중입니다.</div> : null}{snippetsQuery.isError ? <div className="portfolio-state-panel error-state">코드 조각을 불러오지 못했습니다.</div> : null}{!snippetsQuery.isPending && snippets.length === 0 ? <div className="portfolio-state-panel">{status === "ACTIVE" ? "조건에 맞는 코드 조각이 없습니다." : "휴지통이 비어 있습니다."}</div> : null}
         <div className="snippet-card-grid">{snippets.map((snippet) => <article className={`snippet-card${snippet.favorite ? " favorite" : ""}`} key={snippet.snippetId}><header><label className="checkbox-label"><input type="checkbox" aria-label={`${snippet.title} 선택`} checked={selectedIds.includes(snippet.snippetId)} onChange={(event) => setSelectedIds((current) => event.target.checked ? [...current, snippet.snippetId] : current.filter((id) => id !== snippet.snippetId))} /></label><span>{snippet.language}</span>{status === "ACTIVE" ? <button type="button" className="snippet-star-button" aria-label={`${snippet.title} 즐겨찾기 ${snippet.favorite ? "해제" : "설정"}`} onClick={() => void toggleFavorite(snippet)}>{snippet.favorite ? "★" : "☆"}</button> : null}</header><h2>{snippet.title}</h2><p>{snippet.description || "설명이 없습니다."}</p><div className="snippet-tags">{snippet.tags.map((tag) => <span key={tag}>#{tag}</span>)}</div><pre><code>{snippet.code}</code></pre><footer><time dateTime={snippet.updatedAt}>{new Date(snippet.updatedAt).toLocaleString("ko-KR")}</time><div><button type="button" className="ghost-button" onClick={() => void copyText(snippet.code).then(() => applicationNotification.success("코드를 복사했습니다."))}>복사</button>{status === "ACTIVE" ? <><button type="button" className="ghost-button" onClick={() => setEditingSnippet(snippet)}>수정</button><button type="button" className="ghost-button danger-button" onClick={() => setPendingAction({ type: "DELETE", snippetIds: [snippet.snippetId], title: snippet.title })}>삭제</button></> : <button type="button" className="ghost-button" onClick={() => setPendingAction({ type: "RESTORE", snippetIds: [snippet.snippetId], title: snippet.title })}>복구</button>}</div></footer></article>)}</div>
-        {snippetsQuery.data ? <DocumentPagination ariaLabel="코드 조각 목록 페이지 이동" pageInformation={snippetsQuery.data.pageInformation} handlePageChange={(nextPage) => { setPageNumber(nextPage); setSelectedIds([]); }} /> : null}
+        {snippetsQuery.data ? <Pagination ariaLabel="코드 조각 목록 페이지 이동" pageInformation={snippetsQuery.data.pageInformation} handlePageChange={(nextPage) => { setPageNumber(nextPage); setSelectedIds([]); }} /> : null}
       </>}
       <ConfirmDialog isOpen={Boolean(pendingAction)} title={pendingAction?.type === "DELETE" ? "휴지통으로 이동" : "코드 조각 복구"} description={`“${pendingAction?.title ?? ""}”을 ${pendingAction?.type === "DELETE" ? "휴지통으로 이동" : "내 코드 조각으로 복구"}할까요?`} confirmButtonLabel={pendingAction?.type === "DELETE" ? "이동" : "복구"} isConfirming={deleteMutation.isPending || restoreMutation.isPending || bulkDeleteMutation.isPending || bulkRestoreMutation.isPending} onConfirm={() => void executeAction()} onCancel={() => setPendingAction(undefined)} />
       <UtilityHelpDialog isOpen={helpOpen} title="Developer Snippet" description="회원 소유권이 있는 실제 서버 CRUD와 휴지통 흐름을 보여줍니다." onClose={() => setHelpOpen(false)}><article><h3>사용 방법</h3><ol><li>로그인 후 제목·언어·코드·태그를 저장합니다.</li><li>검색·언어·즐겨찾기·정렬과 서버 페이징으로 찾습니다.</li><li>단건 또는 현재 페이지 다중 선택으로 휴지통에 보냅니다.</li><li>휴지통 탭에서 다시 복구합니다.</li></ol></article><article><h3>보안과 데이터 격리</h3><p>프론트가 회원 번호를 보내지 않습니다. 백엔드가 HttpOnly 세션에서 회원을 찾고 모든 SELECT·UPDATE·DELETE에 member_id 조건을 적용합니다.</p></article><article><h3>학습 포인트</h3><p>TanStack Query 서버 상태, 검색 조건 queryKey, 소프트 삭제, 다중 작업, Controller → Service → DAO → MyBatis 흐름을 확인해 보세요.</p></article></UtilityHelpDialog>

@@ -10,6 +10,10 @@ import org.hibernate.type.SqlTypes;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+/**
+ * portfolio_sections 테이블 구조(JPA 엔티티, 구조 확인용 — 읽기·쓰기는 MyBatis).
+ * 컬럼을 바꿀 때는 schema.sql, 이 엔티티, PortfolioSectionMapper.xml, Row/Parameter/DTO를 함께 고친다.
+ */
 @Getter
 @Entity
 @Table(name = "portfolio_sections")
@@ -23,7 +27,7 @@ public class PortfolioSectionEntity {
     @Column(name = "section_subtitle", length = 200) private String sectionSubtitle;
     @Column(name = "start_date") private LocalDate startDate;
     @Column(name = "end_date") private LocalDate endDate;
-    @Column(name = "current_yn", nullable = false, columnDefinition = "char(1)") private String currentYn;
+    @Column(name = "current_yn", nullable = false, columnDefinition = "char(1) default 'N'") private String currentYn;
     @Column(name = "external_url", length = 1000) private String externalUrl;
     @Column(name = "thumbnail_file_id") private Long thumbnailFileId;
     @JdbcTypeCode(SqlTypes.JSON)
@@ -34,7 +38,7 @@ public class PortfolioSectionEntity {
     @Column(name = "sort_order", nullable = false) private Integer sortOrder;
     @Column(name = "visibility", nullable = false, length = 30) private String visibility;
     @Column(name = "version_number", nullable = false) private Long versionNumber;
-    @Column(name = "use_yn", nullable = false, columnDefinition = "char(1)") private String useYn;
+    @Column(name = "use_yn", nullable = false, columnDefinition = "char(1) default 'Y'") private String useYn;
     @Column(name = "created_at", nullable = false) private LocalDateTime createdAt;
     @Column(name = "updated_at", nullable = false) private LocalDateTime updatedAt;
 }

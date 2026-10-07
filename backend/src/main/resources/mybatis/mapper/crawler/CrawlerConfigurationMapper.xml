@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 크롤러 설정·실행 이력 SQL. 이력은 설정을 지우면 함께 지워진다(schema.sql의 ON DELETE CASCADE). -->
 <mapper namespace="com.example.devnote.crawler.CrawlerConfigurationMapper">
     <sql id="configurationColumns">
         c.crawler_configuration_id, c.configuration_title, c.configuration_description,
         c.site_preset, CAST(c.request_json AS CHAR) AS request_json,
+        <!-- 상관 하위 조회: 설정 한 줄마다 그 설정의 실행 횟수와 마지막 실행 상태·시각을 계산한다. -->
         (SELECT COUNT(*) FROM crawler_run_histories h WHERE h.crawler_configuration_id = c.crawler_configuration_id) AS run_count,
         (SELECT h.run_status FROM crawler_run_histories h WHERE h.crawler_configuration_id = c.crawler_configuration_id ORDER BY h.crawler_run_history_id DESC LIMIT 1) AS last_run_status,
         (SELECT h.started_at FROM crawler_run_histories h WHERE h.crawler_configuration_id = c.crawler_configuration_id ORDER BY h.crawler_run_history_id DESC LIMIT 1) AS last_run_at,
@@ -56,6 +58,7 @@
 
     <update id="completeRunHistoryFailure">
         UPDATE crawler_run_histories
+        <!-- NULLIF(값, ''): 빈 문자열이면 NULL로 저장한다. -->
         SET run_status = 'FAILURE', failure_stage = NULLIF(#{failureStage}, ''),
             failure_message = #{failureMessage}, duration_millis = #{durationMillis}, completed_at = CURRENT_TIMESTAMP(6)
         WHERE crawler_run_history_id = #{historyId}
@@ -63,6 +66,7 @@
 
     <select id="selectRunHistories" resultType="com.example.devnote.crawler.dao.row.CrawlerRunHistoryRow">
         SELECT crawler_run_history_id, crawler_configuration_id, run_status,
+               <!-- 목록에서는 큰 JSON을 읽지 않는다(응답 크기·DB 부담 줄이기). 최근 100건까지. -->
                NULL AS request_json, NULL AS result_json, failure_stage, failure_message,
                duration_millis, item_count, started_at, completed_at
         FROM crawler_run_histories

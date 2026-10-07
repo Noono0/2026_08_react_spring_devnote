@@ -1,3 +1,6 @@
+// LogAnalyzerPage.tsx — 로그·Stack Trace 분석 화면: 요약·예외·로그 줄·마스킹된 원문 보기를 탭으로 나눠 보여 준다(utils/logAnalyzer.ts).
+// 비밀번호·토큰은 분석 전에 가려지고, 결과를 마크다운으로 복사·내려받을 수 있다.
+
 import { useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { UtilityHelpDialog, UtilityPageTitle } from "@/features/utility/components/UtilityHelpDialog";

@@ -17,6 +17,7 @@ const formatDateTime = (value: string): string => new Intl.DateTimeFormat("ko-KR
   month: "long", day: "numeric", hour: "numeric", minute: "2-digit",
 }).format(new Date(value));
 
+// 투표 한 건 카드: 질문·선택지(결과 공개 시 표 수·막대), 투표 버튼, 관리 버튼(마감·결과 공개·수정·삭제 — 서버가 준 권한 값으로 표시).
 export const PollCard = ({
   poll,
   selectedOptionIds,

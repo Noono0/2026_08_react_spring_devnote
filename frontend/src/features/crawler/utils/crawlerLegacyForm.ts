@@ -53,6 +53,7 @@ export const naverCafeLegacyForm: CrawlerLegacyForm = {
   searchSubmitSelector: "",
 };
 
+/** 저장된 실행 요청 → 폼 입력값(설정을 불러올 때). */
 export const toCrawlerLegacyForm = (request: CrawlerRunRequest): CrawlerLegacyForm => ({
   loginEnabled: request.login.mode !== "NONE",
   preferSavedSession: request.login.mode === "SAVED_SESSION",
@@ -73,6 +74,7 @@ interface LegacyCredentials {
   password: string;
 }
 
+// 결과 타입: 검사를 통과하면 { valid: true, 요청 조각 }, 아니면 { valid: false, 안내 문구 }. valid로 어느 쪽인지 TypeScript가 구분한다.
 export type CrawlerLegacyRequestParts =
   | { valid: true; login: CrawlerLoginRequest; pageSearch: CrawlerPageSearchRequest }
   | { valid: false; message: string };
@@ -82,6 +84,10 @@ const loginModeOf = (form: CrawlerLegacyForm, useSavedSession: boolean): Crawler
   return useSavedSession ? "SAVED_SESSION" : "FORM";
 };
 
+/**
+ * 폼 입력값 → 서버 요청의 login·pageSearch 부분. 필요한 칸이 비었으면 실패 결과를 돌려준다.
+ * 쓰지 않는 기능의 칸(로그인 끔, 검색 끔)은 빈 문자열로 보내, 예전에 입력했던 값이 섞여 저장되지 않게 한다.
+ */
 export const buildCrawlerLegacyRequestParts = (
   form: CrawlerLegacyForm,
   { useSavedSession, username, password }: LegacyCredentials,

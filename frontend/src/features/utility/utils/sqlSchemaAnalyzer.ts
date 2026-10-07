@@ -1,3 +1,6 @@
+// sqlSchemaAnalyzer.ts — CREATE TABLE 문(DDL)을 읽어 테이블·컬럼·키 구조를 뽑고, ERD(Mermaid) 생성과 두 스키마 비교를 하는 도구
+// SQL 파서를 쓰지 않고 괄호 짝 찾기·쉼표 나누기·정규식으로 MySQL/PostgreSQL/SQL Server에서 흔한 문법을 읽는다.
+
 export interface SqlSchemaColumn {
   name: string;
   type: string;
@@ -32,9 +35,11 @@ export interface SqlSchemaDiff {
   changedTables: Array<{ table: string; addedColumns: string[]; removedColumns: string[]; changedColumns: string[] }>;
 }
 
+// 이름을 감싼 `백틱`·"따옴표"·[대괄호]를 벗기고 schema.table 형태는 점으로 나눠 각각 정리한다.
 const normalizeIdentifier = (value: string): string => value.trim().split(".").map((part) => part.trim().replace(/^`|`$/g, "").replace(/^"|"$/g, "").replace(/^\[|\]$/g, "")).filter(Boolean).join(".");
 const parseIdentifierList = (value: string): string[] => value.split(",").map((item) => normalizeIdentifier(item)).filter(Boolean);
 
+// 블록 주석과 -- 줄 주석을 먼저 지워, 주석 안의 괄호·쉼표가 구조 해석을 망치지 않게 한다.
 const removeSqlComments = (source: string): string => source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/--[^\r\n]*/g, "");
 
 const findClosingParenthesis = (source: string, openingIndex: number): number => {
@@ -56,6 +61,7 @@ const findClosingParenthesis = (source: string, openingIndex: number): number =>
   return -1;
 };
 
+// 괄호 안쪽의 쉼표(DECIMAL(10,2) 등)는 무시하고, 바깥쪽 쉼표로만 컬럼·제약 정의를 나눈다.
 const splitTopLevel = (source: string): string[] => {
   const parts: string[] = [];
   let depth = 0;
@@ -99,12 +105,14 @@ const readColumnType = (rest: string): string => {
   return rest.slice(0, end).trim().replace(/\s+/g, " ");
 };
 
+// FOREIGN KEY (컬럼들) REFERENCES 테이블(컬럼들) 모양을 읽는다.
 const parseForeignKey = (definition: string): SqlSchemaForeignKey | undefined => {
   const match = definition.match(/^(?:CONSTRAINT\s+(`[^`]+`|"[^"]+"|\[[^\]]+\]|[\w$]+)\s+)?FOREIGN\s+KEY\s*\(([^)]+)\)\s+REFERENCES\s+(`[^`]+`|"[^"]+"|\[[^\]]+\]|[\w$.]+)\s*\(([^)]+)\)/i);
   if (!match?.[2] || !match[3] || !match[4]) return undefined;
   return { name: match[1] ? normalizeIdentifier(match[1]) : undefined, columns: parseIdentifierList(match[2]), referencedTable: normalizeIdentifier(match[3]), referencedColumns: parseIdentifierList(match[4]) };
 };
 
+// 괄호 안 정의 하나하나를 컬럼(이름 + 타입 + NOT NULL·PRIMARY KEY·UNIQUE 등) 또는 표 단위 제약(PRIMARY KEY(...), FOREIGN KEY ...)으로 분류한다.
 const parseTableBody = (tableName: string, body: string): SqlSchemaTable => {
   const columns: SqlSchemaColumn[] = [];
   const foreignKeys: SqlSchemaForeignKey[] = [];
@@ -137,6 +145,7 @@ const parseTableBody = (tableName: string, body: string): SqlSchemaTable => {
   return { name: tableName, columns: columns.map((column) => ({ ...column, primaryKey: column.primaryKey || primaryKeys.has(column.name), unique: column.unique || uniqueColumns.has(column.name) })), foreignKeys };
 };
 
+// CREATE TABLE을 하나씩 찾아 해석한 뒤 점검한다: 같은 이름 테이블 중복, 기본 키 없음, 참조 테이블·컬럼이 입력에 없음.
 export const analyzeSqlSchema = (source: string): SqlSchemaModel => {
   if (!source.trim()) throw new Error("CREATE TABLE DDL을 입력해 주세요.");
   if (new Blob([source]).size > 2 * 1024 * 1024) throw new Error("DDL 입력은 2MB 이하만 처리할 수 있습니다.");
@@ -173,6 +182,7 @@ export const analyzeSqlSchema = (source: string): SqlSchemaModel => {
 };
 
 const mermaidIdentifier = (value: string): string => value.replace(/[^A-Za-z0-9_]/g, "_");
+// Mermaid erDiagram 글을 만든다. ||--o{ 는 "참조되는 쪽 1 : 참조하는 쪽 여러 개" 관계 표시다.
 export const generateMermaidErDiagram = (model: SqlSchemaModel): string => {
   const tableBlocks = model.tables.map((table) => {
     const columns = table.columns.map((column) => `    ${column.type.replace(/[^A-Za-z0-9_]/g, "_") || "UNKNOWN"} ${mermaidIdentifier(column.name)}${column.primaryKey ? " PK" : ""}${column.unique ? " UK" : ""}`);
@@ -182,6 +192,7 @@ export const generateMermaidErDiagram = (model: SqlSchemaModel): string => {
   return ["erDiagram", ...tableBlocks, ...relationships].join("\n");
 };
 
+// 이전·이후 스키마 비교: 추가·삭제된 테이블, 그리고 같은 테이블 안의 추가·삭제·변경(타입·NULL·PK·UNIQUE)된 컬럼.
 export const compareSqlSchemas = (before: SqlSchemaModel, after: SqlSchemaModel): SqlSchemaDiff => {
   const beforeMap = new Map(before.tables.map((table) => [table.name.toLowerCase(), table]));
   const afterMap = new Map(after.tables.map((table) => [table.name.toLowerCase(), table]));

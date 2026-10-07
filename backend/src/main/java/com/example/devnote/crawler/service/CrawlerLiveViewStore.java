@@ -25,9 +25,23 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
+/**
+ * 실행 중인 크롤러의 "실시간 화면 상태"를 보관하는 곳입니다. (서버 메모리, 한 번에 한 실행)
+ *
+ * [두 스레드가 함께 쓴다]
+ *   브라우저 스레드: 화면 캡처·단계 진행·로그를 기록하고, 수동 조작 대기열에서 명령을 꺼낸다(pollCommand).
+ *   요청 스레드    : 화면이 /live-view로 상태를 읽고(get), /live-view/actions로 명령을 넣는다(enqueue).
+ * 그래서 값마다 동시 접근에 안전한 도구를 쓴다.
+ *   AtomicReference·AtomicBoolean: 값 하나를 통째로 안전하게 바꾼다(updateAndGet은 이전 값을 보고 새 값을 만든다).
+ *   ConcurrentLinkedQueue        : 여러 스레드가 동시에 넣고 꺼내도 되는 대기열.
+ *   synchronized(recordedSteps)  : 일반 ArrayList를 한 번에 한 스레드만 만지게 잠근다.
+ *
+ * State는 record(불변)라서 바꿀 때마다 새 State를 만들어 교체한다. 읽는 쪽은 항상 "완성된 한 상태"만 보게 된다.
+ */
 @Slf4j
 @Component
 public class CrawlerLiveViewStore {
+    /** 화면에서 보낸 수동 조작 한 건(종류, 클릭 좌표, 입력 글자). */
     public record ManualCommand(CrawlerManualActionType action, double x, double y, String text) {
     }
 
@@ -55,6 +69,7 @@ public class CrawlerLiveViewStore {
         }
     }
 
+    // 원격으로 누를 수 있는 키를 제한한다(브라우저 단축키 등 예상치 못한 키 조합을 막기 위해).
     private static final Set<String> ALLOWED_KEYS = Set.of(
         "Enter", "Tab", "Backspace", "Escape", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"
     );
@@ -71,6 +86,7 @@ public class CrawlerLiveViewStore {
     private final AtomicReference<List<CrawlerExecutionLog>> logs = new AtomicReference<>(List.of());
     private final List<CrawlerScenarioStep> recordedSteps = new ArrayList<>();
 
+    /** 새 실행 시작: 이전 실행의 명령·로그·단계·녹화 기록을 모두 비우고 RUNNING 상태로 만든다. */
     public void begin(boolean enabled) {
         begin(enabled, false);
     }
@@ -96,6 +112,10 @@ public class CrawlerLiveViewStore {
         ));
     }
 
+    /**
+     * 현재 브라우저 화면을 JPEG(품질 70)로 찍어 data URL로 저장한다. 화면이 <img src>로 바로 보여 준다.
+     * 화면 보기가 꺼져 있으면 캡처하지 않고 단계 이름만 갱신한다. 캡처 실패는 실행을 멈출 일이 아니라 debug 로그만 남긴다.
+     */
     public void capture(Page page, String stage) {
         State current = state.get();
         if (!current.enabled()) {
@@ -114,6 +134,7 @@ public class CrawlerLiveViewStore {
         }
     }
 
+    /** 사람이 직접 처리해야 하는 단계에서 멈췄다고 표시한다(WAITING_FOR_USER). 화면에 안내 문구와 조작 버튼이 나타난다. */
     public void requireManualAction(String stage, String message) {
         state.updateAndGet(current -> new State(
             current.enabled(), true, stage, current.imageDataUrl(), Instant.now(), true, message,
@@ -121,6 +142,7 @@ public class CrawlerLiveViewStore {
         ));
     }
 
+    /** 사람이 처리를 마쳐 다시 진행한다. 남아 있던 수동 명령은 버린다. */
     public void resolveManualAction(String stage) {
         commands.clear();
         state.updateAndGet(current -> new State(
@@ -129,6 +151,11 @@ public class CrawlerLiveViewStore {
         ));
     }
 
+    /**
+     * 화면에서 온 수동 조작을 검사한 뒤 대기열에 넣는다. 지금 받을 수 없는 조작이면 400 오류로 알려 준다.
+     *   PAUSE: 단계 실행 중에만 / 계속·다시 시도·건너뛰기·중단: 사람의 선택을 기다리는 중에만
+     *   클릭·입력·키: PC 창 모드가 아니고, 수동 처리·실패 확인·녹화 중일 때만(클릭 좌표는 1280×720 화면 안)
+     */
     public void enqueue(CrawlerManualActionRequest request) {
         State current = state.get();
         if (request.action() == CrawlerManualActionType.PAUSE) {
@@ -172,6 +199,7 @@ public class CrawlerLiveViewStore {
         commands.add(new ManualCommand(request.action(), 0, 0, text));
     }
 
+    /** 브라우저 스레드가 대기열에서 명령 하나를 꺼낸다. 없으면 null. */
     public ManualCommand pollCommand() {
         return commands.poll();
     }
@@ -180,6 +208,7 @@ public class CrawlerLiveViewStore {
 
     public void collected(int count) { collectedCount.set(count); }
 
+    /** 실행 기록을 한 줄 추가한다. 메모리를 지키려고 최근 200줄만 남긴다. */
     public void addLog(String step, String status, String message) {
         logs.updateAndGet(current -> {
             List<CrawlerExecutionLog> next = new ArrayList<>(current);
@@ -188,6 +217,7 @@ public class CrawlerLiveViewStore {
         });
     }
 
+    /** 성공으로 끝났다고 표시한다(active = false → 화면의 주기적 갱신이 멈춘다). */
     public void completeSuccess(String stage) {
         commands.clear();
         pauseRequested.set(false);
@@ -198,6 +228,7 @@ public class CrawlerLiveViewStore {
         ));
     }
 
+    /** 실패로 끝났다고 표시하고 실패 이유·해 볼 일을 남긴다. */
     public void completeFailure(String stage, String reason, String action) {
         commands.clear();
         pauseRequested.set(false);
@@ -228,6 +259,7 @@ public class CrawlerLiveViewStore {
         return closeRequested.get();
     }
 
+    /** 실패 확인용으로 열어 둔 브라우저를 닫은 뒤의 상태. 닫힌 이유를 해 볼 일 뒤에 덧붙인다. */
     public void endInspection(String closeMessage) {
         commands.clear();
         state.updateAndGet(current -> new State(
@@ -247,6 +279,7 @@ public class CrawlerLiveViewStore {
         stepStatuses.set(List.copyOf(statuses));
     }
 
+    /** 단계 하나의 상태(PENDING → RUNNING → DONE·FAILED·BLOCKED·WAITING·SKIPPED)를 바꾸고 기록에도 남긴다. */
     public void markStep(int index, String status, String detail) {
         List<CrawlerStepStatusResponse> currentSteps = stepStatuses.get();
         if (index >= 0 && index < currentSteps.size()) {
@@ -314,6 +347,7 @@ public class CrawlerLiveViewStore {
         }
     }
 
+    /** 녹화된 단계의 복사본을 돌려준다(밖에서 원본 목록을 바꾸지 못하게). */
     public List<CrawlerScenarioStep> recordedSteps() {
         synchronized (recordedSteps) {
             return List.copyOf(recordedSteps);
@@ -325,6 +359,7 @@ public class CrawlerLiveViewStore {
         recording.set(false);
     }
 
+    /** 녹화가 끝났다고 표시한다(RECORDED). 화면은 기록된 단계를 단계 목록으로 가져올 수 있다. */
     public void endRecording(String stage, String reason) {
         recording.set(false);
         commands.clear();
@@ -334,6 +369,7 @@ public class CrawlerLiveViewStore {
         ));
     }
 
+    /** 지금 상태를 응답 모양으로 묶어 돌려준다(화면이 0.7초마다 요청). */
     public CrawlerLiveViewResponse get() {
         State current = state.get();
         return new CrawlerLiveViewResponse(

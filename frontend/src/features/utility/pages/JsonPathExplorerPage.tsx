@@ -1,3 +1,6 @@
+// JsonPathExplorerPage.tsx — JSONPath 탐색기: 식을 실행해 일치한 값을 보여 주고, JSON 트리에서 항목을 누르면 그 경로 식을 만들어 준다.
+// 식 해석·실행은 utils/jsonPathExplorer.ts.
+
 import { useMemo, useState } from "react";
 import { UtilityHelpDialog, UtilityPageTitle } from "@/features/utility/components/UtilityHelpDialog";
 import { copyText, downloadText } from "@/features/utility/utils/browserFileUtils";
@@ -34,6 +37,7 @@ interface JsonTreeNodeProps {
   onPathSelect: (path: string) => void;
 }
 
+// JSON 값을 접고 펼 수 있는 트리로 그리는 재귀 컴포넌트. 결과에 포함된 경로는 강조하고, 누르면 그 경로를 식으로 넣는다.
 const JsonTreeNode = ({ value, path, label, depth, matchedPaths, onPathSelect }: JsonTreeNodeProps) => {
   const isContainer = value !== null && typeof value === "object";
   const entries: Array<readonly [string | number, unknown]> = Array.isArray(value)
@@ -56,6 +60,7 @@ export const JsonPathExplorerPage = () => {
   const resultValue = matches.length === 1 ? matches[0]?.value : matches.map((match) => match.value);
   const resultText = matches.length === 0 ? "" : JSON.stringify(resultValue, null, 2);
 
+  // 입력 JSON을 읽고 식을 실행한다. JSON이나 식이 틀리면 오류 문구를 보여 준다.
   const runQuery = (nextQuery = query): void => {
     try {
       const nextValue = parseJsonValue(source);

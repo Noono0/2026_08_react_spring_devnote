@@ -113,6 +113,7 @@ const requestLines = (request: CrawlerRunRequest | undefined, sitePreset: Crawle
   return lines;
 };
 
+/** 실패 결과 → 실행 화면 상태 → 요청 설정 순서로 줄을 모아 하나의 글로 합친다(join("\n")). */
 export const buildCrawlerFailureReport = ({
   problem, request, sitePreset, liveView, occurredAt = new Date(), pageUrl,
 }: CrawlerFailureReportInput): string => [

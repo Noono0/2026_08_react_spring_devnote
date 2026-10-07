@@ -15,10 +15,12 @@ interface ToolbarButtonProps {
 }
 
 const ToolbarButton = ({ command, label, title, shortcut, children, onCommand }: ToolbarButtonProps) => {
+  // 버튼을 누를 때(mousedown) 기본 동작을 막아 textarea의 선택 범위·포커스가 버튼으로 넘어가지 않게 한다.
   const preserveEditorSelection = (event: MouseEvent<HTMLButtonElement>): void => event.preventDefault();
   return <button type="button" aria-label={label} aria-keyshortcuts={shortcut} title={shortcut ? `${title} · ${shortcut}` : title} onMouseDown={preserveEditorSelection} onClick={() => onCommand(command)}>{children ?? label}</button>;
 };
 
+// 마크다운 서식 버튼 모음. aria-keyshortcuts로 단축키(Ctrl+B 등)를 화면 낭독기에도 알린다.
 export const MarkdownFormattingToolbar = ({ onCommand }: MarkdownFormattingToolbarProps) => {
   const [codeLanguage, setCodeLanguage] = useState<MarkdownCodeLanguage>("JAVASCRIPT");
 

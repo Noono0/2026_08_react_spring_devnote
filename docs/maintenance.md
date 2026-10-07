@@ -2,6 +2,112 @@
 
 [문서 목록으로](../README.md) · [작업 규칙](../AGENTS.md) · [검증 명령](verification.md)
 
+## 2026-10-08 — 서버 정규식 실행 제한 보강, 다음 작업 인계
+
+- **정규식**: `JavaRegexService`가 1초 제한 뒤 요청은 끊었지만 Java 정규식이 중단 신호를 확인하지 않아 작업 스레드(2개)가 계속 계산했습니다. 입력을 `DeadlineCharSequence`로 감싸 `charAt()`마다 제한 시각·중단 신호를 확인하게 해 계산 자체를 멈춥니다. 배포 체크리스트 3번을 완료로 바꿨습니다.
+- **검증**: 백엔드 `gradlew.bat test`(JDK 21) 120개 중 119개 통과·1개 기본 건너뜀. 새 테스트는 사전 검사를 통과하는 `\d*\d*\d*z`를 두 번 보낸 뒤 정상 요청이 처리되는지 확인합니다(약 2초).
+- **다음 시작점(미처리)**: 배포 체크리스트 2번(비로그인 요청을 1번 회원으로 처리하고 `X-Member-Id`로 회원 전환 가능)은 학습 문서·다이어그램·파일 업로드의 동작과 학습 가이드 설명이 함께 바뀌어 이번에 하지 않았습니다. 운영 프로필에서 헤더·기본 회원 대체를 끄고 로그인을 요구하는 방향으로 `CurrentMemberProvider`부터 확인합니다. 이 세션의 브랜치(`chore/deploy-script`)는 main으로 PR을 열어 CI 결과를 확인해야 합니다.
+
+## 2026-10-08 — 크롤러 원격 브라우저 모드와 슈퍼관리자 전용 API
+
+- **실행 위치 설정**: `CrawlerBrowserSettings`가 `CRAWLER_BROWSER_MODE`(local 기본 / remote)를 읽습니다. remote면 `PlaywrightCrawlerEngine.openBrowser`가 표시 방식과 관계없이 항상 `CRAWLER_REMOTE_BROWSER_URL`(비어 있으면 `CRAWLER_PC_BROWSER_URL`)의 Chrome에 CDP로 연결하고, 이 서버에서는 Chromium을 띄우지 않습니다. 운영 `compose.app.yml`은 remote가 기본, 로컬 `compose.yml`은 local입니다. 값 오타는 서버 시작 시 실패합니다. compose가 빈 값을 빈 문자열로 넘겨 `${A:${B}}` 대체가 동작하지 않는 문제를 코드에서 직접 처리했습니다.
+- **화면 선택이 아니라 서버 설정인 이유**: 운영 서버(1GB)에서 실수로 Chromium을 띄우면 서버 전체가 멈출 수 있어 위험한 선택지를 화면에 두지 않았습니다. 화면은 `GET /browser-status`로 상태만 보여 주고, 연결이 안 되면 실행·녹화 시작을 막고 5초마다 다시 확인합니다.
+- **권한**: `CrawlerAccessInterceptor`(+`CrawlerWebConfiguration`)가 `/api/v1/utilities/crawler/**` 전체를 슈퍼관리자 전용으로 막습니다(비로그인 401, 그 외 403). API가 17개 넘어 Service마다 넣으면 새 API에서 빠뜨리기 쉬워 경로 단위로 걸었습니다. 화면은 `RoleProtectedRoute`에 `fallback`을 추가해 홈으로 튕기지 않고 안내합니다. 배포 체크리스트 1번을 완료로 바꿨습니다.
+- **원격 연결 안내**: `docs/crawler.md`에 내 PC + Tailscale 구성(`tailscale serve`로 사설망 안에서만 9222 전달)을 정리했습니다. 9222를 인터넷에 열지 말라는 경고를 compose·문서에 함께 적었습니다.
+- **검증**: 백엔드 `gradlew.bat test`(JDK 21) 119개 중 118개 통과·1개 기본 건너뜀(외부 크롤러). `@WebMvcTest`로 인터셉터가 실제로 등록돼 401/403과 오류 코드를 돌려주는지 확인했습니다(처음에는 프로젝트 보안 설정을 불러오지 않아 Spring Security 기본 401로 손님 테스트가 우연히 통과했고, `@Import(SecurityConfiguration)`과 오류 코드 확인을 추가해 바로잡았습니다). 원격 연결 확인은 가짜 `/json/version` HTTP 서버로 검사했습니다. 프론트엔드 `eslint`·`tsc -b` 통과, Vitest 전체 107개 파일·332개 테스트 통과(원격 미연결 시 실행·녹화 버튼 잠금, 권한 없을 때 안내 표시 포함), `vite build` 성공, `docker compose config`로 compose 문법 확인.
+- **미검증 범위**: 실제 Tailscale 사설망을 통한 PC Chrome 연결, Oracle 서버 컨테이너에서 Tailscale IP로의 접근, `tailscale serve --tcp` 명령은 이 PC에서 실행해 보지 않았습니다(문서에 버전별 확인 방법을 적음). 실행 중인 로컬 백엔드를 재시작하지 않아 브라우저에서 원격 모드 화면은 단위·화면 테스트로만 확인했습니다.
+
+## 2026-10-08 — 학습 진도 체크와 실습 과제 힌트
+
+- **진도 체크**: `features/curriculum/state/learningProgressStore.ts`(Zustand `persist` + Zod 검증, 키 `learningProgress`)에 완료한 단계와 과제를 저장합니다. 로드맵 카드의 `완료 표시`·상단 진행률 막대, 학습 가이드 대화상자의 `이 단계 완료로 표시`(1~25단계에서만)와 과제 체크박스가 같은 저장소를 봅니다. 과제 키는 순서가 아니라 `guideId::과제 문장`이라 순서를 바꿔도 체크가 엉뚱한 과제로 옮겨 가지 않습니다. 로드맵 같은 공통 기능이 `practice/` 코드를 import하지 않도록 21단계 저장소를 재사용하지 않고 같은 방식으로 새로 만들었습니다.
+- **과제 힌트**: `practiceTasks`를 `{ task, hint }` 66개로 바꾸고, 각 단계 소스를 확인해 실제 함수·상태 이름을 짚는 힌트를 넣었습니다. 대화상자에서는 `<details>`로 접어 둡니다. 코드와 맞지 않던 과제 문장 세 개를 고쳤습니다: 로드맵의 "Drawer"(그런 단계 없음) 제거, 12단계 "위·아래 순서 변경"(이미 `moveCategory`로 구현됨) → 맨 위·맨 아래 이동, 25단계 "테스트가 없는 다른 단계"(모든 단계에 테스트 있음) → 테스트가 다루지 않는 동작. 14단계 이탈 경고 힌트는 이 앱이 `BrowserRouter`라 `useBlocker`를 쓸 수 없다는 점을 반영했습니다.
+- **검증**: 프론트엔드 `eslint`·`tsc -b` 통과, Vitest 전체 106개 파일·328개 테스트 통과, `vite build` 성공. 실행 중인 Vite에서 로드맵 완료 표시·진행률·새로고침 후 유지, 375px 폭에서 가로 넘침 없음을 확인하고 확인용 진도는 지웠습니다. 힌트 문장 66개의 내용은 소스와 대조했지만 학습자가 실제로 따라 해 보는 검증은 하지 않았습니다.
+
+## 2026-10-08 — 에디터 본문·표 입력 버그 수정, 로그인 실패 제한
+
+- **에디터 본문이 빈 칸으로 열리던 문제**: 시드 문서 1~3·101·102번의 `content_json`이 빈 문서라, 수정 화면이 빈 에디터로 열리고 거기에 쓴 글이 원래 HTML 본문을 덮어쓸 수 있었습니다. `data.sql`의 JSON과 `content_text`를 HTML 본문과 맞췄고(새 DB), 이미 만들어진 DB는 `INSERT IGNORE`라 바뀌지 않으므로 `rich-text-editor/utils/editorInitialContent.ts`가 "JSON이 비고 HTML에 본문이 있으면 HTML로 채운다"로 대비합니다. 운영 DB는 직접 수정하지 않았습니다.
+- **표 직접 입력 form 중첩**: `RichTextTableMenu`의 안쪽 `<form>`이 문서 작성 `<form>` 안에 들어가, React submit 이벤트가 바깥까지 전달되어 Enter 한 번에 문서 저장까지 실행될 수 있었습니다. 그룹(`role="group"`)+버튼+Enter 처리로 바꿨습니다.
+- **로그인 실패 제한**: `LoginAttemptLimiter`가 같은 IP·아이디로 15분 안에 5번 틀리면 15분 동안 맞는 비밀번호도 거부합니다(429 `LOGIN_TEMPORARILY_LOCKED`, 남은 분 표시). 없는 아이디도 실패로 세어 잠금 여부로 아이디 존재를 알 수 없게 했고, 아이디만이 아니라 IP와 묶어 공격자가 진짜 관리자를 잠그지 못하게 했습니다. 서버 메모리 기준이라 재시작하면 기록이 사라지고 분산 공격은 막지 못합니다. 설정은 `AUTH_LOGIN_MAX_FAILURES`·`AUTH_LOGIN_FAILURE_WINDOW`·`AUTH_LOGIN_LOCK_DURATION`(compose 두 파일·`.env.example` 반영), 배포 체크리스트 7번을 완료로 바꿨습니다.
+- **검증**: 백엔드 `gradlew.bat test`(JDK 21, Testcontainers) 108개 중 107개 통과·1개 기본 건너뜀(외부 크롤러), 새 `data.sql`도 테스트 DB 초기화에서 실행됨. 프론트엔드 `eslint`·`tsc -b` 통과, 에디터 테스트 14개 통과(form 중첩·Enter 시 바깥 form 미제출, HTML 대체 채우기). 실행 중인 로컬 서버에서 JSON이 빈 3번 문서 수정 화면이 HTML 본문으로 열리고 form 중첩이 0개임을 확인했습니다. `docker compose config`로 compose 문법 확인.
+- **미검증 범위**: 로그인 잠금은 단위 테스트로만 확인했고, 실행 중인 로컬 백엔드를 재시작하지 않아 실제 브라우저 잠금 화면은 확인하지 않았습니다. 운영 서버의 Nginx 뒤에서 `getRemoteAddr()`가 실제 IP를 주는지는 `forward-headers-strategy: native` 설정으로 판단했고 운영에서 직접 확인하지는 않았습니다.
+
+## 2026-10-08 — 학습 13·14단계 순서 교체, 14단계 문서 CRUD와 업무 History 코드 분리
+
+- **단계 순서**: 기본 과정(1~14단계) 안에서 실제 API 문서 CRUD(옛 13단계) 다음에 로컬 State 관리자 CRUD(옛 14단계)가 오던 역순을 바로잡았습니다. 관리자 사용자 CRUD가 13단계(난이도 9), 문서 CRUD가 14단계(난이도 9.5)로 기본 과정을 마칩니다. 주소(`/react/admin-users`, `/react/documents`)와 `guideId`는 그대로입니다. 폴더는 `practice/14-admin-users` → `practice/13-admin-users`로 옮겼고, `learningGuides.test.ts`에 기본 과정 난이도가 낮아지지 않는지 검사하는 테스트를 추가했습니다.
+- **코드 분리**: 예전 `features/document`는 학습 화면(`/react/documents`)과 포트폴리오 업무 History(`/history`)가 `isHistory` 스위치로 같은 페이지·API·쿼리 훅·타입을 함께 썼습니다. 학습자가 실습하며 고친 코드가 포트폴리오에 영향을 주지 않도록 다음처럼 나눴습니다.
+  - `features/practice/14-documents/`: 14단계 학습 전용. `/documents`만 호출하고 캐시 키는 `["documents", …]`입니다.
+  - `features/history/`: 업무 History 전용. `/history`만 호출하고 캐시 키는 `["history", …]`이며, 태그 필터·슈퍼관리자 편집 규칙을 담습니다. 학습용과 응답 모양은 같지만 타입을 의도적으로 따로 둡니다.
+  - `features/rich-text-editor/`: 14단계·업무 History·포트폴리오 블록 편집기가 함께 쓰는 Tiptap 에디터와 확장입니다.
+  - `shared/ui/Pagination.tsx`: 옛 `DocumentPagination`. 14단계·업무 History·Snippet·투표 목록이 함께 씁니다.
+- **캐시 무효화**: 로그인·로그아웃 시 `resetAuthenticatedQueries`가 `["documents"]`만 지우던 것을 `["history"]`까지 지우도록 추가했습니다. 분리 후 이것이 빠지면 로그아웃 뒤 슈퍼관리자용 임시저장 글이 캐시에 남습니다.
+- **문서**: `docs/learning-guide.md`의 로드맵 표·학습 순서·코드 위치 설명을 고쳤고, 18단계 비교 대상을 잘못 적은 "7단계"를 "10단계 업무 관리"로 바로잡았습니다.
+- **검증**: 프론트엔드 `eslint`·`tsc -b` 통과, Vitest 전체 102개 파일·316개 테스트 통과, `vite build` 성공(기존 500kB 초과 청크 경고는 그대로이며 첫 화면 청크에 에디터가 포함되지 않음을 확인), `node scripts/verify-typescript-syntax.cjs` 353개 파일 통과. 실행 중인 로컬 백엔드와 Vite로 로드맵 순서, 14단계 목록·상세·수정, 업무 History 방문자 목록·상세, 슈퍼관리자 로그인 후 임시저장 글·작성 버튼 표시, 로그아웃 후 즉시 숨김을 브라우저에서 확인했습니다.
+- **미검증 범위**: 이 PC에 실제 Python이 없어 `scripts/verify-static.py`와 Python 회귀 테스트는 실행하지 못했습니다. 백엔드 코드는 바꾸지 않아 Gradle 테스트는 실행하지 않았습니다. 백엔드는 여전히 `DocumentService`·`documents` 테이블을 범위(`PRACTICE`·`HISTORY`)로 나눠 공유합니다.
+- **발견한 기존 문제(이번에 수정하지 않음)**: ① `data.sql`의 업무 History 예시 글(101번 등)은 `content_json`이 빈 문서라 편집 화면 본문이 비어 보이고, 그대로 저장하면 HTML 본문이 빈 값으로 바뀔 수 있습니다. ② `RichTextTableMenu`의 표 직접 입력 `<form>`이 문서 작성 `<form>` 안에 중첩되어 React가 콘솔 오류를 냅니다.
+
+## 2026-10-05 — 화면별 ? 사용 설명 보강
+
+- 기존 React 학습·유틸리티 도움말을 유지하고, 누락된 포트폴리오 홈·프로젝트 상세·업무 History 목록/상세/편집·크롤러·유틸리티 홈·관리자 5개 화면 및 React 난이도 목록 제목 옆에 `?`를 추가했습니다. 공통 `FeatureHelpButton`에서 화면별 사용 순서와 주의사항을 모달로 보여 줍니다.
+- 유틸리티 홈과 공통 도움말의 데이터 보관 안내가 도구별 서버 전송·저장 방식과 어긋나지 않도록 고쳤습니다. `docs/user-guide.md`에는 화면 내 도움말 위치를 기록했습니다.
+- 프론트엔드 `lint`·`typecheck`·`build` 통과, Vitest 전체 98개 파일·309개 테스트 통과. 처음 실행에서 새 테스트 3개가 jsdom의 `dialog.showModal` 미구현 때문에 실패해 테스트용 대체 함수를 추가하고 전체 테스트를 재실행했습니다. 빌드는 성공했으나 500kB 초과 청크 경고가 남습니다. 백엔드·실제 브라우저 화면·외부 크롤링 동작은 이번 변경에서 검증하지 않았습니다.
+
+## 2026-10-05 — 화면 중심 사용설명서 추가
+
+- `docs/user-guide.md`에 첫 실행, 권한별 메뉴, 포트폴리오·History, React 학습, 크롤러 설정·녹화·결과 검색, API Workspace, 다이어그램, 데이터 보관 위치와 문제 해결을 실제 화면 순서로 정리했습니다. README 문서 목록에서 바로 열 수 있게 연결했습니다.
+- 기존 기능 코드는 변경하지 않았습니다. 문서 링크·명령·화면 문구를 현재 소스 및 관련 가이드와 대조하고 상대 링크·이미지 경로 및 `git diff --check`를 확인했습니다. 실제 외부 사이트 크롤링, PDF 인쇄 결과, 운영 환경의 로그인은 이번 문서 작업에서 재검증하지 않았습니다.
+
+## 2026-10-05 — 프로젝트 전체 설명 주석 보강, 심화 학습 19~25단계 문서 반영
+
+- **설명 주석(코드 변경 없음)**: 백엔드 전체(공통 응답·예외·보안·로그 필터·AOP, 회원·문서·파일·관리자·투표·포트폴리오·코드 조각·정규식·다이어그램·크롤러의 Controller·Service·DAO·DTO·엔티티)와 MyBatis Mapper XML, `schema.sql`·`data.sql`에 왕초보용 설명 주석을 달았습니다. 프론트엔드는 학습 15~25단계를 1~14단계 수준으로 보강하고, 포트폴리오·관리자·크롤러·유틸리티(API 작업 공간, 각종 도구 utils·화면·컴포넌트)·에디터 확장·학습 가이드 데이터에 파일 머리말과 함수 단위 설명을 추가했습니다.
+- **주석만 바뀌었다는 확인 방법**: 작업 전 `frontend/src`·`backend/src/main`의 사본을 떠 두고, 두 쪽에서 주석·빈 줄을 지운 "코드 줄"이 완전히 같은지 파일마다 비교했습니다(328개 파일 일치). 비교 과정에서 블록 주석 안의 `*/`(Cron 예시)와 `map(() => (` 바로 안쪽의 JSX 주석이 문법을 깨뜨린 것을 발견해 즉시 고쳤습니다. 블록 주석 안에는 `*/`를 쓰지 않고, JSX 주석은 요소의 자식 위치에만 둡니다.
+- **문서**: `learning-guide.md` 로드맵 표에 19~25단계를 추가하고 단계 수를 25개로 고쳤습니다. README의 단계 수와 설명도 맞췄습니다. (19~25단계 화면·테스트, Vitest `pool: "threads"` 변경은 이전 작업에서 추가되었고 이 기록에 함께 남깁니다. Windows에서 기본 `forks` 풀이 가끔 모듈을 잘못 읽던 현상을 피하기 위한 설정입니다.)
+- **검증**: 주석 비교 도구로 328개 파일의 코드 줄 일치 확인. 백엔드 JDK 21·Docker로 `gradlew.bat test` 통과(BUILD SUCCESSFUL, 주석을 단 `schema.sql`·`data.sql` 실행 포함). 프론트엔드 `lint`·`typecheck`·`test`(97개 파일·306개 테스트)·`build` 통과. 이 PC에 실제 Python이 없어(Microsoft Store 별칭만 있음) `scripts/verify-static.py`와 Python 회귀 테스트는 실행하지 못했습니다. 브라우저 화면 확인은 하지 않았습니다(주석만 바뀌어 동작 변화 없음).
+
+## 2026-10-04 — 포트폴리오 공개 준비: 공유 미리보기, README, 프로젝트 상세, History 태그, PDF 저장
+
+- **공유 미리보기·탭 제목**: `frontend/public/favicon.svg`, `og-image.png`(1200×630, JDK AWT로 생성)과 Open Graph 메타 태그를 추가했습니다. `og:image` 전체 주소는 빌드 변수 `VITE_SITE_URL`(Actions는 저장소 변수 `SITE_URL`)로 붙이며, 비어 있으면 상대 주소입니다. `DocumentTitle`이 React 19 `<title>`로 화면마다 "화면 이름 | DevNote"를 표시합니다. 이를 위해 사이드바 메뉴 데이터를 `app/navigation/navigationGroups.ts`로 옮겨 사이드바와 공유합니다.
+- **README·트러블슈팅**: README 첫 화면에 CI 배지, 화면 캡처 3장(`docs/images`), 구조도(Mermaid), 트러블슈팅 링크를 넣었습니다. 캡처는 개인 정보가 없는 학습·도구 화면만 사용했고 포트폴리오 홈 캡처는 넣지 않았습니다. 실제 사례 6건을 `docs/troubleshooting.md`에 정리했습니다.
+- **프로젝트 상세**: `portfolio_project_details` 테이블(기술 스택 JSON·역할·저장소·데모 주소)을 추가했습니다. 기존 테이블에 컬럼을 더하지 않아 운영 `validate`와 충돌하지 않습니다. 기술 스택은 서버와 화면이 같은 규칙(공백·대소문자 중복 제거)으로 정리하고, 저장소·데모 주소는 http(s)만 허용합니다. 홈 카드는 요약·기술·링크와 `자세히 보기`만 보여 주고, `/projects/:sectionId`가 전체 설명을 보여 줍니다. 공개 전환·정렬 요청에도 프로젝트 정보를 담아 지워지지 않게 했습니다.
+- **History 태그**: `document_tags` 테이블, 작성·수정 시 태그 저장(`#`·공백·대소문자 중복 정리, 최대 10개·20자), 목록 `?tag=` 필터, `GET /api/v1/history/tags`(방문자는 공개 글 기준) 집계를 추가했습니다. 목록 태그는 문서별 조회 대신 한 번에 읽습니다(N+1 방지). 목록 응답 record에 MyBatis가 쓸 생성자를 `@AutomapConstructor`로 지정했습니다. MSW 더미 데이터·핸들러도 태그를 지원합니다.
+- **PDF 저장**: 포트폴리오 홈에 `PDF로 저장`(브라우저 인쇄) 버튼과 `@media print` 규칙을 추가했습니다. 메뉴·편집 버튼·비공개 블록을 숨기고 흰 배경에 검은 글자로 찍으며, 외부 링크는 주소를 함께 인쇄합니다.
+- **발견한 기존 버그 수정**: 로컬 기본 설정(`JPA_DDL_AUTO=update`)에서는 Hibernate가 기동할 때마다 `use_yn`·`current_yn` 컬럼을 Entity 정의대로 다시 만듭니다. 이때 `schema.sql`의 기본값이 지워져, 새로 만든 로컬 DB에서는 문서·업무 History 저장이 500 오류로 실패했습니다. Entity에 같은 기본값을 넣고, `update` 모드로 확인하는 `LocalSchemaUpdateIntegrationTest`를 추가했습니다(수정 전 코드에서는 실패 확인). 테스트·운영은 `validate`라 영향이 없었습니다.
+- **배포 주의**: 운영 `.env.app`이 `SQL_INIT_MODE=never`라면, 이번 버전을 처음 올릴 때 한 번 `always`로 기동해야 새 테이블 2개가 만들어집니다([배포 가이드](deployment.md) 7번 절).
+- **검증**: 백엔드 `gradlew.bat test` 101개 중 100개 통과(외부 사이트 1개 건너뜀). 새 Testcontainers 통합 테스트는 프로젝트 상세 2개, 태그 2개, 로컬 스키마 2개입니다. 프론트엔드 lint·typecheck·build 통과, Vitest 78개 파일·254개 테스트 통과(전체 실행이 가끔 관련 없는 파일에서 실패하는 기존 현상이 1번 나왔고, 재실행·단독 실행에서는 통과). 임시 MySQL 컨테이너와 로컬 백엔드로 프로젝트 상세 화면, History 태그 필터, 인쇄 규칙 적용 화면, 탭 제목을 브라우저에서 확인한 뒤 컨테이너를 삭제했습니다. 실제 인쇄 대화상자의 PDF 결과, 카카오톡 등 외부 서비스의 링크 미리보기, 운영 서버 반영은 확인하지 않았습니다.
+- **참고**: Vite 개발 서버가 `sed -i`로 바꾼 파일의 변경을 놓쳐 옛 `App.tsx`를 내보낸 일이 있었습니다. 화면이 코드와 다르면 개발 서버를 재시작해 확인합니다.
+
+## 2026-10-04 — 페이지 오류 화면, 크롤러 결과 비교, 심화 학습 15~18단계
+
+- `PageErrorBoundary`를 `PageOutlet`의 Suspense 바깥에 두었습니다. 렌더링 오류가 나도 메뉴는 남고, 재배포 뒤 옛 화면 파일을 못 찾는 경우를 "새 버전이 배포되었습니다"로 구분합니다. 주소가 바뀌면 오류 상태가 초기화됩니다.
+- 크롤러 실행 이력에 `이전과 비교`를 추가했습니다. 바로 이전 성공 실행과 비교해 새 항목 표시, `새 항목만 보기`, 사라진 항목 목록을 제공합니다. 링크 칸이 있으면 링크로, 없으면 상세내용·이미지주소를 뺀 칸 값으로 같은 항목인지 판단합니다. 수집 값의 링크는 http(s)일 때만 링크로 만듭니다. 저장된 이력끼리만 비교하며 백엔드는 바꾸지 않았습니다.
+- React 학습 단계 15~18을 추가했습니다: 무한 스크롤(`useInfiniteQuery`·IntersectionObserver), 동적 견적서 폼(`useFieldArray`·Zod 배열 검증), Context 로그인·보호 라우트(중첩 라우트·`location.state` 검증), React 19 Actions 방명록(`useActionState`·`useFormStatus`·`useOptimistic`). 오류 실험실은 19번으로 옮겼습니다. 로드맵·난이도 화면은 `learningGuides.ts`의 `learningStageRoutes`·`roadmapLearningGuides`를 공통으로 사용합니다.
+- 검증: 프론트엔드 lint·typecheck·build 통과, Vitest 74개 파일·241개 테스트 통과. 로컬 Vite에서 무한 스크롤 자동 로딩, 보호 화면 → 로그인 → 원래 화면 복귀, 방명록 저장 중 표시 후 확정, 375px 폭의 동적 폼·로드맵(가로 스크롤 없음)을 확인했습니다. 백엔드 연결이 필요한 크롤러 비교 화면은 테스트로만 확인했습니다.
+- 주의: 이 PC에서 Vitest 전체 실행이 가끔 관련 없는 파일에서 `... is not a function`이나 `SyntaxError: Unexpected token '}'`로 실패합니다. 실패하는 파일은 매번 다르고 따로 실행하면 통과합니다. 같은 PC에서 기존 커밋(68개 파일)은 10번 모두 통과했고, 현재 소스를 별도 작업본에 복사해 돌리면 6번 중 1번 실패했습니다. 테스트 파일 수가 늘면서 병렬 모듈 로딩 문제가 드러난 것으로 보이며 원인은 확정하지 못했습니다. CI에서 같은 현상이 나오면 Vitest 4.0.0을 최신 4.x로 올리거나 `--maxWorkers` 조정을 검토합니다.
+
+## 2026-10-03 — 미사용 임시 업로드 파일 자동 정리, 권한 화면 표시용 안내
+
+- `TemporaryFileCleanupService`가 매일 한국 시간 04:30에 24시간 지난 미사용 `TEMP` 파일을 정리합니다. DB 행은 `DELETED`·`deleted_at`으로 남기고 디스크 파일만 삭제합니다. 한 번에 최대 500개씩 처리합니다.
+- 문서 본문 이미지는 저장 후에도 `TEMP`로 남아 상태만으로 판단할 수 없습니다. 그래서 문서·문서 이력의 썸네일과 본문 HTML, `document_files`, 포트폴리오 썸네일·`portfolio_section_files`에서 쓰이지 않는 파일만 대상으로 합니다. 삭제 UPDATE에서 같은 조건을 다시 확인해, 조회 직후 쓰이기 시작한 파일은 남깁니다. 저장소 밖 경로는 건드리지 않습니다.
+- 보관 기간·실행 시각·시간대는 `FILE_TEMPORARY_RETENTION`·`FILE_TEMPORARY_CLEANUP_CRON`·`FILE_TEMPORARY_CLEANUP_ZONE`으로 바꿀 수 있습니다. `@EnableScheduling`을 애플리케이션에 추가했습니다.
+- 관리자 권한관리 화면과 API 문서에 "표시용 설정이며 실제 접근 권한은 서버의 고정 규칙을 따른다"는 안내를 추가했습니다. 권한 검사 동작은 바꾸지 않았습니다.
+- 검증: JDK 21·Docker로 `gradlew.bat test` 94개 중 93개 통과(외부 사이트 테스트 1개 건너뜀). 새 `TemporaryFileCleanupServiceTest` 4개, 실제 MySQL로 정리 조건을 확인하는 `TemporaryFileCleanupMapperTest` 1개가 포함됩니다. 프론트엔드 lint·typecheck·test(222개)·build 통과. 실제 예약 시각의 자동 실행과 운영 서버 반영은 확인하지 않았습니다.
+
+## 2026-10-03 — 업로드 한도·의존성 고정·배포 조건 정리와 공개 전 체크리스트
+
+- 전체 점검 결과 중 개인 서버 운영에 바로 영향을 주는 항목을 고쳤습니다. 인증·권한 관련 항목(크롤러 API 인증, `X-Member-Id` 대체 처리, 정규식 실행 제한, 관리자 해시 반영, DEBUG 비밀번호 로그)은 사용자 결정에 따라 코드를 바꾸지 않았습니다. 대신 [배포 가이드](deployment.md#12-외부-공개-전-체크리스트)에 공개 전 체크리스트로 정리했습니다.
+- `frontend/nginx.conf`에 `client_max_body_size 25m`를 추가했습니다. 기존에는 Nginx 기본값 1MB 때문에 Docker·운영 환경에서 1MB가 넘는 첨부·이미지 업로드가 백엔드에 닿기 전에 413으로 거절되었습니다.
+- 로컬은 pnpm 11로 설치하고 `pnpm-lock.yaml`도 커밋되어 있었지만, Dockerfile·CI·`start-local-backend.cmd`는 lock을 읽지 않는 `npm install`을 사용했습니다. `package.json`에 `packageManager: pnpm@11.19.0`을 추가하고 세 곳 모두 `pnpm install --frozen-lockfile`로 바꿨습니다. 실행·검증 문서의 설치 명령도 함께 바꿨습니다.
+- `publish-images.yml`은 `main` 푸시 직후가 아니라 CI가 성공한 뒤(`workflow_run`)에만 운영 이미지를 만듭니다. 이미지 SHA 태그는 CI가 검사한 커밋을 사용합니다.
+- 관리자 해시는 DB가 처음 만들어질 때 한 번만 적용된다는 경고와 수동 SQL 갱신 방법을 배포 가이드 5번 절에 추가했습니다. `X-Member-Id` 설명은 실제로 파일 업로드·다이어그램 API에도 적용된다는 사실에 맞게 고쳤습니다.
+- 검증: 프론트엔드 `npm run lint`·`npm run typecheck`·`npm run test`(68개 파일·222개 테스트)·`npm run build` 통과. Docker와 같은 순서(`pnpm install --frozen-lockfile` → `pnpm exec msw init` → `pnpm run build`)를 Git 추적 파일만 복사한 임시 폴더에서 실행해 성공을 확인했습니다. 수정한 두 워크플로 YAML의 구문 해석도 확인했습니다.
+- 미검증: Docker가 꺼져 있어 이미지 빌드와 `nginx -t`는 실행하지 못했습니다. GitHub Actions의 `workflow_run` 연결은 실제 `main` 푸시 후 Actions 탭에서 확인해야 합니다. 이 PC의 `python`은 Microsoft Store 별칭이라 저장소 정적 검사도 실행하지 못했습니다. 관리자 역할별 권한 표가 실제 권한 검사에 쓰이지 않는 문제는 동작 방식을 결정해야 해서 이번에 바꾸지 않았습니다.
+
+## 2026-09-30 — 네이버 접근 제한 시 추가 요청 중단
+
+- 최근 실행 기록에서 한 번에 목록 10페이지·150건을 수집하고 상세글 수집이 켜져 있었음을 확인했습니다. 계정 보호조치의 내부 판정 원인은 확인할 수 없으므로 특정 대기 시간을 안전한 값으로 제시하지 않습니다.
+- 네이버 상세글은 실패한 URL을 자동 재요청하지 않고, HTTP 오류·로그인·보호조치 화면이 감지되거나 내용 읽기가 3건 연속 실패하면 남은 수집을 중단하도록 변경했습니다. 폼 로그인에서도 보호조치 문구를 별도 실패 원인으로 표시합니다. 다른 사이트의 기존 재시도 동작은 유지합니다.
+- 크롤러 화면과 가이드에서 고정 대기 시간 권장 문구를 제거하고, 상세글 건수만큼 추가 페이지를 연다는 점과 허용된 수집 범위 확인을 안내합니다. 새 설정의 기본 대기는 500ms에서 1,500ms로 변경했으며 기존 저장 설정은 그대로 둡니다.
+- 검증: 백엔드 `gradlew.bat test` 89개 중 88개 통과·외부 사이트 테스트 1개 건너뜀, 프론트엔드 `npm run lint`·`npm run typecheck`·`npm run test`(68개 파일·222개 테스트)·`npm run build` 통과, 저장소 정적 검사 10개 그룹과 Python 회귀 테스트 4개 통과. 실제 네이버 계정으로 재실행하지 않아 보호조치 예방 여부는 검증하지 않았습니다.
+
 ## 2026-09-27 — 크롤러 화면 소스 정리
 
 - `WebCrawlerPage.tsx`에서 독립된 책임을 분리했습니다. 결과 표·빠른 검색·조건 필터·`현재 결과 CSV`는 `CrawlerResultsPanel.tsx`, 네이버 저장 세션 상태·삭제는 `CrawlerNaverSessionPanel.tsx`가 맡습니다. 수집 설정 폼 섹션은 하나의 요청을 만드는 같은 책임이라 페이지에 남겼습니다. 페이지는 655줄에서 525줄이 됐습니다.

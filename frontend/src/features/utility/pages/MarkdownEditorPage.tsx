@@ -52,6 +52,7 @@ const message: string = "Hello DevNote";
 console.log(message);
 \`\`\``;
 
+// 되돌리기 기록은 최근 100단계까지만 보관한다.
 const HISTORY_LIMIT = 100;
 
 export const MarkdownEditorPage = () => {
@@ -76,6 +77,8 @@ export const MarkdownEditorPage = () => {
     pendingSelectionReference.current = undefined;
   }, [source]);
 
+  // 직접 만든 되돌리기(undo)·다시 실행(redo): 바뀌기 전 글을 기록에 쌓는다. 화면에 보일 값이 아니라 ref에 둔다.
+  // (도구 모음 버튼으로 글을 바꾸면 textarea 기본 되돌리기가 동작하지 않기 때문에 직접 관리한다)
   const updateSourceWithHistory = (nextSource: string): void => {
     if (nextSource === source) return;
     undoHistoryReference.current = [...undoHistoryReference.current, source].slice(-HISTORY_LIMIT);
@@ -101,6 +104,7 @@ export const MarkdownEditorPage = () => {
     setSource(nextSource);
   };
 
+  // 도구 모음 버튼: 현재 선택 범위에 마크다운 명령을 적용하고, 다시 그려진 뒤 커서를 새 선택 위치로 옮긴다(pendingSelection).
   const applyCommand = (command: MarkdownEditorCommand): void => {
     const editor = editorReference.current;
     const selectionStart = editor?.selectionStart ?? selectionRange.start;
@@ -114,6 +118,7 @@ export const MarkdownEditorPage = () => {
     } else updateSourceWithHistory(result.value);
   };
 
+  // 단축키: Ctrl/Cmd+Z 되돌리기, Shift+Z·Y 다시 실행, B 굵게, I 기울임, U 밑줄, Shift+X 취소선.
   const handleEditorKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>): void => {
     if (!(event.ctrlKey || event.metaKey)) return;
     const key = event.key.toLocaleLowerCase();

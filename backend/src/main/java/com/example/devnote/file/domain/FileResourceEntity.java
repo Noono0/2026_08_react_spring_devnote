@@ -7,6 +7,10 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
+/**
+ * file_resources 테이블 구조(JPA 엔티티, 구조 확인용). 읽기·쓰기는 FileResourceMapper.xml이 한다.
+ * 파일 내용은 DB에 넣지 않고 디스크에 저장한 뒤, 여기에는 "어디에 무엇이 있는지"만 기록한다.
+ */
 @Getter
 @Entity
 @Table(name = "file_resources")

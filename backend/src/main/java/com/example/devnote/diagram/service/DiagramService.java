@@ -6,6 +6,10 @@ import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.List;
 
+/**
+ * 다이어그램 업무 규칙의 약속. 구현은 DiagramServiceImpl.
+ * 모든 메서드가 HttpServletRequest를 받아 현재 회원을 확인하고, 그 회원의 다이어그램만 다룬다.
+ */
 public interface DiagramService {
     PageResponse<DiagramListItemResponse> getDiagrams(DiagramSearchCondition condition, HttpServletRequest request);
 

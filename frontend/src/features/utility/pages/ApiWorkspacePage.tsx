@@ -1,3 +1,13 @@
+/**
+ * ApiWorkspacePage.tsx — API 작업 공간(브라우저에서 쓰는 Postman 비슷한 도구)
+ *
+ * [기능] 여러 탭으로 요청 편집·전송 / 실행 기록 / 컬렉션·폴더에 요청 저장 / 환경 변수({{baseUrl}}) / 컬렉션 실행기 / Postman 가져오기·내보내기
+ * [저장 위치] 서버가 아니라 이 브라우저 localStorage. 키 앞에 회원 범위(member-번호 또는 guest)를 붙여 회원마다 따로 저장한다.
+ *   비회원은 열린 탭만 저장하고, 기록·컬렉션·환경은 로그인했을 때만 저장한다.
+ * [보안] 저장 전에 토큰·비밀번호·비밀 헤더 값을 지우거나 가린다(sanitizeRequestForStorage). 비밀 환경 변수 값은 저장하지 않는다.
+ * [전송] 요청은 브라우저 fetch로 직접 보내므로 대상 API의 CORS 정책이 그대로 적용된다(utils/apiWorkspaceExecutor.ts).
+ */
+
 import { parseStoredCollections, parseStoredFolders, parseStoredSavedRequests, parseStoredEnvironments } from "@/features/utility/utils/apiWorkspaceStorage";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -50,6 +60,7 @@ const methods: ApiWorkspaceMethod[] = ["GET", "POST", "PUT", "PATCH", "DELETE", 
 
 export const ApiWorkspacePage = () => {
   const sessionQuery = useAuthSessionQuery();
+  // 로그인 회원별로 저장 공간을 나눈다. 다른 회원으로 바뀌면 그 회원의 작업 공간을 다시 불러온다.
   const authenticatedMemberId = sessionQuery.data?.authenticated ? sessionQuery.data.memberId : undefined;
   const storageScope = authenticatedMemberId ? `member-${authenticatedMemberId}` : "guest";
   const storagePrefix = `devnote-api-workspace:${storageScope}`;
@@ -113,6 +124,7 @@ export const ApiWorkspacePage = () => {
   const activeRequest = activeTab?.request;
   const workspaceLoaded = loadedStorageScope === storageScope;
 
+  // 회원 범위가 정해지거나 바뀌면: 진행 중인 요청을 취소하고, 그 범위의 저장 값을 읽어 화면 State를 채운다.
   useEffect(() => {
     if (sessionQuery.isPending) return;
     setLoadedStorageScope(undefined);
@@ -140,11 +152,13 @@ export const ApiWorkspacePage = () => {
     setLoadedStorageScope(storageScope);
   }, [authenticatedMemberId, sessionQuery.isPending, storagePrefix, storageScope]);
 
+  // 탭이 바뀔 때마다 저장(비밀 값은 가린 뒤). workspaceLoaded 전에는 저장하지 않아, 불러오기 전의 빈 값으로 덮어쓰는 일을 막는다.
   useEffect(() => {
     if (!workspaceLoaded) return;
     localStorage.setItem(`${storagePrefix}:tabs`, serializeTabsForStorage(tabs));
   }, [storagePrefix, tabs, workspaceLoaded]);
 
+  // 기록·컬렉션·폴더·저장 요청·환경은 로그인했을 때만 저장한다. 비밀 환경 변수는 값을 빈 문자열로 바꿔 저장한다.
   useEffect(() => {
     if (!workspaceLoaded || !authenticatedMemberId) return;
     localStorage.setItem(`${storagePrefix}:history`, JSON.stringify(historyItems));
@@ -159,11 +173,13 @@ export const ApiWorkspacePage = () => {
     else localStorage.removeItem(`${storagePrefix}:active-environment-id`);
   }, [activeEnvironmentId, authenticatedMemberId, collections, environments, folders, historyItems, savedRequests, storagePrefix, workspaceLoaded]);
 
+  // 지금 탭의 요청을 바꾸고 "저장 안 됨(dirty)" 표시를 켠다.
   const updateActiveRequest = (nextRequest: ApiWorkspaceRequest): void => {
     if (!activeTab) return;
     setTabs((currentTabs) => currentTabs.map((tab) => tab.id === activeTab.id ? { ...tab, request: nextRequest, dirty: true } : tab));
   };
 
+  // 탭 전환: 이전 탭의 응답·오류 표시는 비운다(다른 요청의 응답이 남아 보이지 않게).
   const activateTab = (tabId: string): void => {
     setActiveTabId(tabId);
     setResponse(undefined);
@@ -171,6 +187,7 @@ export const ApiWorkspacePage = () => {
     setRequestError(undefined);
   };
 
+  // 새 탭 열기. 기록·저장 요청에서 열었으면 그 출처 id를, 컬렉션에서 새로 만들면 저장할 위치를 탭에 기억해 둔다.
   const addTab = (
     request?: ApiWorkspaceRequest,
     source: Partial<Pick<ApiWorkspaceTab, "historyItemId" | "savedRequestId" | "saveTargetCollectionId" | "saveTargetFolderId">> = {},
@@ -185,6 +202,7 @@ export const ApiWorkspacePage = () => {
     activateTab(nextTab.id);
   };
 
+  // 기록·저장 요청 열기: 이미 같은 출처의 탭이 열려 있으면 새로 열지 않고 그 탭으로 이동한다.
   const openHistoryItem = (historyItem: ApiWorkspaceHistoryItem): void => {
     const openTab = findOpenApiWorkspaceTab(tabs, { historyItemId: historyItem.id });
     if (openTab) {
@@ -209,6 +227,7 @@ export const ApiWorkspacePage = () => {
     applicationNotification.success("Collection에 새 요청 탭을 만들었습니다.", "요청을 작성한 뒤 Save를 누르면 선택한 위치가 자동 지정됩니다.");
   };
 
+  // 저장하지 않은 변경이 있는 탭은 확인을 거친 뒤(force) 닫는다. 마지막 탭을 닫으면 빈 탭을 하나 새로 만든다.
   const closeTab = (tabId: string, force = false): void => {
     const targetTab = tabs.find((tab) => tab.id === tabId);
     if (!force && targetTab?.dirty) { setCloseTabTargetId(tabId); return; }
@@ -219,6 +238,10 @@ export const ApiWorkspacePage = () => {
     setCloseTabTargetId(undefined);
   };
 
+  /**
+   * 요청 보내기: 제한 시간이 지나면 AbortController로 취소한다. 실제로 보낼 요청(환경 변수 치환 후)을 먼저 보여 주고 응답을 기다린다.
+   * 로그인했고 "비공개 실행"이 아니면 기록에 남긴다(응답 본문은 "응답 저장"을 켰을 때만).
+   */
   const executeRequest = async (): Promise<void> => {
     if (!activeRequest || isSending) return;
     setRequestError(undefined); setResponse(undefined); setActualRequest(undefined); setSending(true);
@@ -263,6 +286,7 @@ export const ApiWorkspacePage = () => {
     }
   };
 
+  // 고른 기록 삭제. 알림의 "실행 취소" 버튼을 누르면 지운 항목을 되돌린다.
   const deleteHistoryItems = (historyIds: Set<string>): void => {
     const deletedItems = historyItems.filter((historyItem) => historyIds.has(historyItem.id));
     setHistoryItems((currentItems) => currentItems.filter((historyItem) => !historyIds.has(historyItem.id)));
@@ -270,6 +294,7 @@ export const ApiWorkspacePage = () => {
     toast.success(`${deletedItems.length}개 History를 삭제했습니다.`, { duration: 6000, action: { label: "실행 취소", onClick: () => setHistoryItems((currentItems) => [...deletedItems, ...currentItems].sort((left, right) => right.executedAt.localeCompare(left.executedAt))) } });
   };
 
+  // 저장 요청 복제: 새 id를 붙인 복사본을 같은 위치에 만든다(즐겨찾기·휴지통 표시는 초기화).
   const duplicateSavedRequest = (savedRequestId: string): void => {
     const sourceRequest = savedRequests.find((savedRequest) => savedRequest.id === savedRequestId);
     if (!sourceRequest) return;
@@ -296,6 +321,7 @@ export const ApiWorkspacePage = () => {
     applicationNotification.success("Collection 이름을 변경했습니다.");
   };
 
+  // 컬렉션 삭제: 폴더는 지우고, 안의 저장 요청은 바로 지우지 않고 휴지통(deletedAt)으로 옮긴다.
   const deleteCollection = (): void => {
     if (!collectionDeleteTargetId) return;
     const deletedAt = new Date().toISOString();
@@ -314,6 +340,7 @@ export const ApiWorkspacePage = () => {
     applicationNotification.success("Folder 이름을 변경했습니다.");
   };
 
+  // 폴더 삭제: 안의 요청은 지우지 않고 컬렉션 최상위로 옮긴다.
   const deleteFolder = (): void => {
     if (!folderDeleteTargetId) return;
     setFolders((currentFolders) => currentFolders.filter((folder) => folder.id !== folderDeleteTargetId));
@@ -337,6 +364,7 @@ export const ApiWorkspacePage = () => {
     setSaveDialogOpen(true);
   };
 
+  // 지금 탭의 요청을 고른 컬렉션·폴더에 저장한다(이미 저장된 요청이면 덮어쓰고 dirty 표시를 끈다).
   const saveCurrentRequest = (): void => {
     if (!activeRequest || !saveName.trim() || !saveCollectionId) return;
     const now = new Date().toISOString();
@@ -375,6 +403,7 @@ export const ApiWorkspacePage = () => {
     setFolders((currentFolders) => [...currentFolders, { id: createWorkspaceId(), collectionId: folderCollectionId, name: folderName.trim() }]); setFolderName(""); setFolderCollectionId(undefined);
   };
 
+  // 저장 요청을 다른 컬렉션·폴더로 옮긴다.
   const moveSavedRequest = (): void => {
     if (!moveSavedRequestTargetId || !moveCollectionId) return;
     setSavedRequests((currentRequests) => currentRequests.map((savedRequest) => savedRequest.id === moveSavedRequestTargetId ? {
@@ -389,6 +418,7 @@ export const ApiWorkspacePage = () => {
     applicationNotification.success("저장 요청을 이동했습니다.");
   };
 
+  // 새 환경 만들기: 바로 쓸 수 있게 baseUrl(http://localhost:8080) 변수 하나를 넣어 두고 활성 환경으로 고른다.
   const createEnvironment = (): void => {
     if (!environmentName.trim()) return;
     const environment: ApiWorkspaceEnvironment = {
@@ -407,6 +437,7 @@ export const ApiWorkspacePage = () => {
     await navigator.clipboard.writeText(response.body); applicationNotification.success("응답을 복사했습니다.");
   };
 
+  // 응답 내려받기: Blob 주소를 만들어 보이지 않는 <a download>를 눌러 저장한 뒤 주소를 해제한다(메모리 정리).
   const downloadResponse = (): void => {
     if (!response) return;
     const downloadBlob = response.downloadBlob ?? new Blob([response.body], { type: response.contentType });
@@ -416,6 +447,7 @@ export const ApiWorkspacePage = () => {
   const availableFolders = useMemo(() => folders.filter((folder) => folder.collectionId === saveCollectionId), [folders, saveCollectionId]);
   const availableMoveFolders = useMemo(() => folders.filter((folder) => folder.collectionId === moveCollectionId), [folders, moveCollectionId]);
   const moveSavedRequestTarget = savedRequests.find((savedRequest) => savedRequest.id === moveSavedRequestTargetId);
+  // 지금 요청을 cURL·fetch 등 코드로 바꾼 결과(비밀 값은 자리표시자). 요청이나 대상 언어가 바뀔 때만 다시 만든다.
   const generatedRequestCode = useMemo(() => activeRequest ? generateApiCode(codeTarget, activeRequest) : "", [activeRequest, codeTarget]);
 
   if (!activeTab || !activeRequest) return null;

@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/** AdminDao의 MyBatis 구현. AdminMapper.xml의 같은 id SQL을 실행한다. */
 @Repository
 @RequiredArgsConstructor
 public class AdminDaoImpl implements AdminDao {
@@ -27,6 +28,7 @@ public class AdminDaoImpl implements AdminDao {
         sqlSessionTemplate.update(NAMESPACE + "upsertRolePermission", Map.of("memberRole", memberRole, "permissionCode", permissionCode, "allowedYn", allowedYn));
     }
     @Override public void insertVisitorEvent(String visitorKey, Long memberId, String visitedPath) {
+        // 비회원 방문이면 memberId가 null이다. Map.of는 null 값을 넣으면 예외가 나므로 HashMap을 쓴다.
         Map<String, Object> parameters = new HashMap<>();
         parameters.put("visitorKey", visitorKey); parameters.put("memberId", memberId); parameters.put("visitedPath", visitedPath);
         sqlSessionTemplate.insert(NAMESPACE + "insertVisitorEvent", parameters);

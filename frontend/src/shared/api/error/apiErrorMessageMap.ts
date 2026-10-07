@@ -37,6 +37,9 @@ export const apiErrorMessageMap: Record<string, string> = {
   ACCESS_DENIED: "이 기능을 사용할 권한이 없습니다.",
   LOGIN_FAILED: "아이디 또는 비밀번호가 올바르지 않습니다.",
   ACCOUNT_NOT_ACTIVE: "현재 사용할 수 없는 계정입니다.",
+  // ※ LOGIN_TEMPORARILY_LOCKED(429, 로그인 실패 반복 잠금)는 일부러 여기에 넣지 않았다.
+  //   서버가 "N분 뒤 다시 시도해 주세요"처럼 남은 시간을 detail에 담아 보내는데,
+  //   사전에 고정 문구를 넣으면 그 값이 우선해서 남은 시간이 가려진다.
   LOGIN_ID_ALREADY_EXISTS: "이미 사용 중인 아이디입니다.",
   EMAIL_ALREADY_EXISTS: "이미 가입된 이메일입니다.",
 

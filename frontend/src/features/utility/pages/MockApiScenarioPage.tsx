@@ -1,3 +1,6 @@
+// MockApiScenarioPage.tsx — Mock API 시나리오 편집기: 메서드·경로별로 가짜 응답(상태·지연·본문·헤더)을 정의한다.
+// 정의한 시나리오는 API 작업 공간의 Mock 모드에서 실제 응답처럼 쓰인다(utils/mockApiEngine.ts). 저장은 localStorage.
+
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthSessionQuery } from "@/features/auth/hooks/useAuthSession";
@@ -30,6 +33,7 @@ export const MockApiScenarioPage = () => {
   const [helpOpen, setHelpOpen] = useState(false);
   const activeScenario = useMemo(() => scenarios.find((scenario) => scenario.id === activeScenarioId), [activeScenarioId, scenarios]);
 
+  // 시나리오가 바뀔 때마다 저장한다.
   useEffect(() => { localStorage.setItem(MOCK_API_SCENARIOS_STORAGE_KEY, JSON.stringify(scenarios)); }, [scenarios]);
 
   const updateScenario = (nextScenario: MockApiScenario): void => setScenarios((currentScenarios) => currentScenarios.map((scenario) => scenario.id === nextScenario.id ? { ...nextScenario, updatedAt: new Date().toISOString() } : scenario));
@@ -50,6 +54,7 @@ export const MockApiScenarioPage = () => {
     const remaining = scenarios.filter((scenario) => scenario.id !== scenarioId);
     setScenarios(remaining); setActiveScenarioId(remaining[0]?.id ?? ""); setTestResponse(undefined); setTestError("");
   };
+  // 지금 시나리오로 가짜 요청을 한 번 보내 어떤 응답이 고르는지 확인한다(순서 응답이면 호출 횟수가 하나 늘어난다).
   const testScenario = async (): Promise<void> => {
     if (!activeScenario) return;
     localStorage.setItem(MOCK_API_SCENARIOS_STORAGE_KEY, JSON.stringify(scenarios));
@@ -58,6 +63,7 @@ export const MockApiScenarioPage = () => {
     catch (error) { setTestError(error instanceof Error ? error.message : "Mock 요청을 실행하지 못했습니다."); }
     finally { setTesting(false); }
   };
+  // 같은 메서드·경로의 요청을 API 작업 공간에 열어 실제 화면에서 시험해 볼 수 있게 한다.
   const openInWorkspace = (): void => {
     if (!activeScenario) return;
     localStorage.setItem(MOCK_API_SCENARIOS_STORAGE_KEY, JSON.stringify(scenarios));

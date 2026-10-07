@@ -1,3 +1,6 @@
+// RealtimeTesterPage.tsx — WebSocket·SSE(Server-Sent Events) 연결 테스트: 연결·메시지 보내기·받은 이벤트 기록·자동 재연결
+// 연결 객체·재연결 타이머는 화면에 보일 값이 아니라서 State가 아니라 ref에 둔다.
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import { UtilityHelpDialog, UtilityPageTitle } from "@/features/utility/components/UtilityHelpDialog";
 import { ApiToolGuide } from "@/features/utility/components/ApiToolGuide";
@@ -43,6 +46,7 @@ export const RealtimeTesterPage = () => {
     if (manual) appendLog("SYSTEM", "disconnect", "연결을 종료했습니다.");
   };
 
+  // 주소를 검사한 뒤 새로 연결한다. 끊기면(직접 끊은 경우가 아니고 자동 재연결이 켜져 있으면) 지정한 시간 뒤 다시 연결한다.
   const connect = (): void => {
     const settings = settingsReference.current;
     let parsedUrl: URL;
@@ -79,6 +83,7 @@ export const RealtimeTesterPage = () => {
     });
   };
 
+  // 화면을 떠날 때 정리: 재연결 타이머를 지우고 연결을 닫는다(닫지 않으면 보이지 않는 연결이 계속 남는다).
   useEffect(() => () => {
     manuallyClosedReference.current = true;
     if (reconnectTimerReference.current) window.clearTimeout(reconnectTimerReference.current);
@@ -87,6 +92,7 @@ export const RealtimeTesterPage = () => {
   }, []);
 
   const visibleLogs = useMemo(() => filterRealtimeLogs(logs, query, direction), [direction, logs, query]);
+  // 메시지 보내기는 WebSocket만 가능하다(SSE는 서버 → 브라우저 한 방향).
   const sendMessage = (): void => {
     const connection = connectionReference.current;
     if (!(connection instanceof WebSocket) || connection.readyState !== WebSocket.OPEN) { applicationNotification.warning("연결된 WebSocket이 없습니다."); return; }

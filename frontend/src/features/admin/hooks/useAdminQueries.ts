@@ -1,3 +1,8 @@
+/**
+ * useAdminQueries.ts — 관리자 화면의 서버 상태 훅
+ * 조회 키는 ["admin", 종류] 모양으로 짓는다. 변경이 성공하면 같은 종류의 조회만 무효화해 다시 받는다.
+ */
+
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getAdminMembers, getGrades, getRolePermissions, getVisitAnalytics, updateAdminMember, updateGrade, updateRolePermission } from "@/features/admin/api/adminApi";
 import type { Grade } from "@/features/admin/types/adminTypes";
@@ -7,6 +12,7 @@ export const useAdminMembersQuery = () => useQuery({ queryKey: ["admin", "member
 export const useGradesQuery = () => useQuery({ queryKey: ["admin", "grades"], queryFn: getGrades });
 export const useRolePermissionsQuery = () => useQuery({ queryKey: ["admin", "permissions"], queryFn: getRolePermissions });
 export const useVisitAnalyticsQuery = () => useQuery({ queryKey: ["admin", "analytics"], queryFn: getVisitAnalytics });
+// 아래 변경 훅들은 모두 "요청 → 성공하면 해당 목록 캐시 무효화" 같은 모양이다.
 export const useUpdateMemberMutation = () => { const client = useQueryClient(); return useMutation({ mutationFn: ({ memberId, grade, role, accountStatus }: { memberId: number; grade: MemberGrade; role: MemberRole; accountStatus: string }) => updateAdminMember(memberId, { grade, role, accountStatus }), onSuccess: async () => client.invalidateQueries({ queryKey: ["admin", "members"] }) }); };
 export const useUpdateGradeMutation = () => { const client = useQueryClient(); return useMutation({ mutationFn: ({ gradeCode, request }: { gradeCode: string; request: Omit<Grade, "gradeCode"> }) => updateGrade(gradeCode, request), onSuccess: async () => client.invalidateQueries({ queryKey: ["admin", "grades"] }) }); };
 export const useUpdatePermissionMutation = () => { const client = useQueryClient(); return useMutation({ mutationFn: ({ role, permission, allowed }: { role: string; permission: string; allowed: boolean }) => updateRolePermission(role, permission, allowed), onSuccess: async () => client.invalidateQueries({ queryKey: ["admin", "permissions"] }) }); };

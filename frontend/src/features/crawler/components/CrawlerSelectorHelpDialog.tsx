@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 
+/**
+ * "CSS 선택자란?" 도움말 대화상자.
+ * 접근성: 열리면 닫기 버튼으로 포커스를 옮기고, Esc로 닫으며, 닫히면 처음 누른 버튼으로 포커스를 돌려준다.
+ */
 export const CrawlerSelectorHelpDialog = () => {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -17,6 +21,7 @@ export const CrawlerSelectorHelpDialog = () => {
 
   const close = (): void => {
     setOpen(false);
+    // 대화상자가 화면에서 사라진 다음(다음 실행 순서)에 포커스를 돌려줘야 포커스가 사라진 요소에 머물지 않는다.
     window.setTimeout(() => triggerRef.current?.focus(), 0);
   };
 

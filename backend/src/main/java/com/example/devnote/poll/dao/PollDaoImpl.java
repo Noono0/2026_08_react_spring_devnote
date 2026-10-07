@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/** PollDao의 MyBatis 구현. PollMapper.xml의 같은 id SQL을 실행한다. */
 @Repository
 @RequiredArgsConstructor
 public class PollDaoImpl implements PollDao {
@@ -25,6 +26,7 @@ public class PollDaoImpl implements PollDao {
     @Override public PollRow selectPollForUpdate(Long pollId) { return sqlSessionTemplate.selectOne(NAMESPACE + "selectPollForUpdate", pollId); }
     @Override public List<PollOptionRow> selectPollOptions(Long pollId) { return sqlSessionTemplate.selectList(NAMESPACE + "selectPollOptions", pollId); }
     @Override public int countPollOptions(Long pollId, List<Long> pollOptionIds) { return sqlSessionTemplate.selectOne(NAMESPACE + "countPollOptions", Map.of("pollId", pollId, "pollOptionIds", pollOptionIds)); }
+    // <Integer>selectOne: 결과 타입을 명시해 COUNT(*) 값을 Integer로 받고, 0보다 크면 이미 투표한 것으로 본다.
     @Override public boolean existsVote(Long pollId, String visitorKey, Long memberId) { return sqlSessionTemplate.<Integer>selectOne(NAMESPACE + "countVote", participantParameters(pollId, visitorKey, memberId)) > 0; }
     @Override public List<Long> selectVotedOptionIds(Long pollId, String visitorKey, Long memberId) { return sqlSessionTemplate.selectList(NAMESPACE + "selectVotedOptionIds", participantParameters(pollId, visitorKey, memberId)); }
     @Override public long countPollBallots(Long pollId) { return sqlSessionTemplate.selectOne(NAMESPACE + "countPollBallots", pollId); }
@@ -37,6 +39,7 @@ public class PollDaoImpl implements PollDao {
     @Override public int updatePollStatus(Long pollId, String status) { return sqlSessionTemplate.update(NAMESPACE + "updatePollStatus", Map.of("pollId", pollId, "status", status)); }
     @Override public int softDeletePoll(Long pollId, Long deletedBy) { return sqlSessionTemplate.update(NAMESPACE + "softDeletePoll", Map.of("pollId", pollId, "deletedBy", deletedBy)); }
 
+    /** 비회원이면 memberId가 null이라 Map.of 대신 HashMap을 쓴다(Map.of는 null 값을 허용하지 않는다). */
     private Map<String, Object> participantParameters(Long pollId, String visitorKey, Long memberId) {
         Map<String, Object> parameters = new HashMap<>();
         parameters.put("pollId", pollId);

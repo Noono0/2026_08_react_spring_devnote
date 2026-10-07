@@ -29,6 +29,7 @@ const bodyTypes: Array<{ value: RequestBodyType; label: string }> = [
   { value: "FORM_DATA", label: "form-data" },
 ];
 
+// 요청 편집 영역(파라미터·인증·헤더·본문 탭). 요청 객체 일부만 바꾼 새 객체를 onRequestChange로 올린다(State는 부모가 가진다).
 export const ApiWorkspaceRequestEditor = ({ request, activeSection, onSectionChange, onRequestChange }: ApiWorkspaceRequestEditorProps) => {
   const updateRequest = (changes: Partial<ApiWorkspaceRequest>): void => onRequestChange({ ...request, ...changes });
   const updateFormDataEntry = (entryId: string, changes: Partial<ApiWorkspaceFormDataEntry>): void => {

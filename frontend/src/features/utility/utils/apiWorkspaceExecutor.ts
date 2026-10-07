@@ -12,6 +12,7 @@ import {
 } from "@/features/utility/utils/apiWorkspaceUtils";
 import { executeMockApiRequest } from "@/features/utility/utils/mockApiEngine";
 
+// Basic 인증 헤더 값 = Base64("아이디:비밀번호"). btoa는 한글을 직접 못 다뤄 UTF-8 바이트로 바꾼 뒤 인코딩한다.
 const encodeBasicAuthentication = (username: string, password: string): string => {
   const encodedBytes = new TextEncoder().encode(`${username}:${password}`);
   let binaryValue = "";
@@ -19,6 +20,8 @@ const encodeBasicAuthentication = (username: string, password: string): string =
   return btoa(binaryValue);
 };
 
+// 응답 본문을 조각(chunk)씩 읽되 화면 표시 한도(1MB)까지만 모으고, 넘으면 읽기를 중단하고 "잘림(truncated)"으로 표시한다.
+// 전체 크기는 Content-Length 헤더(있으면)나 실제 받은 바이트로 계산해 보여 준다.
 const readLimitedResponse = async (response: Response): Promise<{ bytes: Uint8Array; sizeBytes: number; truncated: boolean }> => {
   const responseReader = response.body?.getReader();
   if (!responseReader) return { bytes: new Uint8Array(), sizeBytes: 0, truncated: false };

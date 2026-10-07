@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   deleteNaverCrawlerSession,
+  getCrawlerBrowserStatus,
   getCrawlerConfigurations,
   getCrawlerLiveView,
   getCrawlerRunHistories,
@@ -18,6 +19,7 @@ vi.mock("@/features/utility/utils/browserFileUtils", () => ({ downloadText: vi.f
 
 vi.mock("@/features/crawler/api/webCrawlerApi", () => ({
   runWebCrawler: vi.fn(),
+  getCrawlerBrowserStatus: vi.fn(),
   getNaverCrawlerSessionStatus: vi.fn(),
   deleteNaverCrawlerSession: vi.fn(),
   getCrawlerConfigurations: vi.fn(),
@@ -42,6 +44,7 @@ const mockedGetCrawlerConfigurations = vi.mocked(getCrawlerConfigurations);
 const mockedGetCrawlerLiveView = vi.mocked(getCrawlerLiveView);
 const mockedGetCrawlerRunHistories = vi.mocked(getCrawlerRunHistories);
 const mockedGetCrawlerRunHistory = vi.mocked(getCrawlerRunHistory);
+const mockedGetCrawlerBrowserStatus = vi.mocked(getCrawlerBrowserStatus);
 
 const savedNaverConfiguration: CrawlerConfiguration = {
   configurationId: 7, title: "LH 매물 수집", description: "2호선 주변", sitePreset: "NAVER_CAFE",
@@ -88,7 +91,35 @@ describe("WebCrawlerPage", () => {
     });
     mockedGetCrawlerRunHistories.mockReset();
     mockedGetCrawlerRunHistories.mockResolvedValue([]);
+    // 기본은 로컬 개발 환경(LOCAL, 항상 준비됨). 원격 브라우저 테스트에서만 바꾼다.
+    mockedGetCrawlerBrowserStatus.mockReset();
+    mockedGetCrawlerBrowserStatus.mockResolvedValue({ mode: "LOCAL", ready: true, remoteBrowserConnected: null, message: "이 서버에서 Chromium을 직접 실행합니다." });
     window.localStorage.clear();
+  });
+
+  it("원격 브라우저에 연결되지 않으면 안내를 보여 주고 실행·녹화 시작을 막는다", async () => {
+    mockedGetCrawlerBrowserStatus.mockResolvedValue({
+      mode: "REMOTE", ready: false, remoteBrowserConnected: false,
+      message: "원격 브라우저에 연결할 수 없습니다. 크롤링용 PC에서 start-pc-chrome.cmd로 Chrome을 열어 주세요.",
+    });
+    renderPage();
+    fireEvent.click(screen.getByRole("radio", { name: /^단계별 실행/ }));
+    fireEvent.click(screen.getByRole("button", { name: "페이지 열기" }));
+
+    expect(await screen.findByText("⚠ 원격 브라우저 연결 안 됨")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "▶ 실행" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /테스트 실행/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "● 녹화로 만들기" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "크롤링 실행" })).toBeDisabled();
+    expect(mockedRunWebCrawler).not.toHaveBeenCalled();
+  });
+
+  it("원격 브라우저에 연결되면 연결됨을 표시하고 실행할 수 있다", async () => {
+    mockedGetCrawlerBrowserStatus.mockResolvedValue({ mode: "REMOTE", ready: true, remoteBrowserConnected: true, message: "원격 브라우저에 연결할 수 있습니다." });
+    renderPage();
+
+    expect(await screen.findByText("✓ 원격 브라우저 연결됨")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "크롤링 실행" })).toBeEnabled();
   });
 
   it("처음에는 설정 목록만 보이고 새 설정을 누르면 입력 화면을 연다", () => {
@@ -412,5 +443,44 @@ describe("WebCrawlerPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "결과 보기" }));
     await waitFor(() => expect(screen.getByRole("textbox", { name: "수집 결과 빠른 검색" })).toHaveValue(""));
     expect(screen.getByText("봉천 원룸")).toBeInTheDocument();
+  });
+
+  it("이전 성공 실행과 비교해 새 항목만 보고 사라진 항목을 확인한다", async () => {
+    const summary = (historyId: number, status: string, startedAt: string) => ({
+      historyId, configurationId: 7, status, failureStage: null, failureMessage: status === "FAILURE" ? "실패" : null,
+      durationMillis: 100, itemCount: 2, startedAt, completedAt: startedAt,
+    });
+    const result = (items: Record<string, string>[]) => ({
+      crawledAt: "2026-10-04T00:00:00Z", pageTitle: "비교 결과", finalUrl: "https://example.com/list",
+      crawledPageCount: 1, scannedItemCount: items.length, durationMillis: 100,
+      fieldNames: ["제목", "링크"], items: items.map((item) => ({ ...item, _pageUrl: "https://example.com/list", _pageNumber: "1" })), warnings: [],
+    });
+    const newest = summary(13, "SUCCESS", "2026-10-04T00:00:00Z");
+    const failed = summary(12, "FAILURE", "2026-10-03T12:00:00Z");
+    const older = summary(11, "SUCCESS", "2026-10-03T00:00:00Z");
+    mockedGetCrawlerConfigurations.mockResolvedValue([savedNaverConfiguration]);
+    // 실패한 실행은 건너뛰고 바로 아래 성공 실행(#11)과 비교해야 한다.
+    mockedGetCrawlerRunHistories.mockResolvedValue([newest, failed, older]);
+    mockedGetCrawlerRunHistory.mockImplementation((historyId: number) => Promise.resolve(historyId === 13
+      ? { ...newest, request: savedNaverConfiguration.request, result: result([{ 제목: "유지된 매물", 링크: "https://example.com/1" }, { 제목: "새 매물", 링크: "https://example.com/3" }]) }
+      : { ...older, request: savedNaverConfiguration.request, result: result([{ 제목: "유지된 매물", 링크: "https://example.com/1" }, { 제목: "마감 매물", 링크: "https://example.com/2" }]) }));
+    renderPage(false);
+
+    fireEvent.click(await screen.findByRole("button", { name: "열기·수정" }));
+    fireEvent.click(screen.getByRole("button", { name: "목록으로" }));
+    // 가장 오래된 성공 실행은 비교 대상이 없으므로 비교 버튼이 하나만 보인다.
+    const compareButtons = await screen.findAllByRole("button", { name: /이전 성공 실행과 비교/ });
+    expect(compareButtons).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: "실행 이력 #13을 이전 성공 실행과 비교" }));
+
+    const summaryRegion = await screen.findByRole("region", { name: "이전 실행과 비교" });
+    expect(summaryRegion).toHaveTextContent("#11");
+    expect(summaryRegion).toHaveTextContent("새 항목 1건 · 그대로 1건 · 사라진 항목 1건");
+    expect(mockedGetCrawlerRunHistory).toHaveBeenCalledWith(11);
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "새 항목만 보기" }));
+    expect(screen.getByText("새 매물")).toBeInTheDocument();
+    expect(screen.queryByText("유지된 매물")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "마감 매물 ↗" })).toHaveAttribute("href", "https://example.com/2");
   });
 });

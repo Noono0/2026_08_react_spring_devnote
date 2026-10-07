@@ -1,5 +1,6 @@
 import type { CrawlerStepType } from "@/features/crawler/types/webCrawlerTypes";
 
+// 단계 종류별 아이콘 모양(SVG path 그리기 명령: M 이동, L/h/v 선, a 호 …). 이미지 파일 없이 코드로 그린다.
 const paths: Record<CrawlerStepType | "EXTRACT", string> = {
   GOTO: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18ZM3 12h18M12 3c-5 5-5 13 0 18M12 3c5 5 5 13 0 18M5 7h14M5 17h14",
   CLICK: "m5 3 14 9-7 1-3 7-4-17Z",
@@ -15,6 +16,7 @@ const paths: Record<CrawlerStepType | "EXTRACT", string> = {
   EXTRACT: "M5 3h10l4 4v14H5ZM15 3v5h4M8 12h8M8 16h6",
 };
 
+// stroke="currentColor": 글자색을 그대로 따라가 다크 모드·선택 상태에서도 색이 맞는다. 장식용이라 aria-hidden.
 export const CrawlerStepIcon = ({ type }: { type: CrawlerStepType | "EXTRACT" }) => (
   <svg className={`crawler-action-icon icon-${type.toLowerCase()}`} width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[type]} /></svg>
 );

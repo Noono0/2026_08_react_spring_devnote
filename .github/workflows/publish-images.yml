@@ -18,16 +18,27 @@
 name: Publish Images
 
 on:
-  push:
+  # ★ main 푸시 직후가 아니라 CI(테스트·빌드)가 "성공"한 뒤에만 이미지를 만든다.
+  #   테스트가 깨진 커밋이 운영 이미지(:main)로 배포되는 것을 막기 위해서다.
+  workflow_run:
+    workflows: ["Continuous Integration"]
+    types: [completed]
     branches: [main]
   # 수동 실행도 가능하게 둔다. 재배포만 하고 싶을 때 유용하다.
   workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
+  # workflow_run 에서는 github.sha 가 "CI 를 돌린 커밋"이 아닐 수 있으므로
+  # CI 가 실제로 검사한 커밋(head_sha)을 쓴다. 수동 실행이면 현재 커밋을 쓴다.
+  SOURCE_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
 
 jobs:
   publish:
+    # CI 가 실패했거나 PR 에서 돈 CI 라면 건너뛴다.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -35,6 +46,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SOURCE_SHA }}
 
       # 이미지 이름은 소문자만 허용된다.
       # GitHub 사용자명에 대문자가 있으면 그대로 쓰면 실패하므로 변환해 둔다.
@@ -59,7 +72,7 @@ jobs:
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ steps.owner.outputs.value }}/devnote-backend:main
-            ${{ env.REGISTRY }}/${{ steps.owner.outputs.value }}/devnote-backend:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ steps.owner.outputs.value }}/devnote-backend:${{ env.SOURCE_SHA }}
           # 캐시를 써서 두 번째 빌드부터 시간을 크게 줄인다.
           cache-from: type=gha,scope=backend
           cache-to: type=gha,scope=backend,mode=max
@@ -72,6 +85,8 @@ jobs:
         with:
           context: ./frontend
           push: true
+          # VITE_SITE_URL: 링크 미리보기 이미지 주소용. 저장소 Settings > Secrets and variables > Actions > Variables에
+          #   SITE_URL(예: https://도메인, 끝에 / 없이)을 넣는다. 없으면 빈 값으로 빌드된다.
           build-args: |
             VITE_API_BASE_URL=/api/v1
             VITE_HTTP_CLIENT=axios
@@ -79,9 +94,10 @@ jobs:
             VITE_MOCK_SCENARIO=success
             VITE_DEVELOPMENT_MEMBER_ID=1
             VITE_ENABLE_DEVELOPMENT_MENU=false
+            VITE_SITE_URL=${{ vars.SITE_URL }}
           tags: |
             ${{ env.REGISTRY }}/${{ steps.owner.outputs.value }}/devnote-frontend:main
-            ${{ env.REGISTRY }}/${{ steps.owner.outputs.value }}/devnote-frontend:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ steps.owner.outputs.value }}/devnote-frontend:${{ env.SOURCE_SHA }}
           cache-from: type=gha,scope=frontend
           cache-to: type=gha,scope=frontend,mode=max
 

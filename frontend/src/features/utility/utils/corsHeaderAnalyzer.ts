@@ -1,3 +1,12 @@
+/**
+ * corsHeaderAnalyzer.ts — 요청·응답 헤더를 보고 CORS 통과 여부와 보안·캐시 헤더를 점검하는 도구
+ *
+ * [CORS 요약]
+ *   브라우저는 다른 주소(origin)로 보낸 요청의 응답을, 서버가 Access-Control-Allow-* 헤더로 허락할 때만 JavaScript에 보여 준다.
+ *   GET·HEAD·POST + 단순 헤더 + 단순 Content-Type이 아니면 본 요청 전에 OPTIONS "사전 확인(preflight)"을 먼저 보낸다.
+ * 결과는 항목별 판정(ERROR·WARNING·INFO·PASS)과 100점 기준 점수(ERROR -20, WARNING -8)로 보여 준다.
+ */
+
 export type HeaderFindingSeverity = "ERROR" | "WARNING" | "INFO" | "PASS";
 
 export interface HeaderFinding {
@@ -24,8 +33,13 @@ export interface CorsHeaderAnalysisResult {
   score: number;
 }
 
+// 헤더 이름은 대소문자를 구분하지 않으므로 모두 소문자로 맞춰 비교한다.
 const normalizeHeaders = (headers: Record<string, string>): Record<string, string> => Object.fromEntries(Object.entries(headers).map(([key, value]) => [key.trim().toLowerCase(), value.trim()]));
 
+/**
+ * 개발자 도구에서 복사한 "이름: 값" 줄 목록을 객체로 바꾼다.
+ * 첫 줄 HTTP/1.1 200 상태 줄은 건너뛰고, 공백으로 시작하는 줄은 앞 헤더 값의 이어지는 줄로 붙인다.
+ */
 export const parseRawHeaders = (source: string): Record<string, string> => {
   const headers: Record<string, string> = {};
   let lastHeader = "";
@@ -40,16 +54,22 @@ export const parseRawHeaders = (source: string): Record<string, string> => {
   return headers;
 };
 
+// preflight 없이 보낼 수 있는 "단순" 헤더와 Content-Type 목록(CORS 규칙).
 const simpleRequestHeaders = new Set(["accept", "accept-language", "content-language", "content-type", "range"]);
 const simpleContentTypes = ["application/x-www-form-urlencoded", "multipart/form-data", "text/plain"];
 const splitHeaderList = (value = ""): string[] => value.split(",").map((item) => item.trim().toLowerCase()).filter(Boolean);
 
+/**
+ * 점검 순서: ① 허용 Origin(쿠키 요청이면 * 불가) ② 자격 증명 허용 ③ preflight가 필요하면 메서드·헤더 허용 목록
+ *          ④ 보안 헤더(CSP, nosniff, HSTS, Referrer-Policy) ⑤ Content-Type·Cache-Control
+ */
 export const analyzeCorsAndHeaders = (input: CorsHeaderAnalysisInput): CorsHeaderAnalysisResult => {
   const requestHeaders = normalizeHeaders(input.requestHeaders);
   const responseHeaders = normalizeHeaders(input.responseHeaders);
   const method = input.method.toUpperCase();
   const nonSimpleHeaders = Object.keys(requestHeaders).filter((header) => !simpleRequestHeaders.has(header));
   const contentType = requestHeaders["content-type"]?.split(";")[0]?.trim().toLowerCase();
+  // 단순 메서드가 아니거나, 단순하지 않은 헤더가 있거나, 단순하지 않은 Content-Type(예: application/json)이면 preflight가 일어난다.
   const preflightExpected = !["GET", "HEAD", "POST"].includes(method) || nonSimpleHeaders.length > 0 || Boolean(contentType && !simpleContentTypes.includes(contentType));
   const findings: HeaderFinding[] = [];
   const add = (category: HeaderFinding["category"], severity: HeaderFindingSeverity, id: string, title: string, description: string): void => { findings.push({ category, severity, id, title, description }); };

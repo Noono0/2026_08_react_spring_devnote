@@ -5,7 +5,13 @@ interface CrawlerNaverSessionPanelProps {
   onPreferSavedSessionChange: (preferSavedSession: boolean) => void;
 }
 
+/**
+ * 네이버 카페 프리셋일 때 보이는 "저장된 로그인 세션" 상태 패널.
+ * 세션은 start-naver-crawler-login.cmd(백엔드의 crawlerSessionLogin 도구)로 사람이 직접 로그인해 만든다.
+ * 세션이 있으면 "자동 사용"을 켜서 아이디·비밀번호 입력 없이 실행할 수 있다(캡차를 덜 만나는 장점도 있다).
+ */
 export const CrawlerNaverSessionPanel = ({ preferSavedSession, onPreferSavedSessionChange }: CrawlerNaverSessionPanelProps) => {
+  // 서버에는 "있는지 + 마지막 저장 시각"만 묻는다. 세션 내용(쿠키)은 화면으로 오지 않는다.
   const sessionQuery = useNaverCrawlerSessionStatus(true);
   const deleteSessionMutation = useDeleteNaverCrawlerSession();
   const sessionAvailable = sessionQuery.data?.available === true;

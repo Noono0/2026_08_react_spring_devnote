@@ -59,6 +59,7 @@ class DocumentServiceImplTest {
             "수정 제목",
             null,
             java.util.List.of(),
+            java.util.List.of(),
             objectMapper.createObjectNode().put("type", "doc"),
             "<p>수정 내용</p>",
             "수정 내용",

@@ -53,6 +53,11 @@ server:
 
 auth:
   remember-me-duration: ${AUTH_REMEMBER_ME_DURATION:30d}
+  # 로그인 무차별 대입 방어(LoginAttemptLimiter): 같은 IP·아이디로 failure-window 안에 max-failures번 틀리면 lock-duration 동안 잠근다.
+  login-limit:
+    max-failures: ${AUTH_LOGIN_MAX_FAILURES:5}
+    failure-window: ${AUTH_LOGIN_FAILURE_WINDOW:15m}
+    lock-duration: ${AUTH_LOGIN_LOCK_DURATION:15m}
 
 springdoc:
   swagger-ui:
@@ -87,6 +92,11 @@ application:
   file-storage:
     root-directory: ${FILE_STORAGE_ROOT:./storage}
     maximum-file-size-bytes: 20971520
+    # 업로드했지만 어디에도 쓰지 않은 임시 파일을 이 기간이 지난 뒤 정리합니다.
+    temporary-file-retention: ${FILE_TEMPORARY_RETENTION:24h}
+    # 정리 작업 실행 시각(초 분 시 일 월 요일)과 시간대. 기본값은 한국 시간 매일 04:30입니다.
+    temporary-file-cleanup-cron: ${FILE_TEMPORARY_CLEANUP_CRON:0 30 4 * * *}
+    temporary-file-cleanup-zone: ${FILE_TEMPORARY_CLEANUP_ZONE:Asia/Seoul}
     allowed-extensions:
       - png
       - jpg

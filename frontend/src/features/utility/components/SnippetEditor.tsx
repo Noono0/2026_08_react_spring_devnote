@@ -10,6 +10,7 @@ interface SnippetEditorProps {
 
 const languages = ["JavaScript", "TypeScript", "Java", "Kotlin", "SQL", "HTML", "CSS", "JSON", "YAML", "Bash", "PowerShell", "Other"];
 
+// 코드 조각 추가·수정 폼(제목·설명·언어·코드·태그·즐겨찾기). 열리면 제목 칸으로 포커스를 옮긴다.
 export const SnippetEditor = ({ snippet, pending, onCancel, onSave }: SnippetEditorProps) => {
   const [title, setTitle] = useState(snippet?.title ?? "");
   const [description, setDescription] = useState(snippet?.description ?? "");

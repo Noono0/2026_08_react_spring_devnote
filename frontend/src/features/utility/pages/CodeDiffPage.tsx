@@ -1,3 +1,6 @@
+// CodeDiffPage.tsx — 코드 비교 도구: 두 코드를 줄 단위로 비교해 추가·삭제·변경을 색으로 보여 주고, 통합 패치(diff)로 복사·내려받는다.
+// 비교 계산은 utils/codeDiff.ts(LCS 알고리즘). 이 화면은 입력·옵션(공백·대소문자 무시)·결과 표시만 맡는다.
+
 import { useMemo, useState } from "react";
 import { UtilityHelpDialog, UtilityPageTitle } from "@/features/utility/components/UtilityHelpDialog";
 import { compareCode, createUnifiedPatch, type DiffRow } from "@/features/utility/utils/codeDiff";
@@ -18,6 +21,7 @@ const afterExample = `interface User {
 
 const greeting = "Hello DevNote";`;
 
+// 바뀐 줄 안에서 앞뒤 공통 부분을 빼고 "실제로 달라진 글자"만 강조해 보여 준다.
 const InlineDiffText = ({ row, side }: { row: DiffRow; side: "OLD" | "NEW" }) => {
   const current = side === "OLD" ? row.oldText : row.newText;
   const other = side === "OLD" ? row.newText : row.oldText;
@@ -50,6 +54,7 @@ export const CodeDiffPage = () => {
   const changedCount = rows.filter((row) => row.type !== "EQUAL").length;
   const patch = createUnifiedPatch("before", "after", rows);
 
+  // 왼쪽·오른쪽 입력을 맞바꾼다(비교 방향 뒤집기).
   const swap = (): void => {
     setOldSource(newSource);
     setNewSource(oldSource);

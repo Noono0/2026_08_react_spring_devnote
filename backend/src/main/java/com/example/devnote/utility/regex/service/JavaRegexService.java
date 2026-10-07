@@ -17,12 +17,27 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
+/**
+ * 사용자가 보낸 정규식을 Java로 실행합니다.
+ *
+ * [왜 조심해야 하나? — ReDoS]
+ *   (a+)+ 같은 "반복 안의 반복" 패턴은 특정 입력에서 계산량이 폭발적으로 늘어 서버 CPU를 오래 붙잡을 수 있다.
+ *   그래서 세 겹으로 막는다:
+ *   1. 위험해 보이는 패턴(중첩 반복, .*.*)은 실행 전에 거부
+ *   2. 별도 작업 스레드에서 실행하고 1초가 넘으면 기다리기를 멈춤(Future.get 타임아웃).
+ *      사전 차단을 빠져나가는 패턴(예: \d*\d*\d*z)도 있으므로, 입력을 DeadlineCharSequence로 감싸
+ *      작업 스레드의 계산 자체도 1초에 끊는다(스레드 2개가 영원히 붙잡히는 것 방지)
+ *   3. 결과는 최대 200개까지만 모음
+ */
 @Service
 public class JavaRegexService {
     private static final int MAXIMUM_MATCH_COUNT = 200;
     private static final long TIMEOUT_MILLISECONDS = 1_000;
+    // 패턴 안의 이름 있는 그룹 (?<이름>...)을 찾아 이름을 꺼내는 정규식.
     private static final Pattern NAMED_GROUP_PATTERN = Pattern.compile("\\(\\?<([A-Za-z][A-Za-z0-9]*)>");
+    // "괄호 안에 + 또는 *가 있는데 괄호 뒤에 또 반복"(예: (a+)+) 또는 .*가 두 번 이상 이어지는 패턴을 찾는다.
     private static final Pattern POTENTIALLY_DANGEROUS_PATTERN = Pattern.compile("(\\([^)]*[+*][^)]*\\))[+*{]|(\\.\\*){2,}");
+    // 정규식 전용 작업 스레드 2개. 데몬 스레드라서 서버를 끌 때 이 스레드 때문에 종료가 막히지 않는다.
     private final ExecutorService executor = Executors.newFixedThreadPool(2, runnable -> {
         Thread thread = new Thread(runnable, "java-regex-worker");
         thread.setDaemon(true);
@@ -35,14 +50,19 @@ public class JavaRegexService {
         }
         Future<RegexExecutionResponse> execution = executor.submit(() -> executePattern(request));
         try {
+            // 최대 1초까지만 결과를 기다린다.
             return execution.get(TIMEOUT_MILLISECONDS, TimeUnit.MILLISECONDS);
         } catch (TimeoutException exception) {
+            // 작업 스레드에 중단 신호를 보낸다. (Java 정규식은 실행 중 중단 신호를 확인하지 않아 즉시 멈추지 않을 수 있지만,
+            //   요청한 사용자는 더 기다리지 않고 바로 오류를 받는다. 1번 단계의 사전 차단이 그래서 함께 필요하다)
             execution.cancel(true);
             throw new BusinessException(ErrorCode.COMMON_INVALID_REQUEST, "정규식 실행이 1초를 초과해 중단했습니다. 반복 표현을 단순하게 바꿔 주세요.");
         } catch (InterruptedException exception) {
+            // InterruptedException을 잡으면 중단 표시가 지워지므로 다시 켜 둔다(Java의 관례).
             Thread.currentThread().interrupt();
             throw new BusinessException(ErrorCode.COMMON_INVALID_REQUEST, "정규식 실행이 중단되었습니다.");
         } catch (ExecutionException exception) {
+            // 작업 스레드에서 난 예외는 ExecutionException에 감싸여 온다. 안의 원래 예외를 꺼내 사용자용 오류로 바꾼다.
             Throwable cause = exception.getCause();
             if (cause instanceof BusinessException businessException) throw businessException;
             throw new BusinessException(ErrorCode.COMMON_INVALID_REQUEST, cause == null ? "정규식을 실행하지 못했습니다." : cause.getMessage());
@@ -50,16 +70,28 @@ public class JavaRegexService {
     }
 
     private RegexExecutionResponse executePattern(RegexExecutionRequest request) {
+        // ★ 입력을 "글자를 읽을 때마다 시간을 확인하는" 문자열로 감싼다(아래 DeadlineCharSequence).
+        //   Java 정규식은 중단 신호(cancel)를 스스로 확인하지 않아, 1초가 지나도 작업 스레드가 계속 계산했다.
+        //   작업 스레드가 2개뿐이라 그런 요청 두 번이면 서버를 재시작할 때까지 정규식 기능이 멈췄다.
+        //   정규식은 글자를 볼 때마다 charAt()을 부르므로, 거기서 시간 초과·중단 신호를 확인하면 실제로 멈출 수 있다.
+        CharSequence input = new DeadlineCharSequence(
+            request.input() == null ? "" : request.input(),
+            System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(TIMEOUT_MILLISECONDS)
+        );
         try {
             Pattern compiledPattern = Pattern.compile(request.pattern(), resolveFlags(request.flags()));
-            if ("FULL".equals(request.mode())) return executeFullMatch(compiledPattern, request);
-            Matcher matcher = compiledPattern.matcher(request.input() == null ? "" : request.input());
+            if ("FULL".equals(request.mode())) return executeFullMatch(compiledPattern, request, input);
+            Matcher matcher = compiledPattern.matcher(input);
             List<RegexMatchResponse> matches = collectMatches(matcher, request.pattern());
+            // 200개를 채웠는데 하나 더 찾아지면 "잘린 결과"라고 표시한다.
             boolean truncated = matches.size() == MAXIMUM_MATCH_COUNT && matcher.find();
             String replacedText = "REPLACE".equals(request.mode())
-                ? compiledPattern.matcher(request.input() == null ? "" : request.input()).replaceAll(normalizeReplacement(request.replacement()))
+                ? compiledPattern.matcher(input).replaceAll(normalizeReplacement(request.replacement()))
                 : null;
             return new RegexExecutionResponse(!matches.isEmpty(), matches, replacedText, truncated);
+        } catch (RegexTimeoutException exception) {
+            throw new BusinessException(ErrorCode.COMMON_INVALID_REQUEST, "정규식 실행이 1초를 초과해 중단했습니다. 반복 표현을 단순하게 바꿔 주세요.");
+        // 문법 오류는 몇 번째 글자에서 났는지 함께 알려 준다.
         } catch (PatternSyntaxException exception) {
             throw new BusinessException(ErrorCode.COMMON_INVALID_REQUEST,
                 "정규식 문법 오류" + (exception.getIndex() >= 0 ? " (위치 " + exception.getIndex() + ")" : "") + ": " + exception.getDescription());
@@ -68,8 +100,8 @@ public class JavaRegexService {
         }
     }
 
-    private RegexExecutionResponse executeFullMatch(Pattern pattern, RegexExecutionRequest request) {
-        Matcher matcher = pattern.matcher(request.input() == null ? "" : request.input());
+    private RegexExecutionResponse executeFullMatch(Pattern pattern, RegexExecutionRequest request, CharSequence input) {
+        Matcher matcher = pattern.matcher(input);
         if (!matcher.matches()) return new RegexExecutionResponse(false, List.of(), null, false);
         return new RegexExecutionResponse(true, List.of(toMatch(matcher, request.pattern())), null, false);
     }
@@ -82,6 +114,7 @@ public class JavaRegexService {
 
     private RegexMatchResponse toMatch(Matcher matcher, String pattern) {
         List<RegexGroupResponse> groups = new ArrayList<>();
+        // 번호 그룹(1, 2, …)을 먼저 담고, 이름 그룹은 아래에서 이름으로 한 번 더 담는다. 매칭되지 않은 그룹은 빈 문자열.
         for (int groupIndex = 1; groupIndex <= matcher.groupCount(); groupIndex++) {
             groups.add(new RegexGroupResponse(String.valueOf(groupIndex), valueOrEmpty(matcher.group(groupIndex))));
         }
@@ -98,6 +131,7 @@ public class JavaRegexService {
         return names;
     }
 
+    /** 문자 플래그(i·m·s·u)를 Java Pattern의 옵션 비트로 바꾼다. |= 로 여러 옵션을 합친다. */
     private int resolveFlags(String flags) {
         if (flags == null) return 0;
         int options = 0;
@@ -108,6 +142,7 @@ public class JavaRegexService {
         return options;
     }
 
+    /** JavaScript식 치환 표기를 Java식으로: $& → $0(일치한 전체), $<이름> → ${이름}(이름 그룹). */
     private String normalizeReplacement(String replacement) {
         if (replacement == null) return "";
         return replacement.replace("$&", "$0").replaceAll("\\$<([A-Za-z][A-Za-z0-9]*)>", "\\${$1}");
@@ -115,6 +150,52 @@ public class JavaRegexService {
 
     private String valueOrEmpty(String value) {
         return value == null ? "" : value;
+    }
+
+    /** 정규식 실행 시간이 다 됐거나 중단 신호를 받았을 때 던지는 내부 예외. executePattern이 사용자용 오류로 바꾼다. */
+    private static final class RegexTimeoutException extends RuntimeException {
+        private RegexTimeoutException() {
+            super("정규식 실행 시간 초과", null, false, false);
+        }
+    }
+
+    /**
+     * 글자를 하나 읽을 때마다(charAt) 제한 시각과 중단 신호를 확인하는 문자열 포장지.
+     * 정규식 엔진은 입력을 charAt으로 읽으므로, 계산이 아무리 길어져도 다음 글자를 읽는 순간 멈춘다.
+     * 부분 문자열(subSequence)도 같은 제한 시각을 이어받아, 치환(replaceAll) 중에도 똑같이 멈춘다.
+     */
+    private static final class DeadlineCharSequence implements CharSequence {
+        private final CharSequence source;
+        private final long deadlineNanos;
+
+        private DeadlineCharSequence(CharSequence source, long deadlineNanos) {
+            this.source = source;
+            this.deadlineNanos = deadlineNanos;
+        }
+
+        @Override
+        public char charAt(int index) {
+            // Future.cancel(true)가 보낸 중단 신호이거나, 1초 제한 시각을 넘겼으면 계산을 끊는다.
+            if (Thread.currentThread().isInterrupted() || System.nanoTime() - deadlineNanos > 0) {
+                throw new RegexTimeoutException();
+            }
+            return source.charAt(index);
+        }
+
+        @Override
+        public int length() {
+            return source.length();
+        }
+
+        @Override
+        public CharSequence subSequence(int start, int end) {
+            return new DeadlineCharSequence(source.subSequence(start, end), deadlineNanos);
+        }
+
+        @Override
+        public String toString() {
+            return source.toString();
+        }
     }
 }
 

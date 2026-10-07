@@ -60,6 +60,8 @@ const methodColors: Record<ApiWorkspaceMethod, string> = {
   DELETE: "method-delete", HEAD: "method-head", OPTIONS: "method-options",
 };
 
+// API 작업 공간 왼쪽 패널: 실행 기록·컬렉션 트리·즐겨찾기·환경 변수. 비회원에게는 저장 기능 대신 로그인 안내를 보여 준다.
+// 각 패널은 render… 함수로 나눠 읽기 쉽게 했다(데이터 변경은 모두 부모가 넘긴 콜백이 한다).
 export const ApiWorkspaceSidebar = ({
   activePanel,
   authenticated,
@@ -100,6 +102,7 @@ export const ApiWorkspaceSidebar = ({
   const [historyMethod, setHistoryMethod] = useState<"ALL" | ApiWorkspaceMethod>("ALL");
   const [collectionSearch, setCollectionSearch] = useState("");
 
+  // 검색어로 거른 기록 목록과 컬렉션 트리(utils/apiWorkspaceUtils.ts의 filterApiWorkspaceCollectionTree).
   const visibleHistoryItems = useMemo(() => historyItems.filter((historyItem) => {
     const matchesSearch = historyItem.request.url.toLowerCase().includes(historySearch.trim().toLowerCase());
     const matchesMethod = historyMethod === "ALL" || historyItem.request.method === historyMethod;
@@ -114,6 +117,7 @@ export const ApiWorkspaceSidebar = ({
     <div className="api-sidebar-empty"><strong>로그인이 필요합니다.</strong><p>회원별 저장 기능은 로그인 후 사용할 수 있습니다.</p></div>
   );
 
+  // 실행 기록 패널: 여러 개 골라 삭제, 누르면 그 요청을 탭으로 연다.
   const renderHistory = () => {
     if (!authenticated) return renderLoginNotice();
     return (
@@ -167,6 +171,7 @@ export const ApiWorkspaceSidebar = ({
     </div>
   );
 
+  // 컬렉션 패널: 컬렉션 → 폴더 → 요청 트리와 이름 바꾸기·삭제·이동·새 요청 메뉴.
   const renderCollections = () => {
     if (!authenticated) return renderLoginNotice();
     const deletedSavedRequests = savedRequests.filter((savedRequest) => savedRequest.deletedAt);
@@ -216,6 +221,7 @@ export const ApiWorkspaceSidebar = ({
     return <div className="api-sidebar-list">{favorites.map(renderSavedRequest)}{favorites.length === 0 ? <div className="api-sidebar-empty"><strong>즐겨찾기가 없습니다.</strong><p>자주 쓰는 요청에 ☆를 눌러보세요.</p></div> : null}</div>;
   };
 
+  // 환경 패널: 환경 고르기와 변수(키·값·비밀 여부) 편집.
   const renderEnvironments = () => {
     if (!authenticated) return renderLoginNotice();
     const activeEnvironment = environments.find((environment) => environment.id === activeEnvironmentId);

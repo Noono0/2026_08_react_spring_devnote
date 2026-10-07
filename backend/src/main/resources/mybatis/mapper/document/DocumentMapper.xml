@@ -1,5 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    문서 SQL 모음. DocumentDaoImpl이 namespace("com.example.devnote.document.DocumentMapper.") + id 로 실행한다.
+
+    [자주 나오는 문법]
+    #{값}        : ? 자리표시자로 바뀌어 값이 안전하게 들어간다(SQL 인젝션 방지).
+    <if test>    : 조건이 참일 때만 그 SQL 조각을 붙인다(동적 SQL).
+    <choose>     : Java의 switch처럼 하나만 고른다.
+    <include>    : <sql>로 만든 조각을 끼워 넣는다(목록과 건수 조회가 같은 WHERE를 쓰도록).
+    use_yn = 'Y' : 삭제 표시되지 않은 행만(소프트 삭제).
+-->
 <mapper namespace="com.example.devnote.document.DocumentMapper">
 
     <insert id="insertDocument"
@@ -20,6 +30,7 @@
             #{thumbnailFileId},
             #{documentTitle},
             #{documentScope},
+            <!-- Java에서는 문자열로 넘어온 본문을 MySQL JSON 타입으로 바꿔 저장한다(JSON 문법이 틀리면 DB가 거부한다). -->
             CAST(#{contentJson} AS JSON),
             #{contentHtml},
             #{contentText},
@@ -27,6 +38,11 @@
         )
     </insert>
 
+    <!--
+        목록 검색 조건. 값이 비어 있는 조건은 <if>가 빠뜨려서 "조건 없음"이 된다.
+        태그 필터는 EXISTS: 그 태그를 가진 행이 하나라도 있으면 통과(JOIN과 달리 문서가 여러 번 나오지 않는다).
+        LIKE CONCAT('%', 값, '%'): 값이 들어 있는 행을 찾는다. 값은 #{}로 넣어 안전하다.
+    -->
     <sql id="documentSearchWhereClause">
         WHERE document.use_yn = 'Y'
         <if test="documentScope != null">
@@ -37,6 +53,12 @@
         </if>
         <if test="authorId != null">
             AND document.member_id = #{authorId}
+        </if>
+        <if test="tag != null and tag != ''">
+            AND EXISTS (
+                SELECT 1 FROM document_tags tag_filter
+                WHERE tag_filter.document_id = document.document_id AND tag_filter.tag_name = #{tag}
+            )
         </if>
         <if test="searchKeyword != null and searchKeyword != ''">
             <choose>
@@ -65,6 +87,7 @@
             document.document_title,
             document.document_status,
             document.thumbnail_file_id,
+            <!-- 대표 이미지가 있으면 이미지 주소(/api/v1/files/{번호}/content)를 SQL에서 만들어 둔다. -->
             CASE
                 WHEN document.thumbnail_file_id IS NULL THEN NULL
                 ELSE CONCAT('/api/v1/files/', document.thumbnail_file_id, '/content')
@@ -78,6 +101,11 @@
         FROM documents document
         INNER JOIN members member ON member.member_id = document.member_id
         <include refid="documentSearchWhereClause"/>
+        <!--
+            정렬 컬럼·방향은 #{}로 넣을 수 없다(#{}는 "값" 자리에만 쓸 수 있다).
+            그렇다고 ${}로 문자열을 그대로 붙이면 SQL 인젝션 위험이 있어, <choose>로 정해진 컬럼 중 하나를 고른다.
+            마지막의 document_id DESC: 정렬 값이 같은 행끼리도 순서가 매번 같도록(페이지 이동 시 중복·누락 방지).
+        -->
         ORDER BY
         <choose>
             <when test="sortProperty == 'CREATED_AT'">document.created_at</when>
@@ -89,6 +117,7 @@
             <when test="sortDirection == 'ASC'">ASC</when>
             <otherwise>DESC</otherwise>
         </choose>, document.document_id DESC
+        <!-- 페이지 나누기: offset 건을 건너뛰고 pageSize 건만. offset은 DocumentSearchCondition.getOffset()이 계산한다. -->
         LIMIT #{pageSize} OFFSET #{offset}
     </select>
 
@@ -111,6 +140,7 @@
                 WHEN document.thumbnail_file_id IS NULL THEN NULL
                 ELSE CONCAT('/api/v1/files/', document.thumbnail_file_id, '/content')
             END AS thumbnail_image_url,
+            <!-- JSON 컬럼을 문자열로 읽어 Java의 String 필드에 담는다. Service가 다시 JSON 객체로 바꾼다. -->
             CAST(document.content_json AS CHAR) AS content_json,
             document.content_html,
             document.content_text,
@@ -121,11 +151,19 @@
             document.deleted_at,
             document.created_at,
             document.updated_at
+        <!-- 상세 조회는 삭제된 문서도 읽는다(복구·이력 조회에 필요). 삭제 여부(use_yn) 판단은 Service가 한다. -->
         FROM documents document
         INNER JOIN members member ON member.member_id = document.member_id
         WHERE document.document_id = #{documentId}
     </select>
 
+    <!--
+        낙관적 잠금(optimistic lock) 수정.
+        WHERE의 version_number = #{versionNumber}: 화면이 읽었던 버전일 때만 수정한다.
+        SET version_number = version_number + 1 : 수정에 성공하면 버전을 1 올린다.
+        → 두 사람이 같은 버전으로 동시에 저장하면, 먼저 저장한 쪽만 1건 수정되고 나중 쪽은 0건(→ 409 충돌)이 된다.
+        member_id 조건: 작성자가 아니면 수정되지 않게 DB에서도 한 번 더 막는다.
+    -->
     <update id="updateDocument" parameterType="com.example.devnote.document.dao.parameter.DocumentUpdateParameter">
         UPDATE documents
         SET
@@ -144,6 +182,7 @@
           AND use_yn = 'Y'
     </update>
 
+    <!-- 소프트 삭제: 행을 지우지 않고 use_yn='N'과 삭제 시각만 남긴다. 그래서 복구가 가능하다. -->
     <update id="softDeleteDocument">
         UPDATE documents
         SET use_yn = 'N', deleted_at = CURRENT_TIMESTAMP(6), updated_at = CURRENT_TIMESTAMP(6)
@@ -162,6 +201,7 @@
           AND use_yn = 'N'
     </update>
 
+    <!-- 서버 시작 시 예시 글(101·102)을 HISTORY 범위로 맞춘다(InitialHistoryDocumentInitializer). 사용자가 지운 글은 건드리지 않는다. -->
     <update id="updateDocumentScope">
         UPDATE documents
         SET document_scope = #{documentScope}, use_yn = 'Y'
@@ -169,6 +209,7 @@
           AND deleted_at IS NULL
     </update>
 
+    <!-- 수정 "전" 스냅샷을 이력 테이블에 저장한다. version_number는 이전 버전 번호다. -->
     <insert id="insertDocumentHistory"
             parameterType="com.example.devnote.document.dao.parameter.DocumentHistoryCreateParameter">
         INSERT INTO document_histories (
@@ -212,6 +253,7 @@
         ORDER BY history.version_number DESC
     </select>
 
+    <!-- document_files는 문서와 파일을 잇는 연결 테이블이다. 연결만 지우고 파일 자체(file_resources)는 남는다. -->
     <delete id="deleteDocumentAttachments">
         DELETE FROM document_files
         WHERE document_id = #{documentId}
@@ -234,8 +276,45 @@
         INNER JOIN file_resources file ON file.file_id = document_file.file_id
         WHERE document_file.document_id = #{documentId}
           AND document_file.file_role = 'ATTACHMENT'
+          <!-- 삭제된 파일은 첨부 목록에서 숨긴다. -->
           AND file.file_status != 'DELETED'
         ORDER BY document_file.sort_order ASC, document_file.document_file_id ASC
+    </select>
+
+    <!-- 목록에 보이는 문서들의 태그를 한 번에 읽는다. 문서마다 따로 조회하면 목록 20건에 쿼리 20번이 나간다(N+1). -->
+    <select id="selectTagsByDocumentIds" resultType="com.example.devnote.document.dao.row.DocumentTagRow">
+        SELECT document_id, tag_name
+        FROM document_tags
+        WHERE document_id IN
+        <!-- foreach: 목록 [1,2,3]을 (1,2,3) 모양으로 펼친다. collection="list"는 파라미터가 List 하나일 때 MyBatis가 붙이는 이름이다. -->
+        <foreach collection="list" item="documentId" open="(" separator="," close=")">#{documentId}</foreach>
+        ORDER BY document_id, sort_order, tag_name
+    </select>
+
+    <delete id="deleteDocumentTags">
+        DELETE FROM document_tags WHERE document_id = #{documentId}
+    </delete>
+
+    <insert id="insertDocumentTags">
+        INSERT INTO document_tags (document_id, tag_name, sort_order) VALUES
+        <!-- 여러 행을 INSERT 한 번에 넣는다: VALUES (…), (…), (…). index는 0부터 시작하는 순서 번호다. -->
+        <foreach collection="tags" item="tagName" index="tagIndex" separator=",">
+            (#{documentId}, #{tagName}, #{tagIndex})
+        </foreach>
+    </insert>
+
+    <!-- 태그 필터 버튼용: 같은 조건(범위·작성자·공개 상태)의 문서에서 많이 쓴 태그 순서 -->
+    <select id="selectPopularTags" resultType="com.example.devnote.document.dto.DocumentTagCountResponse">
+        SELECT tag.tag_name, COUNT(*) AS document_count
+        FROM document_tags tag
+        INNER JOIN documents document ON document.document_id = tag.document_id
+        WHERE document.use_yn = 'Y'
+          AND document.document_scope = #{documentScope}
+          <if test="authorId != null">AND document.member_id = #{authorId}</if>
+          <if test="documentStatus != null">AND document.document_status = #{documentStatus}</if>
+        GROUP BY tag.tag_name
+        ORDER BY document_count DESC, tag.tag_name
+        LIMIT 30
     </select>
 
 </mapper>

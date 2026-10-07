@@ -1,5 +1,8 @@
 import DOMPurify from "dompurify";
 
+// markdownRenderer.ts — 마크다운 글을 HTML로 바꾸는 작은 변환기(제목·목록·체크리스트·표·인용·코드 블록 색칠)
+// ★ 먼저 모든 글자의 HTML 특수문자를 이스케이프하고, 허용한 문법만 태그로 바꾼 뒤, 마지막에 DOMPurify로 한 번 더 정화한다(XSS 방지).
+// 링크·이미지는 http(s) 주소만 태그로 만든다(javascript: 주소 차단).
 const escapeHtml = (value: string): string => value.replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character] ?? character);
 
 const renderInline = (value: string): string => escapeHtml(value)
@@ -19,6 +22,7 @@ const renderInline = (value: string): string => escapeHtml(value)
 
 type SyntaxTokenType = "comment" | "keyword" | "number" | "string" | "tag";
 
+// 코드 블록 색칠용: 언어별 주석·키워드·숫자·문자열 패턴을 찾아 <span class="syntax-종류">으로 감싼다(CSS가 색을 입힌다).
 const tokenPatterns: Record<string, RegExp> = {
   javascript: /(\/\*[\s\S]*?\*\/|\/\/[^\n]*|`(?:\\.|[^`\\])*`|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\b(?:as|async|await|break|case|catch|class|const|continue|default|delete|do|else|export|extends|false|finally|for|from|function|if|import|in|instanceof|let|new|null|of|return|static|super|switch|this|throw|true|try|typeof|undefined|var|void|while|yield)\b|\b\d+(?:\.\d+)?\b)/g,
   typescript: /(\/\*[\s\S]*?\*\/|\/\/[^\n]*|`(?:\\.|[^`\\])*`|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\b(?:abstract|any|as|async|await|boolean|break|case|catch|class|const|continue|declare|default|delete|do|else|enum|export|extends|false|finally|for|from|function|if|implements|import|in|instanceof|interface|keyof|let|never|new|null|number|of|private|protected|public|readonly|return|static|string|super|switch|this|throw|true|try|type|typeof|undefined|unknown|var|void|while|yield)\b|\b\d+(?:\.\d+)?\b)/g,
@@ -79,6 +83,7 @@ const highlightCode = (source: string, requestedLanguage: string): string => {
 
 type TableAlignment = "left" | "center" | "right";
 
+// 표: | 칸 | 칸 | 줄을 칸 배열로 나누고, 둘째 줄의 :--- / :---: / ---: 로 정렬(왼쪽·가운데·오른쪽)을 읽는다.
 const parseTableCells = (line: string): string[] => line.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((cell) => cell.trim());
 
 const parseTableAlignments = (line: string): TableAlignment[] | undefined => {
@@ -87,6 +92,7 @@ const parseTableAlignments = (line: string): TableAlignment[] | undefined => {
   return cells.map((cell) => cell.startsWith(":") && cell.endsWith(":") ? "center" : cell.endsWith(":") ? "right" : "left");
 };
 
+// 줄을 차례로 읽으며 지금 목록·코드 블록·표 안에 있는지 상태를 기억하고, 상태가 끝나면 닫는 태그를 붙인다.
 export const renderMarkdown = (source: string): string => {
   const lines = source.replace(/\r\n/g, "\n").split("\n");
   const html: string[] = [];
@@ -176,6 +182,7 @@ export const renderMarkdown = (source: string): string => {
   return DOMPurify.sanitize(html.join("\n"), { USE_PROFILES: { html: true } });
 };
 
+// "HTML로 내려받기"용 완성 문서(기본 스타일 포함). 제목도 이스케이프해 <title>에 넣는다.
 export const createMarkdownHtmlDocument = (title: string, renderedHtml: string): string => `<!doctype html>
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${escapeHtml(title)}</title><style>body{max-width:860px;margin:40px auto;padding:0 20px;font:16px/1.7 system-ui;color:#172033}pre{padding:16px;overflow:auto;background:#f4f6fa;border-radius:10px}code{font-family:ui-monospace,monospace}blockquote{border-left:4px solid #7188ff;margin-left:0;padding-left:16px;color:#536079}img{max-width:100%}table{width:100%;border-collapse:collapse}th,td{padding:8px 10px;border:1px solid #d8deea}.align-left{text-align:left}.align-center{text-align:center}.align-right{text-align:right}.markdown-task-list{padding:0;list-style:none}.markdown-task-list li{display:flex;gap:8px}</style></head><body>${renderedHtml}</body></html>`;

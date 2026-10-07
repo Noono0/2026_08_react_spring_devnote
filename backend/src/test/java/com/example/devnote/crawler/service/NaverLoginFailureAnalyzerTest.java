@@ -6,6 +6,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class NaverLoginFailureAnalyzerTest {
     @Test
+    void stopsAutomaticLoginWhenAccountIsProtected() {
+        NaverLoginFailureAnalyzer.Diagnosis diagnosis = NaverLoginFailureAnalyzer.diagnose(
+            "아이디가 보호조치 되었습니다. 보호조치 해제 후 다시 로그인하세요."
+        );
+
+        assertThat(diagnosis.stage()).isEqualTo("네이버 계정 보호조치");
+        assertThat(diagnosis.reason()).contains("추가 로그인을 시도하지 않습니다");
+        assertThat(diagnosis.manualActionRequired()).isFalse();
+    }
+
+    @Test
     void classifiesImageSecurityQuestionAsAdditionalVerification() {
         NaverLoginFailureAnalyzer.Diagnosis diagnosis = NaverLoginFailureAnalyzer.diagnose(
             "보안을 위해 추가 확인을 해주세요 해당 영수증은 가상으로 제작된 것으로 실제 영수증 사진이 아니에요. 정답을 입력해 주세요"

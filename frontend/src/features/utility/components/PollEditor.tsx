@@ -24,6 +24,7 @@ interface PollEditorProps {
 
 const createOptionKey = (): string => createUuid();
 
+// 투표 만들기·수정 폼: 질문, 선택지 2~10개(추가·삭제), 복수 선택·최대 선택 수, 실시간 결과 공개, 마감 시각(최대 60분 뒤).
 export const PollEditor = ({ initialPoll, pending, onCancel, onSubmit }: PollEditorProps) => {
   const [question, setQuestion] = useState(initialPoll?.question ?? "");
   const [options, setOptions] = useState<EditablePollOption[]>(
@@ -39,6 +40,7 @@ export const PollEditor = ({ initialPoll, pending, onCancel, onSubmit }: PollEdi
   const [absoluteEndsAt, setAbsoluteEndsAt] = useState(
     initialPoll ? toDateTimeLocalValue(new Date(initialPoll.endsAt)) : toDateTimeLocalValue(new Date(Date.now() + 10 * 60_000)),
   );
+  // 이미 누군가 투표했으면 선택지를 바꿀 수 없다(서버 규칙과 같음). 마감 시각 입력 범위는 1분 뒤 ~ 최대 기간 뒤.
   const optionEditingLocked = (initialPoll?.participantCount ?? 0) > 0;
   const absoluteMinimum = useMemo(() => toDateTimeLocalValue(new Date(Date.now() + 60_000)), []);
   const absoluteMaximum = useMemo(() => toDateTimeLocalValue(new Date(Date.now() + MAXIMUM_POLL_DURATION_MINUTES * 60_000)), []);

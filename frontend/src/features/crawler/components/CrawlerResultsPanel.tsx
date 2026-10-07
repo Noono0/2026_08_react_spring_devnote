@@ -6,10 +6,17 @@ import type {
 } from "@/features/crawler/types/webCrawlerTypes";
 import { filterCrawlerItems } from "@/features/crawler/utils/crawlerFilters";
 import { createCrawlerCsvFileName, downloadCrawlerCsv } from "@/features/crawler/utils/crawlerCsv";
+import {
+  compareCrawlerResults,
+  isAddedCrawlerItem,
+  type CrawlerComparisonBaseline,
+} from "@/features/crawler/utils/crawlerResultComparison";
 import { createUuid } from "@/shared/lib/createUuid";
 
 interface CrawlerResultsPanelProps {
   response: CrawlerRunResponse;
+  /** 있으면 이 이전 실행과 비교해 새 항목을 표시하고 사라진 항목을 따로 보여 준다. */
+  baseline?: CrawlerComparisonBaseline;
 }
 
 const filterOperatorLabels: Record<CrawlerFilterOperator, string> = {
@@ -20,6 +27,7 @@ const filterOperatorLabels: Record<CrawlerFilterOperator, string> = {
   NUMBER_LTE: "숫자 이하",
 };
 
+/** 새 거르기 규칙(기본: 그 칸에 값이 "포함"된 항목). id는 목록 key와 수정 대상 찾기에 쓴다. */
 const createFilterRule = (fieldName: string): CrawlerFilterRule => ({
   id: createUuid(),
   fieldName,
@@ -27,15 +35,26 @@ const createFilterRule = (fieldName: string): CrawlerFilterRule => ({
   value: "",
 });
 
-export const CrawlerResultsPanel = ({ response }: CrawlerResultsPanelProps) => {
+/**
+ * 수집 결과 표. 빠른 검색·규칙 거르기(crawlerFilters.ts), 이전 실행과 비교(새 항목 표시·사라진 항목 목록), CSV 내려받기.
+ * 거르기는 화면에서만 하므로 대상 사이트에 다시 요청하지 않는다.
+ */
+export const CrawlerResultsPanel = ({ response, baseline }: CrawlerResultsPanelProps) => {
   const [quickSearch, setQuickSearch] = useState("");
   const [filterRules, setFilterRules] = useState<CrawlerFilterRule[]>([]);
   const [filterMatchMode, setFilterMatchMode] = useState<"ALL" | "ANY">("ALL");
-  const visibleItems = useMemo(
-    () => filterCrawlerItems(response.items, quickSearch, filterRules, filterMatchMode),
-    [filterMatchMode, filterRules, quickSearch, response.items],
+  const [addedOnly, setAddedOnly] = useState(false);
+  // 두 결과(최대 500건씩)를 비교하는 계산이라 검색어를 입력할 때마다 다시 하지 않도록 결과가 바뀔 때만 계산한다.
+  const comparison = useMemo(
+    () => baseline ? compareCrawlerResults(response, baseline.response) : undefined,
+    [baseline, response],
   );
+  const visibleItems = useMemo(() => {
+    const filteredItems = filterCrawlerItems(response.items, quickSearch, filterRules, filterMatchMode);
+    return comparison && addedOnly ? filteredItems.filter((item) => isAddedCrawlerItem(item, comparison)) : filteredItems;
+  }, [addedOnly, comparison, filterMatchMode, filterRules, quickSearch, response.items]);
 
+  // 규칙 하나의 일부 값만 바꾼 새 배열로 교체한다(불변 갱신).
   const updateFilterRule = (ruleId: string, patch: Partial<CrawlerFilterRule>): void => {
     setFilterRules((currentRules) => currentRules.map((rule) => rule.id === ruleId ? { ...rule, ...patch } : rule));
   };
@@ -47,6 +66,31 @@ export const CrawlerResultsPanel = ({ response }: CrawlerResultsPanelProps) => {
         <button type="button" className="secondary-button" disabled={visibleItems.length === 0} onClick={() => downloadCrawlerCsv(createCrawlerCsvFileName(), response.fieldNames, visibleItems)}>현재 결과 CSV</button>
       </header>
       {response.warnings.length > 0 ? <ul className="crawler-warning-list">{response.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul> : null}
+
+      {baseline && comparison ? (
+        <section className="crawler-comparison-summary" aria-label="이전 실행과 비교">
+          <p>
+            <strong>{baseline.label} 실행과 비교</strong>
+            새 항목 <b>{comparison.addedCount}</b>건 · 그대로 {comparison.unchangedCount}건 · 사라진 항목 {comparison.removedItems.length}건
+            <small>{comparison.keyFieldName ? `‘${comparison.keyFieldName}’ 칸이 같으면 같은 항목으로 봅니다.` : "링크 칸이 없어 상세내용·이미지주소를 뺀 나머지 칸 값이 모두 같으면 같은 항목으로 봅니다."}</small>
+          </p>
+          <label className="checkbox-label"><input type="checkbox" checked={addedOnly} onChange={(event) => setAddedOnly(event.target.checked)} /><span>새 항목만 보기</span></label>
+          {comparison.removedItems.length > 0 ? (
+            <details>
+              <summary>사라진 항목 {comparison.removedItems.length}건 보기</summary>
+              <ul className="crawler-removed-list">
+                {comparison.removedItems.map((item, itemIndex) => {
+                  const label = response.fieldNames.map((fieldName) => item[fieldName]).find((value) => value?.trim()) ?? "(빈 항목)";
+                  // 수집한 값은 외부 사이트에서 온 데이터라 http(s) 주소일 때만 링크로 만든다(javascript: 주소 차단).
+                  const rawLink = comparison.keyFieldName ? item[comparison.keyFieldName]?.trim() : undefined;
+                  const link = rawLink && /^https?:\/\//i.test(rawLink) ? rawLink : undefined;
+                  return <li key={`${link ?? label}-${itemIndex}`}>{link ? <a href={link} target="_blank" rel="noreferrer">{label} ↗</a> : label}</li>;
+                })}
+              </ul>
+            </details>
+          ) : null}
+        </section>
+      ) : null}
 
       <div className="crawler-filter-panel">
         <div className="crawler-filter-toolbar">
@@ -63,7 +107,7 @@ export const CrawlerResultsPanel = ({ response }: CrawlerResultsPanelProps) => {
         <strong className="crawler-filter-count">전체 {response.items.length}건 중 {visibleItems.length}건 표시</strong>
       </div>
 
-      {visibleItems.length === 0 ? <div className="portfolio-state-panel">검색 조건에 맞는 데이터가 없습니다.</div> : <div className="crawler-table-wrap"><table><caption>크롤링 결과</caption><thead><tr><th scope="col">#</th>{response.fieldNames.map((fieldName) => <th scope="col" key={fieldName}>{fieldName}</th>)}<th scope="col">출처</th></tr></thead><tbody>{visibleItems.map((item, itemIndex) => <tr key={`${item._pageUrl}-${itemIndex}`}><td>{itemIndex + 1}</td>{response.fieldNames.map((fieldName) => <td key={fieldName} className={fieldName === "상세내용" ? "crawler-detail-cell" : undefined}>{item[fieldName] || <span className="crawler-empty-value">비어 있음</span>}</td>)}<td><a href={item._pageUrl} target="_blank" rel="noreferrer">{item._pageNumber}페이지 ↗</a></td></tr>)}</tbody></table></div>}
+      {visibleItems.length === 0 ? <div className="portfolio-state-panel">검색 조건에 맞는 데이터가 없습니다.</div> : <div className="crawler-table-wrap"><table><caption>크롤링 결과</caption><thead><tr><th scope="col">#</th>{response.fieldNames.map((fieldName) => <th scope="col" key={fieldName}>{fieldName}</th>)}<th scope="col">출처</th></tr></thead><tbody>{visibleItems.map((item, itemIndex) => <tr key={`${item._pageUrl}-${itemIndex}`}><td>{itemIndex + 1}{comparison && isAddedCrawlerItem(item, comparison) ? <span className="crawler-new-badge">새 항목</span> : null}</td>{response.fieldNames.map((fieldName) => <td key={fieldName} className={fieldName === "상세내용" ? "crawler-detail-cell" : undefined}>{item[fieldName] || <span className="crawler-empty-value">비어 있음</span>}</td>)}<td><a href={item._pageUrl} target="_blank" rel="noreferrer">{item._pageNumber}페이지 ↗</a></td></tr>)}</tbody></table></div>}
     </section>
   );
 };

@@ -6,8 +6,10 @@ import lombok.RequiredArgsConstructor;
 import org.mybatis.spring.SqlSessionTemplate;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Map;
 
+/** FileResourceDao의 MyBatis 구현. FileResourceMapper.xml의 같은 id SQL을 실행한다. */
 @Repository
 @RequiredArgsConstructor
 public class FileResourceDaoImpl implements FileResourceDao {
@@ -29,6 +31,22 @@ public class FileResourceDaoImpl implements FileResourceDao {
         return sqlSessionTemplate.update(
             NAMESPACE + "updateFileStatus",
             Map.of("fileId", fileId, "uploaderId", uploaderId, "fileStatus", fileStatus)
+        );
+    }
+
+    @Override
+    public List<FileResourceRow> selectUnusedTemporaryFiles(long retentionMinutes, int limit) {
+        return sqlSessionTemplate.selectList(
+            NAMESPACE + "selectUnusedTemporaryFiles",
+            Map.of("retentionMinutes", retentionMinutes, "limit", limit)
+        );
+    }
+
+    @Override
+    public int markUnusedTemporaryFileDeleted(Long fileId, long retentionMinutes) {
+        return sqlSessionTemplate.update(
+            NAMESPACE + "markUnusedTemporaryFileDeleted",
+            Map.of("fileId", fileId, "retentionMinutes", retentionMinutes)
         );
     }
 }

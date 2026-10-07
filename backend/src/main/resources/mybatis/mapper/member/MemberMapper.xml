@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    회원(members) SQL 모음. MemberDaoImpl이 namespace + id 로 각 SQL을 찾아 실행한다.
+    #{이름}: PreparedStatement의 ? 자리로 바뀌어 값이 안전하게 들어간다(SQL 인젝션 방지).
+    resultType: 결과 한 행을 담을 Java 클래스. 컬럼 member_id → 필드 memberId 로 자동 연결된다.
+-->
 <mapper namespace="com.example.devnote.member.MemberMapper">
+    <!-- 여러 SELECT에서 같은 컬럼 목록을 반복하지 않도록 조각으로 만들어 두고 <include refid="memberColumns"/>로 끼워 넣는다. -->
     <sql id="memberColumns">
         member_id, login_id, password_hash, email, member_name, member_role, grade_code,
         account_status, use_yn, last_login_at, created_at, updated_at
@@ -18,16 +24,19 @@
         SELECT <include refid="memberColumns"/> FROM members WHERE member_id = #{memberId} AND use_yn = 'Y'
     </select>
 
+    <!-- 관리자 화면용: use_yn 조건이 없어 삭제 표시된 회원도 보이고, 최근 가입자부터 정렬한다. -->
     <select id="selectAllMembers" resultType="com.example.devnote.member.dao.row.MemberRow">
         SELECT <include refid="memberColumns"/> FROM members ORDER BY member_id DESC
     </select>
 
+    <!-- useGeneratedKeys + keyProperty: INSERT 후 DB가 만든 member_id를 파라미터 객체의 memberId에 다시 넣어 준다. -->
     <insert id="insertMember" parameterType="com.example.devnote.member.dao.parameter.MemberCreateParameter" useGeneratedKeys="true" keyProperty="memberId">
         INSERT INTO members (login_id, password_hash, email, member_name, member_role, grade_code, account_status, use_yn)
         VALUES (#{loginId}, #{passwordHash}, #{email}, #{memberName}, #{memberRole}, #{gradeCode}, 'ACTIVE', 'Y')
     </insert>
 
     <update id="updateLastLoginAt">
+        <!-- CURRENT_TIMESTAMP(6): DB 서버의 현재 시각(마이크로초까지). -->
         UPDATE members SET last_login_at = CURRENT_TIMESTAMP(6) WHERE member_id = #{memberId}
     </update>
 
@@ -37,6 +46,11 @@
         WHERE member_id = #{memberId} AND use_yn = 'Y'
     </update>
 
+    <!--
+        서버 시작 시 실행(InitialSuperAdministratorInitializer).
+        WHERE login_id IS NULL: 1번 회원이 아직 준비되지 않았을 때만 admin 계정으로 채운다.
+        한 번 채워진 뒤에는 조건에 맞지 않아 아무 행도 바뀌지 않는다(재시작해도 비밀번호를 덮어쓰지 않음).
+    -->
     <update id="upsertSuperAdministrator">
         UPDATE members
         SET login_id = 'admin', password_hash = #{passwordHash}, member_name = '슈퍼관리자',

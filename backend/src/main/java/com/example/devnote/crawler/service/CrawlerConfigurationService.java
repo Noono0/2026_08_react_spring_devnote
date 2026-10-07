@@ -19,6 +19,12 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 
+/**
+ * 크롤러 설정 저장과 "저장된 설정으로 실행 + 이력 남기기"를 담당합니다.
+ *
+ * ★ 로그인 아이디·비밀번호는 DB에 저장하지 않는다(withoutCredentials). 설정·이력에는 빈 값으로 바꿔 넣고,
+ *   실행할 때만 화면이 보낸 값을 그대로 엔진에 넘긴다.
+ */
 @Service
 @RequiredArgsConstructor
 public class CrawlerConfigurationService {
@@ -59,6 +65,12 @@ public class CrawlerConfigurationService {
         }
     }
 
+    /**
+     * 저장된 설정으로 실행하고 이력을 남긴다.
+     * 이 메서드에는 @Transactional을 붙이지 않았다. 실행이 실패해도 "실패했다"는 이력은 남아야 하기 때문이다.
+     * (트랜잭션으로 묶으면 예외가 났을 때 이력 INSERT까지 롤백되어 기록이 사라진다)
+     * 크롤링은 수십 초 걸릴 수 있어, 그동안 DB 트랜잭션을 열어 두지 않는 효과도 있다.
+     */
     public CrawlerTrackedRunResponse run(Long configurationId, CrawlerRunRequest request) {
         requireConfiguration(configurationId);
         CrawlerRunRequest safeRequest = withoutCredentials(request);
@@ -78,6 +90,8 @@ public class CrawlerConfigurationService {
                 result.items().size()
             );
             return new CrawlerTrackedRunResponse(history.getCrawlerRunHistoryId(), result);
+        // 실패 종류에 따라 "어느 단계에서" 실패했는지를 다르게 기록하고, 예외는 다시 던져 화면에도 알린다.
+        // CrawlerFailure(크롤링 단계 실패) → 엔진이 알려 준 단계 이름 / BusinessException(설정 오류) / 그 밖의 예외(예상 못 한 오류)
         } catch (CrawlerFailure failure) {
             crawlerConfigurationDao.completeRunHistoryFailure(
                 history.getCrawlerRunHistoryId(), failure.getStage(), failure.getMessage(), elapsedMillis(startedNanos));
@@ -119,6 +133,7 @@ public class CrawlerConfigurationService {
         }
     }
 
+    /** 저장 전에도 단계 순서 규칙을 검사하고, 로그인 정보를 지운 요청을 JSON으로 바꿔 담는다. */
     private CrawlerConfigurationSaveParameter toSaveParameter(Long configurationId, CrawlerConfigurationSaveRequest request) {
         CrawlerService.validateSteps(request.request());
         return CrawlerConfigurationSaveParameter.builder()
@@ -130,6 +145,7 @@ public class CrawlerConfigurationService {
             .build();
     }
 
+    /** 로그인 아이디·비밀번호 자리만 빈 문자열로 바꾼 새 요청을 만든다(record는 값을 바꿀 수 없어 새로 만든다). */
     private CrawlerRunRequest withoutCredentials(CrawlerRunRequest request) {
         CrawlerLoginRequest login = request.login();
         CrawlerLoginRequest safeLogin = new CrawlerLoginRequest(

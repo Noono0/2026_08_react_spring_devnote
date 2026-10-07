@@ -5,6 +5,7 @@ import lombok.Setter;
 
 import java.time.LocalDateTime;
 
+/** 설정 한 행 + 실행 요약(실행 횟수, 마지막 실행 상태·시각 — SQL의 하위 조회로 계산). */
 @Getter
 @Setter
 public class CrawlerConfigurationRow {

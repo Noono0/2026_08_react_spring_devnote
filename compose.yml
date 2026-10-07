@@ -46,9 +46,17 @@ services:
       INITIAL_SUPER_ADMIN_PASSWORD_HASH: ${INITIAL_SUPER_ADMIN_PASSWORD_HASH:-600000:2519u3hcpq5hx8SaSCvL9A==:LQjLKoKo4WuJr2WDDpE3FAkNQCMtoPmH8e9U77Fa2Gc=}
       AUTH_SESSION_TIMEOUT: ${AUTH_SESSION_TIMEOUT:-30m}
       AUTH_REMEMBER_ME_DURATION: ${AUTH_REMEMBER_ME_DURATION:-30d}
+      # 로그인 실패 제한: 같은 IP·아이디로 FAILURE_WINDOW 안에 MAX_FAILURES번 틀리면 LOCK_DURATION 동안 잠근다.
+      AUTH_LOGIN_MAX_FAILURES: ${AUTH_LOGIN_MAX_FAILURES:-5}
+      AUTH_LOGIN_FAILURE_WINDOW: ${AUTH_LOGIN_FAILURE_WINDOW:-15m}
+      AUTH_LOGIN_LOCK_DURATION: ${AUTH_LOGIN_LOCK_DURATION:-15m}
       SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
       # '내 PC에 새 창으로 열기' 선택 시 연결할 PC Chrome(start-pc-chrome.cmd)의 원격 디버깅 주소
       CRAWLER_PC_BROWSER_URL: ${CRAWLER_PC_BROWSER_URL:-http://host.docker.internal:9222}
+      # 크롤러 브라우저 실행 위치. 로컬 Docker는 기본 local(이 컨테이너가 Chromium을 띄움).
+      # remote로 바꾸면 CRAWLER_REMOTE_BROWSER_URL(없으면 위 CRAWLER_PC_BROWSER_URL)의 Chrome에 연결한다.
+      CRAWLER_BROWSER_MODE: ${CRAWLER_BROWSER_MODE:-local}
+      CRAWLER_REMOTE_BROWSER_URL: ${CRAWLER_REMOTE_BROWSER_URL:-}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
@@ -79,6 +87,7 @@ services:
         VITE_MOCK_SCENARIO: ${VITE_MOCK_SCENARIO:-success}
         VITE_DEVELOPMENT_MEMBER_ID: ${VITE_DEVELOPMENT_MEMBER_ID:-1}
         VITE_ENABLE_DEVELOPMENT_MENU: ${VITE_ENABLE_DEVELOPMENT_MENU:-true}
+        VITE_SITE_URL: ${VITE_SITE_URL:-}
     container_name: devnote-frontend
     ports:
       - "${FRONTEND_PORT:-3000}:80"

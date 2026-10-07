@@ -1,3 +1,17 @@
+-- ============================================================================
+-- 데이터베이스 테이블 정의 (서버가 켜질 때마다 실행된다 — application.yml의 spring.sql.init)
+--
+-- CREATE TABLE IF NOT EXISTS: 테이블이 없을 때만 만든다. 이미 있는 테이블의 구조는 바꾸지 않는다.
+--   → 기존 테이블에 컬럼을 추가해야 하면: 개발은 JPA ddl-auto=update가, 운영은 직접 ALTER TABLE을 실행한다.
+-- ★ 컬럼을 바꿀 때는 이 파일, JPA 엔티티(domain/*Entity), Mapper XML, Row/Parameter/DTO를 함께 맞춘다.
+--
+-- 공통 관례
+--   use_yn CHAR(1)      : 'Y' 사용 중 / 'N' 삭제 표시(소프트 삭제)
+--   version_number      : 낙관적 잠금용 버전(수정할 때마다 +1)
+--   DATETIME(6)          : 마이크로초까지 저장하는 시각(UTC)
+--   utf8mb4             : 한글·이모지까지 저장할 수 있는 문자 집합
+-- ============================================================================
+
 CREATE TABLE IF NOT EXISTS members (
     member_id BIGINT NOT NULL AUTO_INCREMENT COMMENT '회원 식별자',
     login_id VARCHAR(100) NULL COMMENT '로그인 아이디',
@@ -216,6 +230,16 @@ CREATE TABLE IF NOT EXISTS document_files (
     CONSTRAINT fk_document_files_file FOREIGN KEY (file_id) REFERENCES file_resources(file_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='문서 파일 연결';
 
+-- 문서 태그. 문서 하나에 여러 태그를 붙이고, 태그로 목록을 거른다.
+CREATE TABLE IF NOT EXISTS document_tags (
+    document_id BIGINT NOT NULL COMMENT '문서 식별자',
+    tag_name VARCHAR(20) NOT NULL COMMENT '태그 이름(앞뒤 공백·# 제거)',
+    sort_order INT NOT NULL DEFAULT 0 COMMENT '입력 순서',
+    PRIMARY KEY (document_id, tag_name),
+    KEY idx_document_tags_tag (tag_name, document_id),
+    CONSTRAINT fk_document_tags_document FOREIGN KEY (document_id) REFERENCES documents(document_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='문서 태그';
+
 CREATE TABLE IF NOT EXISTS portfolio_sections (
     portfolio_section_id BIGINT NOT NULL AUTO_INCREMENT COMMENT '포트폴리오 섹션 식별자',
     section_type VARCHAR(30) NOT NULL COMMENT 'PROFILE, RICH_TEXT, IMAGE, SKILL, EXPERIENCE, PROJECT, EDUCATION, CERTIFICATE 또는 CONTACT',
@@ -255,6 +279,19 @@ CREATE TABLE IF NOT EXISTS portfolio_section_files (
     CONSTRAINT fk_portfolio_section_files_section FOREIGN KEY (portfolio_section_id) REFERENCES portfolio_sections(portfolio_section_id),
     CONSTRAINT fk_portfolio_section_files_file FOREIGN KEY (file_id) REFERENCES file_resources(file_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='포트폴리오 섹션 파일 연결';
+
+-- PROJECT 섹션에만 있는 추가 정보. 기존 portfolio_sections에 컬럼을 더하지 않고 별도 테이블로 둔다.
+-- (운영 DB는 JPA validate 모드라 컬럼 추가는 수동 ALTER가 필요하지만, 새 테이블은 이 파일의 IF NOT EXISTS로 만들어진다)
+CREATE TABLE IF NOT EXISTS portfolio_project_details (
+    portfolio_section_id BIGINT NOT NULL COMMENT '포트폴리오 섹션 식별자(PROJECT)',
+    tech_stack_json JSON NOT NULL COMMENT '기술 스택 이름 배열',
+    role_summary VARCHAR(300) NULL COMMENT '맡은 역할 요약',
+    repository_url VARCHAR(1000) NULL COMMENT '소스 저장소 주소',
+    demo_url VARCHAR(1000) NULL COMMENT '데모·배포 주소',
+    updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '수정 일시',
+    PRIMARY KEY (portfolio_section_id),
+    CONSTRAINT fk_portfolio_project_details_section FOREIGN KEY (portfolio_section_id) REFERENCES portfolio_sections(portfolio_section_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='포트폴리오 프로젝트 상세 정보';
 
 -- ============================================================================
 -- 다이어그램 (ERD / UML / Flowchart / 시스템 구성도)

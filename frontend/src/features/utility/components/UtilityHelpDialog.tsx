@@ -9,6 +9,7 @@ interface UtilityHelpDialogProps {
   onClose: () => void;
 }
 
+// 유틸리티 화면 공통 "사용법" 대화상자(공통 ModalDialog를 감싼 것).
 export const UtilityHelpDialog = ({ isOpen, title, description, children, onClose }: UtilityHelpDialogProps) => (
   <ModalDialog
     isOpen={isOpen}
@@ -20,7 +21,7 @@ export const UtilityHelpDialog = ({ isOpen, title, description, children, onClos
     onRequestClose={onClose}
   >
     <div className="utility-help-content">{children}</div>
-    <div className="api-help-warning"><strong>공통 개인정보 안내</strong><p>이 도구의 입력은 브라우저 안에서만 처리하며 서버·DB·URL·분석 로그에 저장하지 않습니다.</p></div>
+    <div className="api-help-warning"><strong>데이터 보관 안내</strong><p>도구마다 처리·저장 위치가 다릅니다. 현재 도구의 설명에서 서버 전송 여부와 저장 범위를 확인하고, 비밀번호·토큰 등 민감한 값은 입력 전에 주의해 주세요.</p></div>
   </ModalDialog>
 );
 
@@ -32,6 +33,7 @@ interface UtilityPageTitleProps {
   onHelpOpen: () => void;
 }
 
+// 유틸리티 화면 공통 제목 영역: 작은 분류 글(kicker)·제목·설명과 사용법 열기 버튼.
 export const UtilityPageTitle = ({ kicker, title, description, helpLabel = title, onHelpOpen }: UtilityPageTitleProps) => (
   <div className="page-hero utility-page-title">
     <div>

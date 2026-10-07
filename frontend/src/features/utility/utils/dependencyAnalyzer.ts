@@ -1,3 +1,10 @@
+/**
+ * dependencyAnalyzer.ts — 의존성 목록 분석기(NPM package.json·package-lock.json, Gradle build.gradle·dependencies 결과)
+ *
+ * 같은 라이브러리가 서로 다른 버전으로 여러 번 들어 있으면 "충돌"로 모아 보여 준다.
+ * 선언 파일(package.json, build.gradle)만 넣으면 직접 의존성만, 잠금 파일·dependencies 보고서를 넣으면 간접 의존성까지 보인다.
+ */
+
 export type DependencyEcosystem = "NPM" | "GRADLE";
 export type DependencyScope = "PRODUCTION" | "DEVELOPMENT" | "PEER" | "OPTIONAL" | "TRANSITIVE" | "IMPLEMENTATION" | "API" | "COMPILE_ONLY" | "RUNTIME" | "TEST" | "ANNOTATION" | "RESOLVED";
 
@@ -27,6 +34,7 @@ export interface DependencyAnalysisResult {
   sourceKind: string;
 }
 
+// 붙여 넣은 JSON은 모양을 믿을 수 없으므로 "객체인지", "문자열 값만 있는지"를 확인하는 작은 도우미를 둔다.
 const isRecord = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === "object" && !Array.isArray(value);
 const asStringRecord = (value: unknown): Record<string, string> => isRecord(value) ? Object.fromEntries(Object.entries(value).filter((entry): entry is [string, string] => typeof entry[1] === "string")) : {};
 
@@ -34,6 +42,7 @@ const npmScopes: Array<{ key: string; scope: DependencyScope }> = [
   { key: "dependencies", scope: "PRODUCTION" }, { key: "devDependencies", scope: "DEVELOPMENT" }, { key: "peerDependencies", scope: "PEER" }, { key: "optionalDependencies", scope: "OPTIONAL" },
 ];
 
+/** 이름별로 버전을 모아 두 개 이상이면 충돌로 본다. */
 const buildConflicts = (dependencies: AnalyzedDependency[]): DependencyConflict[] => {
   const grouped = new Map<string, { versions: Set<string>; count: number }>();
   dependencies.forEach((dependency) => {
@@ -45,11 +54,16 @@ const buildConflicts = (dependencies: AnalyzedDependency[]): DependencyConflict[
   return [...grouped.entries()].filter(([, value]) => value.versions.size > 1).map(([name, value]) => ({ name, versions: [...value.versions].sort(), occurrences: value.count })).sort((left, right) => right.versions.length - left.versions.length || left.name.localeCompare(right.name));
 };
 
+/** "node_modules/a/node_modules/b" → "b"(잠금 파일의 경로에서 패키지 이름 꺼내기). */
 const npmPackageNameFromPath = (path: string): string => {
   const parts = path.split("node_modules/").filter(Boolean);
   return parts.at(-1) ?? path;
 };
 
+/**
+ * NPM 분석. package-lock(v2+)의 packages 항목이 있으면 설치된 모든 패키지를, 없으면 package.json의 선언만 읽는다.
+ * 루트 package.json에 직접 적힌 이름이고 node_modules 바로 아래에 있으면 "직접 의존성", 나머지는 "간접(TRANSITIVE)".
+ */
 const analyzeNpmJson = (root: Record<string, unknown>): DependencyAnalysisResult => {
   const packages = isRecord(root.packages) ? root.packages : undefined;
   const isLockFile = Boolean(packages) || typeof root.lockfileVersion === "number";
@@ -77,6 +91,10 @@ const gradleScopeMap: Record<string, DependencyScope> = {
   implementation: "IMPLEMENTATION", api: "API", compileOnly: "COMPILE_ONLY", runtimeOnly: "RUNTIME", testImplementation: "TEST", testRuntimeOnly: "TEST", annotationProcessor: "ANNOTATION", kapt: "ANNOTATION",
 };
 
+/**
+ * Gradle 분석. gradlew dependencies 출력(+--- / \--- 트리)이 있으면 그 트리를, 없으면 build.gradle의 선언 줄을 정규식으로 읽는다.
+ * 보고서의 "1.0 -> 1.2"는 요청 버전과 실제로 선택된 버전이다. 들여쓰기(| 또는 5칸 공백) 개수로 트리 깊이를 계산한다.
+ */
 const analyzeGradle = (source: string): DependencyAnalysisResult => {
   const dependencies: AnalyzedDependency[] = [];
   const warnings: string[] = [];
@@ -103,6 +121,7 @@ const analyzeGradle = (source: string): DependencyAnalysisResult => {
   return { ecosystem: "GRADLE", projectName, projectVersion: source.match(/\bversion\s*=\s*["']([^"']+)["']/)?.[1] ?? "", dependencies, conflicts: buildConflicts(dependencies), warnings, sourceKind: reportLines.length > 0 ? "Gradle dependency report" : "build.gradle" };
 };
 
+/** 입력 글이 {로 시작하면 NPM JSON, 아니면 Gradle로 판단해 분석한다. 8MB를 넘으면 브라우저 부담 때문에 거부한다. */
 export const analyzeDependencySource = (source: string): DependencyAnalysisResult => {
   if (!source.trim()) throw new Error("package.json, package-lock.json, build.gradle 또는 dependencies 결과를 입력해 주세요.");
   if (new Blob([source]).size > 8 * 1024 * 1024) throw new Error("의존성 입력은 8MB 이하만 처리할 수 있습니다.");
@@ -115,6 +134,7 @@ export const analyzeDependencySource = (source: string): DependencyAnalysisResul
   return analyzeGradle(source);
 };
 
+/** 버전 표기의 의미: ^1.2.3 = 1.x 안에서 업데이트, ~1.2.3 = 1.2.x 안에서 업데이트, 1.2.3 = 고정 … */
 export const describeVersionRange = (version: string): string => {
   if (!version) return "Lock 파일에서만 확인";
   if (version.startsWith("^")) return "같은 major 안에서 업데이트 허용";

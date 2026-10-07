@@ -44,6 +44,17 @@ services:
 
       AUTH_SESSION_TIMEOUT: ${AUTH_SESSION_TIMEOUT:-30m}
       AUTH_REMEMBER_ME_DURATION: ${AUTH_REMEMBER_ME_DURATION:-30d}
+      # 로그인 실패 제한: 같은 IP·아이디로 FAILURE_WINDOW 안에 MAX_FAILURES번 틀리면 LOCK_DURATION 동안 잠근다.
+      AUTH_LOGIN_MAX_FAILURES: ${AUTH_LOGIN_MAX_FAILURES:-5}
+      AUTH_LOGIN_FAILURE_WINDOW: ${AUTH_LOGIN_FAILURE_WINDOW:-15m}
+      AUTH_LOGIN_LOCK_DURATION: ${AUTH_LOGIN_LOCK_DURATION:-15m}
+
+      # 크롤러 브라우저 실행 위치. 운영 서버(1GB)에서는 Chromium을 띄우지 않도록 remote로 고정한다.
+      # remote: 다른 컴퓨터(예: Tailscale로 연결한 내 PC)에 열어 둔 Chrome에 원격 디버깅으로 연결한다.
+      # 주소 예: http://100.101.102.103:9222  (설정 방법은 docs/crawler.md "원격 브라우저로 실행")
+      # ★ 이 주소는 사설망 주소여야 한다. 9222 포트를 인터넷에 열면 누구나 그 브라우저를 조종할 수 있다.
+      CRAWLER_BROWSER_MODE: ${CRAWLER_BROWSER_MODE:-remote}
+      CRAWLER_REMOTE_BROWSER_URL: ${CRAWLER_REMOTE_BROWSER_URL:-}
 
       # HTTPS(Cloudflare) 적용 후 true. HTTP 로만 테스트하는 동안에는 false 로 둔다.
       SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-true}

@@ -2,6 +2,14 @@ package com.example.devnote.crawler.dto;
 
 import java.time.Instant;
 
+/**
+ * 실시간 화면 응답. 프론트가 실행 중 주기적으로(폴링) 요청해 브라우저 화면과 진행 상태를 그린다.
+ *   active               : 지금 실행(또는 녹화) 중인지
+ *   imageDataUrl         : 브라우저 화면 캡처(data:image/... 형식, 화면이 없으면 빈 값)
+ *   manualActionRequired : 사람이 직접 처리해야 하는 단계(캡차 등)에서 멈췄는지 + 그 안내(manualActionMessage)
+ *   runStatus / finalReason / suggestedAction: 실행 결과와 실패 원인·해 볼 일
+ *   collectedCount, logs : 지금까지 수집한 개수와 실행 기록
+ */
 public record CrawlerLiveViewResponse(
     boolean active,
     String stage,

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Size;
 
+/** 사이트 안 검색창에 검색어를 넣고 검색한 뒤 목록을 수집하는 설정. enabled일 때만 검색어가 필요하다. */
 public record CrawlerPageSearchRequest(
     boolean enabled,
 

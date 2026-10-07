@@ -27,5 +27,12 @@ export default defineConfig({
     /** 각 테스트가 남긴 mock 상태가 다음 테스트로 새지 않도록 정리합니다. */
     restoreMocks: true,
     clearMocks: true,
+    /**
+     * 테스트 파일을 여러 "프로세스"(forks, Vitest 4 기본값)가 아니라 여러 "스레드"로 나눠 실행합니다.
+     * Windows에서 forks로 병렬 실행하면 가끔 import한 모듈이 빈 값(undefined)이나 SyntaxError로 읽혀
+     * 관련 없는 파일이 무작위로 실패했습니다(2026-10-04 기록: 6번 중 4번 실패).
+     * 같은 테스트를 threads 또는 작업자 1개로 돌리면 매번 통과해 실행 방식의 문제로 판단했습니다.
+     */
+    pool: "threads",
   },
 });
