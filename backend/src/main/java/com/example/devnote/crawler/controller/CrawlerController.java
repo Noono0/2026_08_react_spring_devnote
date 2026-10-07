@@ -12,6 +12,8 @@ import com.example.devnote.crawler.dto.CrawlerTrackedRunResponse;
 import com.example.devnote.crawler.dto.CrawlerLiveViewResponse;
 import com.example.devnote.crawler.dto.CrawlerManualActionRequest;
 import com.example.devnote.crawler.dto.CrawlerRecordingRequest;
+import com.example.devnote.crawler.dto.CrawlerBrowserStatusResponse;
+import com.example.devnote.crawler.service.CrawlerBrowserSettings;
 import com.example.devnote.crawler.service.CrawlerConfigurationService;
 import com.example.devnote.crawler.service.CrawlerService;
 import com.example.devnote.crawler.service.CrawlerSessionStore;
@@ -39,8 +41,10 @@ import java.util.List;
  *   저장된 설정  : /configurations — 설정 저장·수정·삭제, 저장된 설정으로 실행(이력 남김)
  *   실행 이력    : /histories — 실행 결과·실패 원인 조회·삭제
  *   네이버 세션  : /sessions/naver — 저장된 로그인 세션 상태 확인·삭제
+ *   브라우저 상태 : /browser-status — 실행 위치(local/remote)와 원격 브라우저 연결 여부
  *
- * ★ 개인용 도구라 로그인 검사가 없다. 외부에 공개하기 전에는 이 API를 막거나 권한 검사를 붙여야 한다(docs/deployment.md 12번 절).
+ * ★ 모든 API는 슈퍼관리자만 쓸 수 있다. 검사는 메서드마다 넣지 않고 CrawlerAccessInterceptor가 경로 전체에 한 번에 건다.
+ *   (새 API를 추가하면서 권한 검사를 빼먹는 실수가 생기지 않게)
  * 자세한 사용법은 docs/crawler.md 참고.
  */
 @RestController
@@ -51,6 +55,13 @@ public class CrawlerController {
     private final CrawlerSessionStore crawlerSessionStore;
     private final CrawlerConfigurationService crawlerConfigurationService;
     private final CrawlerLiveViewStore crawlerLiveViewStore;
+    private final CrawlerBrowserSettings crawlerBrowserSettings;
+
+    // 화면이 실행 버튼을 켜거나 끄기 전에 묻는다. remote 모드면 원격 Chrome에 2초 안에 닿는지 확인한다.
+    @GetMapping("/browser-status")
+    public ApiResponse<CrawlerBrowserStatusResponse> browserStatus() {
+        return ApiResponse.success(crawlerBrowserSettings.checkStatus());
+    }
 
     // 실행이 끝날 때까지(최대 수십 초) 응답을 기다리는 동기 방식이다. 진행 상황은 다른 요청(/live-view)으로 따로 확인한다.
     @PostMapping("/run")

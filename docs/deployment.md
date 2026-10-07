@@ -455,6 +455,10 @@ INITIAL_SUPER_ADMIN_PASSWORD_HASH=<5번에서 만든 값>
 SQL_INIT_MODE=always          # 첫 배포 후 never 로 변경
 JPA_DDL_AUTO=validate         # 스키마 불일치로 기동이 막히면 none 으로 임시 우회
 SESSION_COOKIE_SECURE=false   # HTTPS 붙인 뒤 true 로 변경
+
+# 크롤러: 이 서버(1GB)는 Chromium을 띄우지 않고 원격 Chrome에 연결한다(기본 remote).
+# 비워 두면 크롤러 화면에 "원격 브라우저 연결 안 됨"이 뜨고 실행이 막힌다. 설정 방법은 docs/crawler.md
+CRAWLER_REMOTE_BROWSER_URL=   # 예: http://100.x.y.z:9222 (Tailscale 사설망의 PC)
 ```
 
 ```bash
@@ -606,7 +610,7 @@ scp -i <키> opc@<공인IP>:~/devnote-backups/*.gz ./
 
 | 순서 | 항목 | 현재 상태 | 공개 전 조치 |
 |---|---|---|---|
-| 1 | 웹 크롤러 API 인증 | `CrawlerController` 의 모든 API(실행·녹화·설정·이력·실시간 화면·네이버 세션)가 로그인 없이 열려 있음. `SecurityConfiguration` 이 전체 `permitAll` | 슈퍼관리자만 허용하거나 운영 프로필에서 크롤러를 끔. 1GB 서버에서 Chromium 실행은 메모리 부족(OOM)으로 이어질 수 있음 |
+| 1 | 웹 크롤러 API 인증 | ✅ 2026-10-08 적용. `CrawlerAccessInterceptor`가 `/api/v1/utilities/crawler/**` 전체를 슈퍼관리자 전용으로 막음(401/403). 운영은 `CRAWLER_BROWSER_MODE=remote`가 기본이라 이 서버에서 Chromium을 띄우지 않음 | 크롤러를 쓰려면 `.env.app`에 `CRAWLER_REMOTE_BROWSER_URL`(Tailscale 사설망의 PC Chrome 주소)을 넣는다. 설정 순서는 [크롤러 가이드](crawler.md#원격-브라우저로-실행-내-pc--tailscale) |
 | 2 | 비로그인 요청의 회원 처리 | `CurrentMemberProvider` 가 세션이 없으면 1번 회원(슈퍼관리자)으로 처리하고 `X-Member-Id` 헤더로 다른 회원도 지정 가능. 학습 문서·다이어그램·파일 업로드가 이 방식을 사용 | 운영 프로필에서 헤더·기본값 대체를 끄고, 업로드·다이어그램은 로그인을 요구. (24시간 지난 미사용 `TEMP` 파일은 매일 자동 정리됨) |
 | 3 | 서버 정규식 실행 제한 | `JavaRegexService` 의 위험 패턴 검사를 `\d*\d*\d*z` 같은 패턴이 통과하고, Java 정규식은 중단 요청을 무시해 1초 제한 뒤에도 계속 실행됨. 작업 스레드가 2개라 이런 요청 두 번이면 재시작 전까지 기능이 멈춤 | 입력 문자열을 감싸 `charAt()` 에서 제한 시간을 확인하도록 변경 |
 | 4 | 관리자 비밀번호 교체 | 5번 절의 경고처럼 첫 기동 뒤에는 해시 변경이 반영되지 않음 | 공개 전에 SQL 로 비밀번호를 교체하고 로그인 확인 |

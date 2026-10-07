@@ -34,9 +34,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.net.InetAddress;
 import java.net.URI;
-import java.net.UnknownHostException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -120,17 +118,21 @@ public class PlaywrightCrawlerEngine implements WebCrawlerEngine {
     private final CrawlerItemMatcher itemMatcher;
     private final CrawlerSessionStore sessionStore;
     private final CrawlerLiveViewStore liveViewStore;
+    /** 브라우저를 이 서버에서 띄울지(local), 원격 Chrome에 연결할지(remote)와 원격 주소. */
+    private final CrawlerBrowserSettings browserSettings;
 
     /**
      * true: 백엔드가 사용자 PC에서 실행돼 Chromium 창이 화면에 직접 보인다(gradlew bootRun).
      * false: Docker의 Xvfb처럼 창이 보이지 않아 웹 화면의 원격 조작을 사용한다.
+     * remote 모드에서는 이 값과 관계없이 "직접 띄운 창"이 없다(canUseDirectWindow 참고).
      */
     @Value("${CRAWLER_DIRECT_WINDOW:true}")
     private boolean directWindowAvailable;
 
-    /** Docker 백엔드가 'PC에 새 창' 모드에서 연결할 PC Chrome의 원격 디버깅 주소(start-pc-chrome.cmd로 실행). */
-    @Value("${CRAWLER_PC_BROWSER_URL:http://host.docker.internal:9222}")
-    private String pcBrowserUrl;
+    /** 이 서버가 띄운 Chromium 창을 사용자가 직접 볼 수 있는지. remote 모드면 브라우저가 다른 컴퓨터에 있으므로 false. */
+    private boolean canUseDirectWindow() {
+        return directWindowAvailable && !browserSettings.isRemoteMode();
+    }
 
     @Override
     public CrawlerRunResponse crawl(CrawlerRunRequest request) {
@@ -368,25 +370,22 @@ public class PlaywrightCrawlerEngine implements WebCrawlerEngine {
 
     /**
      * 브라우저 표시 방식에 맞게 브라우저를 준비한다.
-     * - 화면 보기 끔: headless
-     * - 웹 화면(WEB): Docker(Xvfb)에서는 headless: false, PC에서 실행 중이면 창을 띄우지 않도록 headless
-     * - PC에 새 창(PC_WINDOW): PC에서 실행 중이면 Chromium 창을 직접 띄우고,
-     *   Docker라면 PC에 열어 둔 Chrome(start-pc-chrome.cmd)에 원격 디버깅으로 연결한다.
+     * - remote 모드(CRAWLER_BROWSER_MODE=remote): 표시 방식과 관계없이 항상 원격 Chrome에 연결한다.
+     *   이 서버에서는 Chromium을 절대 띄우지 않는다(운영 서버 메모리 보호).
+     * - local 모드
+     *   - 화면 보기 끔: headless
+     *   - 웹 화면(WEB): Docker(Xvfb)에서는 headless: false, PC에서 실행 중이면 창을 띄우지 않도록 headless
+     *   - PC에 새 창(PC_WINDOW): PC에서 실행 중이면 Chromium 창을 직접 띄우고,
+     *     Docker라면 PC에 열어 둔 Chrome(start-pc-chrome.cmd)에 원격 디버깅으로 연결한다.
      */
     private Browser openBrowser(Playwright playwright, boolean showBrowser, boolean pcWindow, CrawlerProgress progress) {
+        if (browserSettings.isRemoteMode()) {
+            progress.at("원격 브라우저 연결", "크롤링용 PC에서 start-pc-chrome.cmd로 Chrome을 열고 Tailscale이 켜져 있는지 확인해 주세요.");
+            return connectToRemoteChrome(playwright, "원격 브라우저");
+        }
         if (pcWindow && !directWindowAvailable) {
             progress.at("PC 브라우저 연결", "PC에서 start-pc-chrome.cmd를 실행해 Chrome 창을 먼저 열어 두었는지 확인해 주세요.");
-            String endpoint = pcBrowserEndpoint();
-            try {
-                return playwright.chromium().connectOverCDP(endpoint, new BrowserType.ConnectOverCDPOptions()
-                    .setSlowMo(120)
-                    .setTimeout(10_000));
-            } catch (PlaywrightException exception) {
-                throw new BusinessException(
-                    ErrorCode.CRAWLER_EXECUTION_FAILED,
-                    "PC의 Chrome(" + endpoint + ")에 연결하지 못했습니다. 프로젝트 폴더의 start-pc-chrome.cmd로 Chrome을 먼저 열어 두었는지 확인해 주세요."
-                );
-            }
+            return connectToRemoteChrome(playwright, "PC의 Chrome");
         }
         boolean headless = !showBrowser || (!pcWindow && directWindowAvailable);
         return playwright.chromium().launch(new BrowserType.LaunchOptions()
@@ -395,17 +394,21 @@ public class PlaywrightCrawlerEngine implements WebCrawlerEngine {
             .setTimeout(NAVIGATION_TIMEOUT_MILLISECONDS));
     }
 
-    /** Chrome 원격 디버깅은 localhost·IP가 아닌 Host 헤더를 거부하므로 호스트 이름을 IP 주소로 바꿔 연결한다. */
-    private String pcBrowserEndpoint() {
-        URI uri = URI.create(pcBrowserUrl.trim());
+    /**
+     * 이미 열려 있는 Chrome에 원격 디버깅(CDP)으로 붙는다.
+     * ★ 이렇게 연결한 브라우저는 browser.close()를 불러도 Chrome 자체가 꺼지지 않고 "연결만" 끊긴다.
+     *   (우리가 만든 컨텍스트·탭만 정리된다) 그래서 사용자가 열어 둔 Chrome을 다음 실행에도 계속 쓸 수 있다.
+     */
+    private Browser connectToRemoteChrome(Playwright playwright, String browserLabel) {
+        String endpoint = browserSettings.browserEndpoint();
         try {
-            String address = InetAddress.getByName(uri.getHost()).getHostAddress();
-            String host = address.contains(":") ? "[" + address + "]" : address;
-            return uri.getScheme() + "://" + host + (uri.getPort() == -1 ? "" : ":" + uri.getPort());
-        } catch (UnknownHostException exception) {
+            return playwright.chromium().connectOverCDP(endpoint, new BrowserType.ConnectOverCDPOptions()
+                .setSlowMo(120)
+                .setTimeout(10_000));
+        } catch (PlaywrightException exception) {
             throw new BusinessException(
                 ErrorCode.CRAWLER_EXECUTION_FAILED,
-                "PC 브라우저 주소(" + uri.getHost() + ")를 찾지 못했습니다. CRAWLER_PC_BROWSER_URL 설정을 확인해 주세요."
+                browserLabel + "(" + endpoint + ")에 연결하지 못했습니다. 크롤링용 PC에서 start-pc-chrome.cmd로 Chrome을 먼저 열어 두었는지 확인해 주세요."
             );
         }
     }
@@ -493,7 +496,7 @@ public class PlaywrightCrawlerEngine implements WebCrawlerEngine {
                 if (diagnosis.manualActionRequired()) {
                     // PC에서 직접 띄운 창: page.pause()로 멈추고 Inspector의 Resume으로 이어간다.
                     // PC Chrome 연결(Docker)·웹 화면: 로그인 쿠키가 생길 때까지 기다렸다가 자동으로 이어간다.
-                    boolean passed = request.usesPcWindow() && directWindowAvailable
+                    boolean passed = request.usesPcWindow() && canUseDirectWindow()
                         ? waitForManualLoginInDirectWindow(page, diagnosis)
                         : waitForManualLogin(page, diagnosis, request.usesPcWindow());
                     if (passed) return;

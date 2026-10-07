@@ -19,7 +19,8 @@ class PlaywrightCrawlerRecordingSessionTest {
         CrawlerLiveViewStore liveViewStore = mock(CrawlerLiveViewStore.class);
         BrowserContext context = mock(BrowserContext.class);
         PlaywrightCrawlerEngine engine = new PlaywrightCrawlerEngine(
-            mock(CrawlerTargetPolicy.class), mock(CrawlerItemMatcher.class), sessionStore, liveViewStore
+            mock(CrawlerTargetPolicy.class), mock(CrawlerItemMatcher.class), sessionStore, liveViewStore,
+            mock(CrawlerBrowserSettings.class)
         );
         when(context.cookies()).thenReturn(List.of(cookie("NID_SES", "old")));
         List<String> savedCookies = engine.naverLoginCookieSignatures(context);

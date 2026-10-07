@@ -27,6 +27,8 @@ interface CrawlerStepEditorProps {
   onUsernameChange: (value: string) => void;
   onPasswordChange: (value: string) => void;
   disabled: boolean;
+  /** 원격 브라우저가 준비되지 않아 실행·녹화 "시작"만 막는다(단계 편집은 계속 가능). 진행 중인 녹화 종료는 막지 않는다. */
+  runBlocked?: boolean;
   onRun: (test: boolean) => void;
   onBeforeAddAction: () => boolean;
   commonFields: CrawlerFieldRequest[];
@@ -52,7 +54,7 @@ const describe = (step: EditableScenarioStep): string => {
   }
 };
 
-export const CrawlerStepEditor = ({ steps, onChange, onLoadExample, startUrl, browserWindow, username, password, onUsernameChange, onPasswordChange, disabled, onRun, onBeforeAddAction, commonFields, commonItemSelector, focusProblem }: CrawlerStepEditorProps) => {
+export const CrawlerStepEditor = ({ steps, onChange, onLoadExample, startUrl, browserWindow, username, password, onUsernameChange, onPasswordChange, disabled, runBlocked = false, onRun, onBeforeAddAction, commonFields, commonItemSelector, focusProblem }: CrawlerStepEditorProps) => {
   // 지금 선택한 행. fieldId가 있으면 목록 반복 안의 추출 칸을 고른 것이다.
   const [selection, setSelection] = useState<{ stepId: string; fieldId?: string }>();
   const editorRef = useRef<HTMLElement>(null);
@@ -172,8 +174,8 @@ export const CrawlerStepEditor = ({ steps, onChange, onLoadExample, startUrl, br
   return <section ref={editorRef} className="crawler-config-section crawler-workflow">
     <header><span>▶</span><div><h2>단계별 실행</h2><p>동작 추가 → 행 선택 → 설정. 목록 반복을 선택하면 그 안에 데이터 추출을 추가할 수 있습니다.</p></div></header>
     <div className="crawler-workflow-toolbar">
-      <button type="button" className="secondary-button" disabled={locked || steps.length === 0} onClick={() => onRun(true)}>▷ 테스트 실행</button>
-      <button type="button" className="primary-button" disabled={locked || steps.length === 0} onClick={() => onRun(false)}>▶ 실행</button>
+      <button type="button" className="secondary-button" disabled={locked || runBlocked || steps.length === 0} onClick={() => onRun(true)}>▷ 테스트 실행</button>
+      <button type="button" className="primary-button" disabled={locked || runBlocked || steps.length === 0} onClick={() => onRun(false)}>▶ 실행</button>
       <button type="button" className="secondary-button" disabled={!disabled || manual.isPending || (!isPaused && (live?.runStatus !== "RUNNING" || live.pauseRequested))} onClick={() => manual.mutate({ action: isPaused ? "CONTINUE" : "PAUSE" })}>{isPaused ? "▶ 재개" : live?.pauseRequested ? "일시정지 요청됨" : "Ⅱ 일시정지"}</button>
       <small>테스트: 최대 1페이지·3건 / 일시정지: 현재 동작이 끝난 뒤 적용</small>
     </div>
@@ -219,7 +221,7 @@ export const CrawlerStepEditor = ({ steps, onChange, onLoadExample, startUrl, br
     </section>
     <details className="crawler-workflow-extras" open><summary>예시·녹화·계정정보</summary>
       <div className="crawler-workflow-toolbar"><button type="button" className="secondary-button" disabled={locked} onClick={() => { onLoadExample(createNaverCafeExampleSteps(startUrl.trim() || "https://cafe.naver.com/lhuniv9", "LH")); setSelection(undefined); }}>네이버 카페 검색 예시 불러오기</button>
-        <button type="button" className="secondary-button" disabled={disabled || recording.start.isPending || recording.stop.isPending || !startUrl.trim()} onClick={() => isRecording ? recording.stop.mutate() : recording.start.mutate({ startUrl: startUrl.trim(), browserWindow })}>{isRecording ? "■ 녹화 종료" : "● 녹화로 만들기"}</button></div>
+        <button type="button" className="secondary-button" disabled={disabled || recording.start.isPending || recording.stop.isPending || (!isRecording && (runBlocked || !startUrl.trim()))} onClick={() => isRecording ? recording.stop.mutate() : recording.start.mutate({ startUrl: startUrl.trim(), browserWindow })}>{isRecording ? "■ 녹화 종료" : "● 녹화로 만들기"}</button></div>
       {recording.start.isError || recording.stop.isError ? <p className="field-error">녹화 요청을 처리하지 못했습니다. 다른 실행이 진행 중인지 확인해 주세요.</p> : null}
       {isRecording ? <><p>브라우저에서 클릭·입력을 진행하고 ‘녹화 종료’를 눌러 주세요.</p><CrawlerLiveViewPanel running /></> : null}
       {recording.start.isSuccess && !isRecording && (live?.recordedSteps.length ?? 0) > 0 ? <div><p>녹화한 동작 {live?.recordedSteps.length}개</p><button type="button" className="secondary-button" disabled={locked} onClick={() => { onChange(toEditableSteps(live?.recordedSteps ?? [])); setSelection(undefined); recording.start.reset(); }}>녹화 결과로 단계 바꾸기</button><button type="button" className="secondary-button" disabled={locked || steps.length + (live?.recordedSteps.length ?? 0) > 100} onClick={() => { onChange([...steps, ...toEditableSteps(live?.recordedSteps ?? [])]); recording.start.reset(); }}>기존 단계 뒤에 붙이기</button></div> : null}

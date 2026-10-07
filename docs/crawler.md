@@ -18,8 +18,44 @@
   - `내 PC에 새 창으로 열기`: PC에 새 브라우저 창이 떠서 로그인·캡차를 그 창에서 직접 처리하고 작업을 이어갑니다.
     - 백엔드를 PC에서 실행할 때(`start-local-backend.cmd` 또는 `gradlew.bat bootRun`): Chromium 창이 바로 뜨고, 캡차 화면에서는 `page.pause()`로 멈춥니다. 창에서 인증한 뒤 함께 열린 Playwright Inspector의 Resume(▶)을 누르면 이어집니다.
     - 백엔드가 Docker일 때: 먼저 `start-pc-chrome.cmd`로 크롤링용 Chrome을 열어 둡니다. 백엔드가 `CRAWLER_PC_BROWSER_URL`(기본 `http://host.docker.internal:9222`)로 그 Chrome에 연결해 새 창을 열고, 캡차는 창에서 인증하면 자동으로 이어집니다.
+    - 운영 서버처럼 `CRAWLER_BROWSER_MODE=remote`이면 이 구분과 관계없이 항상 원격 Chrome에 연결합니다(아래 "브라우저 실행 위치").
   - `start-local-backend.cmd`는 Docker 전체 실행을 종료하고 MySQL만 `compose.dev.yml`로 띄웁니다. 이 개발용 DB는 Docker 전체 실행과 볼륨이 달라 데이터가 따로 관리됩니다. 개발용 MySQL은 PC의 다른 DB(MariaDB 등)나 Windows 예약 포트와 겹치지 않도록 13306·23306·33306·43306·53306을 차례로 시도해 처음 성공한 포트로 띄우고, 백엔드도 그 포트로 연결합니다. Docker Desktop이 꺼져 있으면 먼저 실행하고 최대 3분 기다립니다.
 - 로컬 브라우저 접속은 `localhost`와 `127.0.0.1`의 3000·5173 포트를 모두 허용합니다. 프록시를 거치는 POST 검증에서도 브라우저와 동일한 `Origin` 헤더를 사용해야 CORS 거부를 확인할 수 있습니다.
+
+## 사용 권한
+
+크롤러 API(`/api/v1/utilities/crawler/**`)와 화면은 **슈퍼관리자만** 사용할 수 있습니다. 서버는 `CrawlerAccessInterceptor`가 경로 전체를 막아 비로그인은 401 `AUTHENTICATION_REQUIRED`, 슈퍼관리자가 아니면 403 `ACCESS_DENIED`를 돌려주고, 화면은 홈으로 보내지 않고 안내 문구를 보여 줍니다. 크롤러가 서버 이름으로 다른 사이트에 접속하고 저장된 네이버 세션을 쓰기 때문입니다.
+
+## 브라우저 실행 위치 (`CRAWLER_BROWSER_MODE`)
+
+크롤러에서 메모리를 가장 많이 쓰는 것은 Chromium입니다. 어디서 띄울지는 화면이 아니라 서버 설정이 정합니다(실수로 운영 서버에서 띄우지 않도록 화면에 선택지를 두지 않음).
+
+| 값 | 동작 | 쓰는 곳 |
+|---|---|---|
+| `local` (기본) | 백엔드가 있는 컴퓨터에서 Chromium을 직접 띄웁니다. 위의 `웹 화면 안에서 보기`·`내 PC에 새 창으로 열기`가 그대로 동작합니다. | 로컬 개발, 로컬 Docker(`compose.yml`) |
+| `remote` | 이 서버에서는 Chromium을 절대 띄우지 않고, `CRAWLER_REMOTE_BROWSER_URL`의 Chrome에 원격 디버깅(CDP)으로 연결합니다. 표시 방식과 관계없이 항상 원격으로 연결합니다. | 운영(`compose.app.yml`의 기본값) |
+
+- `CRAWLER_REMOTE_BROWSER_URL`이 비어 있으면 `CRAWLER_PC_BROWSER_URL`을 씁니다. 값의 오타(예: `remtoe`)는 서버 시작 시 바로 실패합니다.
+- 크롤러 화면은 `GET /browser-status`로 상태를 받아, remote일 때 `✓ 원격 브라우저 연결됨` 또는 `⚠ 원격 브라우저 연결 안 됨`을 보여 줍니다. 연결이 안 되면 `크롤링 실행`·`▶ 실행`·`테스트 실행`·`녹화로 만들기` 시작을 막고 5초마다 다시 확인합니다(진행 중인 녹화 종료는 막지 않음).
+- remote에서는 `화면 보기 끔`을 골라도 원격 PC의 Chrome에 창이 뜰 수 있습니다(그 Chrome이 화면 있는 일반 Chrome이기 때문).
+
+### 원격 브라우저로 실행: 내 PC + Tailscale
+
+운영 서버(Oracle)가 집 PC의 Chrome을 조종하는 구성입니다. PC가 켜져 있을 때만 크롤링할 수 있지만 무료이고, 집 IP라 네이버 차단 위험이 가장 낮습니다.
+
+> ⚠ Chrome 원격 디버깅 포트(9222)는 그 브라우저의 쿠키·로그인을 포함해 전부를 조종할 수 있는 통로입니다. **공유기 포트 포워딩이나 방화벽 개방으로 인터넷에 열면 절대 안 됩니다.** 아래처럼 Tailscale 사설망 안에서만 연결합니다.
+
+1. Tailscale(개인 무료)을 PC와 Oracle 앱 서버에 설치하고 같은 계정으로 로그인합니다. 서버: `curl -fsSL https://tailscale.com/install.sh | sh` 후 `sudo tailscale up`.
+2. PC에서 `start-pc-chrome.cmd`로 크롤링용 Chrome을 엽니다. 이 Chrome은 PC 자신(127.0.0.1)에서만 9222 접속을 받습니다.
+3. PC에서 Tailscale이 사설망으로 들어온 9222 연결을 PC 내부로 전달하게 합니다: `tailscale serve --bg --tcp 9222 tcp://localhost:9222`. 설정 확인은 `tailscale serve status`, 해제는 `tailscale serve reset`입니다. (Tailscale 버전에 따라 옵션이 다를 수 있으니 `tailscale serve --help`로 확인하세요.)
+4. PC의 Tailscale IP(`tailscale ip -4`, 보통 `100.x.y.z`)를 확인하고 서버의 `.env.app`에 적습니다.
+   ```
+   CRAWLER_BROWSER_MODE=remote
+   CRAWLER_REMOTE_BROWSER_URL=http://100.x.y.z:9222
+   ```
+5. 서버에서 연결을 먼저 확인합니다: `curl http://100.x.y.z:9222/json/version`이 Chrome 버전 JSON을 돌려주면 됩니다. 앱을 다시 띄운 뒤(`./scripts/deploy.sh`) 크롤러 화면에 `✓ 원격 브라우저 연결됨`이 보이는지 확인합니다.
+
+같은 설정으로 Oracle Always Free의 ARM(Ampere A1) 서버에 Chrome을 띄워 연결할 수도 있습니다. 이때도 9222 포트는 사설망(VCN 내부 또는 Tailscale)에서만 열어야 합니다.
 
 - `/utilities/crawler`에서 URL과 반복 항목·필드 CSS 선택자를 입력하면 백엔드 Playwright Chromium이 실제 렌더링 결과를 읽습니다. 별도 검색 API는 사용하지 않습니다.
 - 크롤링 설정·실행 이력은 MySQL을 사용합니다. 로컬에서는 `start-local-backend.cmd` 또는 MySQL 실행 후 `backend`의 `gradlew.bat bootRun`을 사용합니다.

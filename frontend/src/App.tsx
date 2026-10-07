@@ -232,7 +232,13 @@ export const App = () => (
             <Route path="diagrams" element={<Suspense fallback={<UtilityLazyFallback name="Diagram Designer" />}><DiagramListPage /></Suspense>} />
             <Route path="diagrams/:diagramId" element={<Suspense fallback={<UtilityLazyFallback name="Diagram Designer" />}><DiagramEditorPage /></Suspense>} />
             <Route path="dependencies" element={<Suspense fallback={<UtilityLazyFallback name="Dependency Analyzer" />}><DependencyAnalyzerPage /></Suspense>} />
-            <Route path="crawler" element={<Suspense fallback={<UtilityLazyFallback name="웹 크롤링 도구" />}><WebCrawlerPage /></Suspense>} />
+            {/* 크롤러는 서버(또는 연결된 원격 브라우저)로 다른 사이트에 접속하므로 슈퍼관리자 전용이다.
+                서버도 CrawlerAccessInterceptor로 막고, 화면은 권한이 없으면 홈으로 튕기지 않고 이유를 알려 준다. */}
+            <Route path="crawler" element={
+              <RoleProtectedRoute superAdminOnly fallback={<div className="portfolio-state-panel" role="alert">웹 크롤링 도구는 슈퍼관리자만 사용할 수 있습니다. 슈퍼관리자로 로그인한 뒤 다시 열어 주세요.</div>}>
+                <Suspense fallback={<UtilityLazyFallback name="웹 크롤링 도구" />}><WebCrawlerPage /></Suspense>
+              </RoleProtectedRoute>
+            } />
           </Route>
           {/* 관리자 화면 묶음. 전부 RoleProtectedRoute로 감싸서 비관리자는 못 들어간다. */}
           <Route path="admin" element={<RoleProtectedRoute><AdminHomePage /></RoleProtectedRoute>} />

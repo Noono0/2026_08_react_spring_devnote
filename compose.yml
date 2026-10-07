@@ -53,6 +53,10 @@ services:
       SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
       # '내 PC에 새 창으로 열기' 선택 시 연결할 PC Chrome(start-pc-chrome.cmd)의 원격 디버깅 주소
       CRAWLER_PC_BROWSER_URL: ${CRAWLER_PC_BROWSER_URL:-http://host.docker.internal:9222}
+      # 크롤러 브라우저 실행 위치. 로컬 Docker는 기본 local(이 컨테이너가 Chromium을 띄움).
+      # remote로 바꾸면 CRAWLER_REMOTE_BROWSER_URL(없으면 위 CRAWLER_PC_BROWSER_URL)의 Chrome에 연결한다.
+      CRAWLER_BROWSER_MODE: ${CRAWLER_BROWSER_MODE:-local}
+      CRAWLER_REMOTE_BROWSER_URL: ${CRAWLER_REMOTE_BROWSER_URL:-}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:

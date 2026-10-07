@@ -9,6 +9,8 @@
 import type { ApiResponse } from "@/shared/api/apiResponseTypes";
 import { selectedHttpClient } from "@/shared/api/http/selectedHttpClient";
 import {
+  crawlerBrowserStatusSchema,
+  type CrawlerBrowserStatus,
   crawlerRunResponseSchema,
   crawlerLiveViewSchema,
   crawlerConfigurationSchema,
@@ -27,6 +29,12 @@ import {
   type CrawlerManualActionRequest,
   type CrawlerSessionStatus,
 } from "@/features/crawler/types/webCrawlerTypes";
+
+// ── 브라우저 실행 준비 상태: 실행 위치(LOCAL/REMOTE)와 원격 브라우저 연결 여부 ──
+export const getCrawlerBrowserStatus = async (): Promise<CrawlerBrowserStatus> => {
+  const response = await selectedHttpClient.get<ApiResponse<unknown>>("/utilities/crawler/browser-status");
+  return crawlerBrowserStatusSchema.parse(response.data);
+};
 
 // ── 실시간 화면: 상태 읽기 / 수동 조작 보내기 / 실패 후 열어 둔 브라우저 닫기 ──
 export const getCrawlerLiveView = async (): Promise<CrawlerLiveView> => {

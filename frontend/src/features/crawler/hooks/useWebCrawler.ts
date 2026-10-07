@@ -14,6 +14,7 @@ import {
   deleteCrawlerRunHistory,
   getCrawlerConfigurations,
   closeCrawlerLiveView,
+  getCrawlerBrowserStatus,
   startCrawlerRecording,
   stopCrawlerRecording,
   getCrawlerLiveView,
@@ -28,6 +29,20 @@ import {
 import type { CrawlerConfigurationSaveRequest, CrawlerRunRequest } from "@/features/crawler/types/webCrawlerTypes";
 
 export const useWebCrawlerMutation = () => useMutation({ mutationFn: runWebCrawler });
+
+/** 원격 브라우저를 기다리는 동안 다시 확인하는 간격(5초). 사용자가 PC에서 Chrome을 켜면 곧 버튼이 풀린다. */
+const BROWSER_STATUS_RETRY_INTERVAL = 5_000;
+
+/**
+ * 브라우저 실행 준비 상태. 준비되지 않았을 때만 5초마다 다시 묻고, 준비되면 멈춘다(불필요한 요청 방지).
+ * 창으로 돌아왔을 때(refetchOnWindowFocus, 기본값)도 다시 확인한다.
+ */
+export const useCrawlerBrowserStatus = () => useQuery({
+  queryKey: ["crawler", "browser-status"],
+  queryFn: getCrawlerBrowserStatus,
+  retry: false,
+  refetchInterval: (query) => (query.state.data?.ready === false ? BROWSER_STATUS_RETRY_INTERVAL : false),
+});
 
 /**
  * 실시간 화면 상태. polling이 true면 0.7초마다 다시 받아 화면 캡처와 진행 단계를 갱신한다.

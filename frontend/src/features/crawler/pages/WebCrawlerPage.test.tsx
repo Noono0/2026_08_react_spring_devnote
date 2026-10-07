@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   deleteNaverCrawlerSession,
+  getCrawlerBrowserStatus,
   getCrawlerConfigurations,
   getCrawlerLiveView,
   getCrawlerRunHistories,
@@ -18,6 +19,7 @@ vi.mock("@/features/utility/utils/browserFileUtils", () => ({ downloadText: vi.f
 
 vi.mock("@/features/crawler/api/webCrawlerApi", () => ({
   runWebCrawler: vi.fn(),
+  getCrawlerBrowserStatus: vi.fn(),
   getNaverCrawlerSessionStatus: vi.fn(),
   deleteNaverCrawlerSession: vi.fn(),
   getCrawlerConfigurations: vi.fn(),
@@ -42,6 +44,7 @@ const mockedGetCrawlerConfigurations = vi.mocked(getCrawlerConfigurations);
 const mockedGetCrawlerLiveView = vi.mocked(getCrawlerLiveView);
 const mockedGetCrawlerRunHistories = vi.mocked(getCrawlerRunHistories);
 const mockedGetCrawlerRunHistory = vi.mocked(getCrawlerRunHistory);
+const mockedGetCrawlerBrowserStatus = vi.mocked(getCrawlerBrowserStatus);
 
 const savedNaverConfiguration: CrawlerConfiguration = {
   configurationId: 7, title: "LH 매물 수집", description: "2호선 주변", sitePreset: "NAVER_CAFE",
@@ -88,7 +91,35 @@ describe("WebCrawlerPage", () => {
     });
     mockedGetCrawlerRunHistories.mockReset();
     mockedGetCrawlerRunHistories.mockResolvedValue([]);
+    // 기본은 로컬 개발 환경(LOCAL, 항상 준비됨). 원격 브라우저 테스트에서만 바꾼다.
+    mockedGetCrawlerBrowserStatus.mockReset();
+    mockedGetCrawlerBrowserStatus.mockResolvedValue({ mode: "LOCAL", ready: true, remoteBrowserConnected: null, message: "이 서버에서 Chromium을 직접 실행합니다." });
     window.localStorage.clear();
+  });
+
+  it("원격 브라우저에 연결되지 않으면 안내를 보여 주고 실행·녹화 시작을 막는다", async () => {
+    mockedGetCrawlerBrowserStatus.mockResolvedValue({
+      mode: "REMOTE", ready: false, remoteBrowserConnected: false,
+      message: "원격 브라우저에 연결할 수 없습니다. 크롤링용 PC에서 start-pc-chrome.cmd로 Chrome을 열어 주세요.",
+    });
+    renderPage();
+    fireEvent.click(screen.getByRole("radio", { name: /^단계별 실행/ }));
+    fireEvent.click(screen.getByRole("button", { name: "페이지 열기" }));
+
+    expect(await screen.findByText("⚠ 원격 브라우저 연결 안 됨")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "▶ 실행" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /테스트 실행/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "● 녹화로 만들기" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "크롤링 실행" })).toBeDisabled();
+    expect(mockedRunWebCrawler).not.toHaveBeenCalled();
+  });
+
+  it("원격 브라우저에 연결되면 연결됨을 표시하고 실행할 수 있다", async () => {
+    mockedGetCrawlerBrowserStatus.mockResolvedValue({ mode: "REMOTE", ready: true, remoteBrowserConnected: true, message: "원격 브라우저에 연결할 수 있습니다." });
+    renderPage();
+
+    expect(await screen.findByText("✓ 원격 브라우저 연결됨")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "크롤링 실행" })).toBeEnabled();
   });
 
   it("처음에는 설정 목록만 보이고 새 설정을 누르면 입력 화면을 연다", () => {

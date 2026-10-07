@@ -159,6 +159,20 @@ export const crawlerRunResponseSchema = z.object({
 
 export type CrawlerRunResponse = z.infer<typeof crawlerRunResponseSchema>;
 
+/**
+ * 브라우저 실행 준비 상태(서버 CrawlerBrowserStatusResponse).
+ *   mode   : LOCAL(서버가 Chromium을 직접 띄움) / REMOTE(원격 Chrome에 연결, 운영 서버)
+ *   ready  : false면 실행·녹화 버튼을 막는다(원격 Chrome이 꺼져 있는 등)
+ *   remoteBrowserConnected : REMOTE일 때만 값이 있고 LOCAL이면 null
+ */
+export const crawlerBrowserStatusSchema = z.object({
+  mode: z.enum(["LOCAL", "REMOTE"]),
+  ready: z.boolean(),
+  remoteBrowserConnected: z.boolean().nullable(),
+  message: z.string(),
+});
+export type CrawlerBrowserStatus = z.infer<typeof crawlerBrowserStatusSchema>;
+
 // 실시간 화면 상태(서버 CrawlerLiveViewResponse). 0.7초마다 받아 화면 캡처·단계 진행·로그를 그린다.
 export const crawlerLiveViewSchema = z.object({
   active: z.boolean(),

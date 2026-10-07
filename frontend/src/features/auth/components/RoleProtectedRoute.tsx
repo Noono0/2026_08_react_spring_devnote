@@ -32,7 +32,8 @@ import type { ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuthSessionQuery } from "@/features/auth/hooks/useAuthSession";
 
-export const RoleProtectedRoute = ({ children, superAdminOnly = false }: { children: ReactNode; superAdminOnly?: boolean }) => {
+// fallback: 권한이 없을 때 홈으로 보내는 대신 보여 줄 안내. 메뉴에서 들어온 사람이 이유도 모른 채 튕기지 않게 할 때 쓴다.
+export const RoleProtectedRoute = ({ children, superAdminOnly = false, fallback }: { children: ReactNode; superAdminOnly?: boolean; fallback?: ReactNode }) => {
   const sessionQuery = useAuthSessionQuery();
 
   // ★★ 로딩 중 처리가 반드시 필요하다.
@@ -59,5 +60,6 @@ export const RoleProtectedRoute = ({ children, superAdminOnly = false }: { child
   // ※ 더 친절하게 하려면 홈으로 보내면서
   //   "권한이 없어 이동했습니다" 같은 알림을 띄우는 방법도 있다.
   //   아무 설명 없이 홈으로 가면 사용자는 링크가 고장 났다고 생각한다.
-  return allowed ? children : <Navigate to="/" replace />;
+  if (allowed) return children;
+  return fallback ?? <Navigate to="/" replace />;
 };

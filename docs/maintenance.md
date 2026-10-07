@@ -2,6 +2,15 @@
 
 [문서 목록으로](../README.md) · [작업 규칙](../AGENTS.md) · [검증 명령](verification.md)
 
+## 2026-10-08 — 크롤러 원격 브라우저 모드와 슈퍼관리자 전용 API
+
+- **실행 위치 설정**: `CrawlerBrowserSettings`가 `CRAWLER_BROWSER_MODE`(local 기본 / remote)를 읽습니다. remote면 `PlaywrightCrawlerEngine.openBrowser`가 표시 방식과 관계없이 항상 `CRAWLER_REMOTE_BROWSER_URL`(비어 있으면 `CRAWLER_PC_BROWSER_URL`)의 Chrome에 CDP로 연결하고, 이 서버에서는 Chromium을 띄우지 않습니다. 운영 `compose.app.yml`은 remote가 기본, 로컬 `compose.yml`은 local입니다. 값 오타는 서버 시작 시 실패합니다. compose가 빈 값을 빈 문자열로 넘겨 `${A:${B}}` 대체가 동작하지 않는 문제를 코드에서 직접 처리했습니다.
+- **화면 선택이 아니라 서버 설정인 이유**: 운영 서버(1GB)에서 실수로 Chromium을 띄우면 서버 전체가 멈출 수 있어 위험한 선택지를 화면에 두지 않았습니다. 화면은 `GET /browser-status`로 상태만 보여 주고, 연결이 안 되면 실행·녹화 시작을 막고 5초마다 다시 확인합니다.
+- **권한**: `CrawlerAccessInterceptor`(+`CrawlerWebConfiguration`)가 `/api/v1/utilities/crawler/**` 전체를 슈퍼관리자 전용으로 막습니다(비로그인 401, 그 외 403). API가 17개 넘어 Service마다 넣으면 새 API에서 빠뜨리기 쉬워 경로 단위로 걸었습니다. 화면은 `RoleProtectedRoute`에 `fallback`을 추가해 홈으로 튕기지 않고 안내합니다. 배포 체크리스트 1번을 완료로 바꿨습니다.
+- **원격 연결 안내**: `docs/crawler.md`에 내 PC + Tailscale 구성(`tailscale serve`로 사설망 안에서만 9222 전달)을 정리했습니다. 9222를 인터넷에 열지 말라는 경고를 compose·문서에 함께 적었습니다.
+- **검증**: 백엔드 `gradlew.bat test`(JDK 21) 119개 중 118개 통과·1개 기본 건너뜀(외부 크롤러). `@WebMvcTest`로 인터셉터가 실제로 등록돼 401/403과 오류 코드를 돌려주는지 확인했습니다(처음에는 프로젝트 보안 설정을 불러오지 않아 Spring Security 기본 401로 손님 테스트가 우연히 통과했고, `@Import(SecurityConfiguration)`과 오류 코드 확인을 추가해 바로잡았습니다). 원격 연결 확인은 가짜 `/json/version` HTTP 서버로 검사했습니다. 프론트엔드 `eslint`·`tsc -b` 통과, Vitest 전체 107개 파일·332개 테스트 통과(원격 미연결 시 실행·녹화 버튼 잠금, 권한 없을 때 안내 표시 포함), `vite build` 성공, `docker compose config`로 compose 문법 확인.
+- **미검증 범위**: 실제 Tailscale 사설망을 통한 PC Chrome 연결, Oracle 서버 컨테이너에서 Tailscale IP로의 접근, `tailscale serve --tcp` 명령은 이 PC에서 실행해 보지 않았습니다(문서에 버전별 확인 방법을 적음). 실행 중인 로컬 백엔드를 재시작하지 않아 브라우저에서 원격 모드 화면은 단위·화면 테스트로만 확인했습니다.
+
 ## 2026-10-08 — 학습 진도 체크와 실습 과제 힌트
 
 - **진도 체크**: `features/curriculum/state/learningProgressStore.ts`(Zustand `persist` + Zod 검증, 키 `learningProgress`)에 완료한 단계와 과제를 저장합니다. 로드맵 카드의 `완료 표시`·상단 진행률 막대, 학습 가이드 대화상자의 `이 단계 완료로 표시`(1~25단계에서만)와 과제 체크박스가 같은 저장소를 봅니다. 과제 키는 순서가 아니라 `guideId::과제 문장`이라 순서를 바꿔도 체크가 엉뚱한 과제로 옮겨 가지 않습니다. 로드맵 같은 공통 기능이 `practice/` 코드를 import하지 않도록 21단계 저장소를 재사용하지 않고 같은 방식으로 새로 만들었습니다.

@@ -2081,6 +2081,13 @@ tbody tr:hover { background: color-mix(in srgb, var(--primary-color) 5%, var(--b
 .crawler-safety-notice { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; padding: 13px 16px; border: 1px solid color-mix(in srgb, var(--warning-color) 35%, var(--border-color)); border-radius: 14px; background: color-mix(in srgb, var(--warning-color) 7%, var(--background-panel)); }
 .crawler-safety-notice strong { color: var(--warning-color); font-size: 11px; }
 .crawler-safety-notice p { margin: 0; color: var(--text-secondary); font-size: 10px; line-height: 1.6; }
+/* 원격 브라우저 연결 상태: 연결됨(초록) / 연결 안 됨(경고색) */
+.crawler-browser-status { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 12px 16px; border: 1px solid var(--border-color); border-radius: 14px; background: var(--background-panel); }
+.crawler-browser-status span { flex: 1 1 240px; color: var(--text-secondary); font-size: 13px; line-height: 1.5; }
+.crawler-browser-status.is-ready { border-color: color-mix(in srgb, var(--success-color) 45%, var(--border-color)); }
+.crawler-browser-status.is-ready strong { color: var(--success-color); }
+.crawler-browser-status.is-unavailable { border-color: color-mix(in srgb, var(--warning-color) 45%, var(--border-color)); background: color-mix(in srgb, var(--warning-color) 7%, var(--background-panel)); }
+.crawler-browser-status.is-unavailable strong { color: var(--warning-color); }
 .crawler-board { display: grid; gap: 13px; padding: 18px; border: 1px solid var(--border-color); border-radius: 17px; background: var(--background-panel); box-shadow: var(--shadow-small); }
 .crawler-board-header { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
 .crawler-board-header h2 { margin: 4px 0; font-size: 17px; }

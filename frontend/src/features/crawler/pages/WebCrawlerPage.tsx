@@ -17,6 +17,7 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
+  useCrawlerBrowserStatus,
   useNaverCrawlerSessionStatus,
   useRunCrawlerConfiguration,
   useWebCrawlerMutation,
@@ -109,6 +110,11 @@ const saveRunMode = (mode: CrawlerRunMode): void => {
 export const WebCrawlerPage = () => {
   const crawlerMutation = useWebCrawlerMutation();
   const trackedCrawlerMutation = useRunCrawlerConfiguration();
+  // 브라우저 실행 위치(LOCAL/REMOTE)와 원격 Chrome 연결 여부. 어디서 실행할지는 서버 설정이 정하고, 화면은 상태만 보여 준다.
+  const browserStatusQuery = useCrawlerBrowserStatus();
+  // 서버가 "준비 안 됨"이라고 답했을 때만 막는다. 상태를 아직 못 받았거나 조회가 실패하면 막지 않고,
+  // 실제 실행 요청에서 서버가 원인을 알려 준다(상태 조회 실패 때문에 도구 전체를 못 쓰게 되지 않도록).
+  const browserUnavailable = browserStatusQuery.data?.ready === false;
   // 기억해 둔 계정 정보는 처음 한 번만 읽는다(함수를 넘기는 지연 초기화).
   const [initialCredentials] = useState(loadCrawlerCredentials);
   const [sitePreset, setSitePreset] = useState<CrawlerSitePreset>("GENERIC");
@@ -367,6 +373,11 @@ export const WebCrawlerPage = () => {
    * 계정 정보 기억을 끈 상태에서는 실행이 끝나면 비밀번호 입력칸을 비운다.
    */
   const runCrawler = (test: boolean): void => {
+    // 버튼은 이미 막혀 있지만, 입력칸에서 Enter로 폼을 제출하는 경로도 있어 여기서 한 번 더 막는다.
+    if (browserUnavailable) {
+      setValidationMessage(browserStatusQuery.data?.message ?? "원격 브라우저에 연결할 수 없습니다.");
+      return;
+    }
     const configured = buildCrawlerRequest();
     if (!configured) return;
     const request = test ? { ...configured, maxPages: 1, maxItems: Math.min(configured.maxItems, 3) } : configured;
@@ -413,8 +424,25 @@ export const WebCrawlerPage = () => {
           <div className="page-title-with-guide"><h1>웹 크롤링 도구</h1><FeatureHelpButton topic="crawler" /></div>
           <p>로그인 세션으로 페이지를 열고 CSS 선택자로 데이터를 수집한 뒤, 결과 필드에 원하는 검색 조건을 조합합니다.</p>
         </div>
-        <div className="crawler-runtime-badge"><strong>Chromium · 격리 실행</strong><span>선택한 경우에만 이 브라우저에 로그인 정보 저장</span></div>
+        <div className="crawler-runtime-badge">
+          <strong>{browserStatusQuery.data?.mode === "REMOTE" ? "원격 브라우저 · 격리 실행" : "Chromium · 격리 실행"}</strong>
+          <span>선택한 경우에만 이 브라우저에 로그인 정보 저장</span>
+        </div>
       </div>
+
+      {/* 원격 브라우저 연결 상태. role="status"라 연결이 바뀌면 화면 낭독기가 알려 준다.
+          LOCAL 모드(로컬 개발)에서는 알릴 것이 없으므로 그리지 않는다. */}
+      {browserStatusQuery.data?.mode === "REMOTE" ? (
+        <div className={`crawler-browser-status ${browserUnavailable ? "is-unavailable" : "is-ready"}`} role="status">
+          <strong>{browserUnavailable ? "⚠ 원격 브라우저 연결 안 됨" : "✓ 원격 브라우저 연결됨"}</strong>
+          <span>{browserStatusQuery.data.message}</span>
+          {browserUnavailable ? (
+            <button type="button" className="secondary-button" disabled={browserStatusQuery.isFetching} onClick={() => void browserStatusQuery.refetch()}>
+              {browserStatusQuery.isFetching ? "확인 중..." : "다시 확인"}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="crawler-safety-notice">
         <strong>사용 전 확인</strong>
@@ -489,6 +517,7 @@ export const WebCrawlerPage = () => {
             onUsernameChange={setUsername}
             onPasswordChange={setPassword}
             disabled={runPending}
+            runBlocked={browserUnavailable}
             onRun={runCrawler}
             onBeforeAddAction={validateBeforeAddAction}
             commonFields={fields}
@@ -547,7 +576,7 @@ export const WebCrawlerPage = () => {
         </section>
 
         {validationMessage ? <p className="field-error" role="alert">{validationMessage}</p> : null}
-        <button className="crawler-run-button" type="submit" disabled={runPending}>{runPending ? "Chromium으로 수집하는 중..." : selectedConfigurationId === undefined ? "크롤링 실행" : `#${selectedConfigurationId} 설정 실행 · 이력 저장`}</button>
+        <button className="crawler-run-button" type="submit" disabled={runPending || browserUnavailable}>{runPending ? "Chromium으로 수집하는 중..." : selectedConfigurationId === undefined ? "크롤링 실행" : `#${selectedConfigurationId} 설정 실행 · 이력 저장`}</button>
       </form> : null}
 
       {editorOpen && requestProblem ? (
