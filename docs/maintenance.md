@@ -2,6 +2,12 @@
 
 [문서 목록으로](../README.md) · [작업 규칙](../AGENTS.md) · [검증 명령](verification.md)
 
+## 2026-10-09 — 운영에서 학습용 회원 대체 끄기, CI 정적 검사 수정
+
+- **보안 체크리스트 2번**: `CurrentMemberProvider`에 `auth.allow-development-member`(`AUTH_ALLOW_DEVELOPMENT_MEMBER`, 기본 `true`)를 추가했습니다. `false`면 로그인 세션만 인정하고 `X-Member-Id` 헤더·1번 회원 대체 없이 401을 돌려줍니다. 운영 `compose.app.yml`은 `.env`로 덮어쓸 수 없게 `"false"`로 고정했습니다. 로컬 학습용 회원 전환은 그대로입니다. 학습 문서 조회 API는 회원 정보를 쓰지 않아 운영에서도 공개이고, 쓰기·업로드·개인 다이어그램만 로그인이 필요합니다.
+- **CI**: PR #4 머지 뒤 main의 `frontend-quality`가 Python 정적 검사에서 실패해 `Publish Images`가 건너뛰어졌습니다. 25단계의 `...test.tsx?raw` 가져오기를 검사 스크립트가 누락 파일로 판단한 것이 원인이며 별도 PR(`fix/static-verify-vite-query`)로 고쳤습니다.
+- **검증**: `CurrentMemberProviderTest` 3개 추가·통과. 이날은 Docker Desktop이 꺼져 있어 Testcontainers 통합 테스트 5개 파일이 시작하지 못했고(코드 실패 아님), 나머지 백엔드 테스트는 통과했습니다. 통합 테스트는 PR CI로 확인합니다.
+
 ## 2026-10-08 — 서버 정규식 실행 제한 보강, 다음 작업 인계
 
 - **정규식**: `JavaRegexService`가 1초 제한 뒤 요청은 끊었지만 Java 정규식이 중단 신호를 확인하지 않아 작업 스레드(2개)가 계속 계산했습니다. 입력을 `DeadlineCharSequence`로 감싸 `charAt()`마다 제한 시각·중단 신호를 확인하게 해 계산 자체를 멈춥니다. 배포 체크리스트 3번을 완료로 바꿨습니다.

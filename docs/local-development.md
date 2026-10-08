@@ -435,7 +435,7 @@ await startMockServerWhenEnabled();
 
 같은 IP에서 같은 아이디로 15분 안에 5번 로그인에 실패하면 15분 동안 맞는 비밀번호로도 로그인할 수 없고 `429 LOGIN_TEMPORARILY_LOCKED`와 남은 시간이 표시됩니다(`LoginAttemptLimiter`). 로컬 실습 중 잠겼다면 15분을 기다리거나 백엔드를 재시작합니다. 횟수와 시간은 `AUTH_LOGIN_MAX_FAILURES`(기본 5), `AUTH_LOGIN_FAILURE_WINDOW`(기본 15m), `AUTH_LOGIN_LOCK_DURATION`(기본 15m)으로 바꿀 수 있습니다.
 
-`/react/documents`의 소유권 오류 실습은 로그인과 별개로 기존 `X-Member-Id` 헤더 전환 기능을 유지합니다. 로그인하지 않은 요청에만 적용되며, 헤더가 없으면 1번 회원으로 처리합니다. 이 방식을 쓰는 API는 학습 문서(`/api/v1/documents`), 다이어그램(`/api/v1/diagrams`), 파일 업로드(`/api/v1/files`)입니다. 포트폴리오·업무 History·관리자 권한은 부여하지 않습니다. 개발 편의 기능이므로 외부 공개 전에는 [배포 가이드의 공개 전 체크리스트](deployment.md#12-외부-공개-전-체크리스트)에 따라 정리합니다.
+`/react/documents`의 소유권 오류 실습은 로그인과 별개로 기존 `X-Member-Id` 헤더 전환 기능을 유지합니다. 로그인하지 않은 요청에만 적용되며, 헤더가 없으면 1번 회원으로 처리합니다. 이 방식을 쓰는 API는 학습 문서(`/api/v1/documents`), 다이어그램(`/api/v1/diagrams`), 파일 업로드(`/api/v1/files`)입니다. 포트폴리오·업무 History·관리자 권한은 부여하지 않습니다. 이 대체는 `AUTH_ALLOW_DEVELOPMENT_MEMBER`(기본 `true`)로 켜고 끕니다. 운영(`compose.app.yml`)은 `false`로 고정되어 로그인 세션만 인정하고, 로그인하지 않은 작성·수정·삭제·업로드와 다이어그램 목록은 401 `AUTHENTICATION_REQUIRED`를 받습니다. 학습 문서 목록·상세 조회는 로그인 없이 계속 볼 수 있습니다.
 
 | Member ID | 이메일 | 학습 데이터 역할 |
 |---:|---|---|
