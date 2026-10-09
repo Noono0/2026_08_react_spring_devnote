@@ -65,7 +65,7 @@ export default function App() {
       {showResults ? (
         <ul id="topic-results" role="listbox" className="list">
           {results.map((topic, index) => (
-            <li key={topic} role="option" aria-selected={index === activeIndex} style={{ background: index === activeIndex ? "#eaf0ff" : undefined }}>{topic}</li>
+            <li key={topic} role="option" aria-selected={index === activeIndex} style={{ background: index === activeIndex ? "var(--accent-soft)" : undefined }}>{topic}</li>
           ))}
           {status === "done" && results.length === 0 ? <li className="muted">결과가 없습니다.</li> : null}
         </ul>

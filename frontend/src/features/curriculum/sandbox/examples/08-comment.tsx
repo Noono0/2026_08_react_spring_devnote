@@ -36,7 +36,7 @@ export default function App() {
 
   const renderComment = (comment: Comment, isReply: boolean) => (
     <div key={comment.id} className="card" style={{ marginLeft: isReply ? 24 : 0 }}>
-      <p style={{ color: comment.deleted ? "#8a94a6" : undefined }}>{comment.deleted ? "삭제된 댓글입니다." : comment.content}</p>
+      <p style={{ color: comment.deleted ? "var(--muted)" : undefined }}>{comment.deleted ? "삭제된 댓글입니다." : comment.content}</p>
       {!comment.deleted ? (
         <div className="row">
           {!isReply ? <button className="secondary" onClick={() => setReplyTargetId(comment.id)}>답글</button> : null}

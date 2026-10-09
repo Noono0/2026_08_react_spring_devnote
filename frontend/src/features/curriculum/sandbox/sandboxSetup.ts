@@ -40,27 +40,4 @@ export const selectSandboxDependencies = (source: string): Record<string, string
   return selected;
 };
 
-/** 모든 예제가 함께 쓰는 최소 스타일. 예제 코드는 이 클래스 이름만 쓴다. */
-export const sandboxStyles = `
-* { box-sizing: border-box; }
-body { margin: 0; padding: 16px; font-family: system-ui, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; color: #1d2433; background: #f6f8fb; line-height: 1.5; }
-h1 { margin: 0 0 6px; font-size: 20px; }
-h2 { margin: 16px 0 8px; font-size: 16px; }
-p { margin: 4px 0 10px; color: #5b677a; }
-button { padding: 6px 12px; border: 1px solid #3461ff; border-radius: 8px; color: #fff; background: #3461ff; font: inherit; cursor: pointer; }
-button.secondary { color: #3461ff; background: #fff; }
-button.danger { border-color: #d63b4c; background: #d63b4c; }
-button:disabled { opacity: .5; cursor: not-allowed; }
-input, select, textarea { padding: 6px 8px; border: 1px solid #dce3ed; border-radius: 8px; font: inherit; }
-label { display: grid; gap: 4px; margin: 6px 0; font-size: 14px; }
-.card { margin: 10px 0; padding: 12px; border: 1px solid #dce3ed; border-radius: 12px; background: #fff; }
-.row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.list { margin: 0; padding: 0; list-style: none; }
-.list li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid #eef1f6; }
-.muted { color: #8a94a6; font-size: 13px; }
-.error { color: #d63b4c; font-size: 13px; }
-.ok { color: #16875b; font-size: 13px; }
-.badge { display: inline-block; padding: 1px 8px; border-radius: 999px; color: #3461ff; background: #eaf0ff; font-size: 12px; }
-table { width: 100%; border-collapse: collapse; background: #fff; }
-th, td { padding: 6px 8px; border: 1px solid #dce3ed; text-align: left; font-size: 14px; }
-`;
+// 미리보기 스타일(/styles.css)은 색 테마와 함께 sandboxThemes.ts의 createSandboxStyles가 만든다.

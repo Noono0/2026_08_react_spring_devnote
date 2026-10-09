@@ -2,6 +2,13 @@
 
 [문서 목록으로](../README.md) · [작업 규칙](../AGENTS.md) · [검증 명령](verification.md)
 
+## 2026-10-09 — 사이트 안 편집기 색 테마 선택
+
+- **화면**: 편집기 도구 막대에 `색 테마` 선택(사이트 테마 따라가기·밝게·어둡게·베이지·남색 밤)을 추가했습니다. 기본값은 사이트 밝게/어둡게 설정을 따르며, 고른 값은 `localStorage`의 `stageSandboxTheme`에 저장하고 읽을 때 아는 값인지 검사합니다.
+- **구현**: `sandbox/sandboxThemes.ts`가 테마마다 편집기 색(Sandpack `theme`)과 미리보기 색(`/styles.css` 맨 위 CSS 변수)을 한 묶음으로 정해 배경과 글자 색이 함께 바뀝니다. 예제 05·08의 고정 색도 CSS 변수로 바꿨습니다.
+- **주의(발견한 문제)**: Sandpack은 `files`·`customSetup` 객체가 새 객체로 바뀌면 내용이 같아도 고친 코드를 처음으로 되돌립니다. 테마 변경으로 다시 그려질 때 코드가 사라지던 문제를 `useMemo`로 같은 객체를 유지해 고쳤고, 미리보기 색은 `PreviewThemeSync`가 `/styles.css`만 `updateFile`로 바꿉니다.
+- **검증**: `eslint`·`tsc -b` 통과, Vitest 111개 파일·348개 테스트 통과(`sandboxThemes.test.ts` 추가), `vite build` 성공. 내장 브라우저에서 어둡게·베이지·남색 밤 적용, 코드 수정 후 테마를 바꿔도 수정 내용 유지, 새로고침 후 테마 기억, 되돌리기 후에도 테마 유지를 확인했습니다.
+
 ## 2026-10-09 — 사이트 안 편집기를 모달에서 연습 화면 아래 펼치기·접기로 변경
 
 - **이유**: 모달 안 편집기가 작다는 의견에 따라, 연습 화면 맨 아래에 `N단계 직접 해 보기` 펼치기·접기 영역(`StageSandboxSection`)을 두고 `ApplicationLayout`의 `PageOutlet` 다음에 렌더링합니다. 제목 옆 메뉴의 `이 화면 아래에서 바로 편집`은 영역을 펼치고 그 위치로 스크롤합니다. 펼침 상태는 `stageSandboxStore.ts`(Zustand)가 공유하고, 다른 단계로 이동하면 자동으로 접힙니다.

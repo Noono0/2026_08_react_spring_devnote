@@ -186,6 +186,9 @@ button.online-practice-option { width: 100%; min-height: 0; background: transpar
 .stage-sandbox-body { padding: 16px 20px 20px; }
 /* 사이트 안 편집기(Sandpack): 넓은 화면은 편집기·미리보기 좌우(높이 560px), 좁은 화면은 위아래 */
 .stage-sandbox-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; color: var(--text-secondary); font-size: 13px; }
+.stage-sandbox-toolbar-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.stage-sandbox-theme { display: inline-flex; align-items: center; gap: 6px; color: var(--text-primary); font-weight: 700; }
+.stage-sandbox-theme select { min-height: 36px; padding: 4px 8px; border: 1px solid var(--border-color); border-radius: 9px; color: var(--text-primary); background: var(--background-panel); }
 .stage-sandbox-layout { --sp-layout-height: 560px; border-radius: 12px; }
 /* Sandpack 스타일이 나중에 붙어 같은 우선순위 규칙을 덮으므로 .stage-sandbox-body를 앞에 붙였다.
    (높이가 0이 되면 콘솔이 안 보이고, 콘솔 지우기 버튼이 위 미리보기의 새로고침 버튼과 겹친다) */
