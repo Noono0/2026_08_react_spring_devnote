@@ -2,6 +2,47 @@
 
 [문서 목록으로](../README.md) · [작업 규칙](../AGENTS.md) · [검증 명령](verification.md)
 
+## 2026-10-09 — 직접 해 보기 크게 보기
+
+- **화면**: 상자 제목 줄 오른쪽 `크게 보기`(`aria-pressed` 토글)로 상자가 브라우저 창 전체를 덮습니다(`position: fixed`, z-index 150로 사이드바·디버그 버튼 위). 제목 줄은 위에 고정되고, `◢`는 숨깁니다. `원래 크기로 (Esc)`·Esc·접기·펼치기로 돌아옵니다. 코드 편집기 안의 Esc는 편집기(Tab 들여쓰기 빠져나오기)가 쓰므로 닫지 않습니다.
+- **구현**: `maximized`는 `stageSandboxStore`에 두고 저장하지 않으며 `expand`·`toggle`이 항상 `false`로 되돌립니다. `StageSandboxSection`의 `useEffect`가 크게 보는 동안 `document` Esc 리스너와 `body` 스크롤 막기를 걸고 cleanup에서 되돌립니다. 같이 `색 테마` 라벨이 두 줄로 끊기던 문제(`white-space: nowrap`)를 고쳤습니다.
+- **검증**: `eslint`·`tsc -b` 통과, Vitest 112개 파일·355개 테스트 통과(크게 보기·Esc·접기 시 복원), `vite build` 성공. 내장 브라우저 1280×900에서 창 전체(1280×900)를 덮고 미리보기 실행, 편집기 밖 Esc 복원·편집기 안 Esc 유지·접기 복원과 body 스크롤 복원, 375px에서 가로 넘침 없음을 확인했습니다.
+
+## 2026-10-09 — 직접 해 보기 상자 전체 크기 조절(◢)
+
+- **요청 정리**: 앞 작업의 상자 안 막대(좌우 비율·높이)는 요청과 달랐으나 사용자 선택으로 유지하고, 요청한 "상자 자체의 좌우·높이 조절"을 오른쪽 아래 모서리 `◢`로 추가했습니다(학습 가이드 모달과 같은 모양·사용법).
+- **동작**: `StageSandboxSection`이 끌기 시작 크기 + 움직인 거리로 상자 너비(`sectionWidth`, 최소 480px, CSS `max-width: 100%`로 본문 폭 이하)와 편집기 높이를 함께 바꿉니다. 본문 폭 이상으로 넓히면 `null`(본문 폭 전체)로 저장해 화면이 넓어지면 같이 넓어집니다. ←/→는 너비, ↑/↓는 높이, 더블클릭은 기본값입니다. `SandboxResizeHandle`에 `corner` 방향과 `onDragStart`, 축(x/y) 정보를 추가했습니다. 760px 이하에서는 숨깁니다.
+- **검증**: `eslint`·`tsc -b` 통과, Vitest 112개 파일·354개 테스트 통과, `vite build` 성공. 내장 브라우저 1280px에서 끌기로 너비 911→657px·높이 560→455px, 본문 밖까지 끌면 본문 폭 전체로 복귀(가로 넘침 없음), 방향키와 더블클릭 복원을 확인했습니다.
+- **남은 점**: 상자를 페이지 맨 아래까지 내리면 `◢`가 사이트 오른쪽 아래 떠 있는 버튼과 가까워집니다(내장 브라우저에서는 겹치지 않고 눌림).
+
+## 2026-10-09 — 사이트 안 편집기 좌우 비율·높이 조절
+
+- **화면**: 편집기와 미리보기 사이 세로 막대(좌우 비율 20~80%)와 아래 가로 막대(높이 320~1000px)를 추가했습니다(`SandboxResizeHandle`). 마우스·터치 끌기(Pointer Events + `setPointerCapture`로 iframe 위에서도 끌기 유지), 방향키(`Shift`는 크게), 더블클릭 기본값 복원을 지원하며 학습 가이드 모달 크기 조절과 사용법을 맞췄습니다. 760px 이하에서는 위아래로 쌓이므로 손잡이를 숨깁니다.
+- **저장**: `stageSandboxStore`가 `stageSandboxEditorWidth`·`stageSandboxLayoutHeight`를 `localStorage`에 저장하고, 읽을 때 숫자가 아니면 기본값, 범위를 벗어나면 범위 안으로 맞춥니다. 방향키 조절은 `getState()`로 최신 값을 읽어 빠른 연속 입력에서도 옛 값으로 계산하지 않습니다.
+- **검증**: `eslint`·`tsc -b` 통과, Vitest 112개 파일·352개 테스트 통과(`SandboxResizeHandle.test.tsx` 추가), `vite build` 성공. 내장 브라우저 1280px에서 끌기로 너비 50→31%, 높이 560→697px 변경, 방향키 최소·최대(320·1000px)와 더블클릭 복원, 375px에서 손잡이 숨김을 확인했습니다. 미리보기 위로 지나가는 위쪽 끌기는 도구 제약으로 끌기 대신 방향키로 확인했습니다.
+
+## 2026-10-09 — 사이트 안 편집기 색 테마 선택
+
+- **화면**: 편집기 도구 막대에 `색 테마` 선택(사이트 테마 따라가기·밝게·어둡게·베이지·남색 밤)을 추가했습니다. 기본값은 사이트 밝게/어둡게 설정을 따르며, 고른 값은 `localStorage`의 `stageSandboxTheme`에 저장하고 읽을 때 아는 값인지 검사합니다.
+- **구현**: `sandbox/sandboxThemes.ts`가 테마마다 편집기 색(Sandpack `theme`)과 미리보기 색(`/styles.css` 맨 위 CSS 변수)을 한 묶음으로 정해 배경과 글자 색이 함께 바뀝니다. 예제 05·08의 고정 색도 CSS 변수로 바꿨습니다.
+- **주의(발견한 문제)**: Sandpack은 `files`·`customSetup` 객체가 새 객체로 바뀌면 내용이 같아도 고친 코드를 처음으로 되돌립니다. 테마 변경으로 다시 그려질 때 코드가 사라지던 문제를 `useMemo`로 같은 객체를 유지해 고쳤고, 미리보기 색은 `PreviewThemeSync`가 `/styles.css`만 `updateFile`로 바꿉니다.
+- **검증**: `eslint`·`tsc -b` 통과, Vitest 111개 파일·348개 테스트 통과(`sandboxThemes.test.ts` 추가), `vite build` 성공. 내장 브라우저에서 어둡게·베이지·남색 밤 적용, 코드 수정 후 테마를 바꿔도 수정 내용 유지, 새로고침 후 테마 기억, 되돌리기 후에도 테마 유지를 확인했습니다.
+
+## 2026-10-09 — 사이트 안 편집기를 모달에서 연습 화면 아래 펼치기·접기로 변경
+
+- **이유**: 모달 안 편집기가 작다는 의견에 따라, 연습 화면 맨 아래에 `N단계 직접 해 보기` 펼치기·접기 영역(`StageSandboxSection`)을 두고 `ApplicationLayout`의 `PageOutlet` 다음에 렌더링합니다. 제목 옆 메뉴의 `이 화면 아래에서 바로 편집`은 영역을 펼치고 그 위치로 스크롤합니다. 펼침 상태는 `stageSandboxStore.ts`(Zustand)가 공유하고, 다른 단계로 이동하면 자동으로 접힙니다.
+- **변경**: `StageSandboxDialog.tsx` → `StageSandboxPanel.tsx`(모달 제거, 지연 로딩 유지). 넓은 화면은 편집기·미리보기 좌우 560px, 760px 이하에서는 위아래 380px씩입니다. Sandpack 스타일이 나중에 붙어 같은 우선순위 규칙을 덮으므로 모바일 규칙은 `.stage-sandbox-body`로 우선순위를 높였습니다.
+- **검증**: `eslint`·`tsc -b` 통과, Vitest 110개 파일·344개 테스트 통과(접힘 기본값·토글·메뉴에서 펼치기·비학습 화면 미표시), `vite build` 성공. 내장 브라우저에서 1280px 좌우 배치와 375px 위아래 배치, 2단계 할 일 예제 미리보기 실행을 확인했습니다.
+
+## 2026-10-09 — 학습 화면 직접 해 보기(사이트 안 편집기 Sandpack·StackBlitz·Codespaces)
+
+- **화면**: 1~25단계 제목 옆 `▶ 직접 해 보기` 메뉴(`OnlinePracticeMenu`, `<details>` 기반)에서 사이트 안 편집기(Sandpack)·StackBlitz·Codespaces 중 고릅니다. 처음 요청은 StackBlitz와 Sandpack이었는데 Sandpack 대신 Codespaces를 먼저 만들었고, 사용자 확인 후 Sandpack을 25단계 전부에 추가하고 Codespaces는 `SHOW_CODESPACES_OPTION`과 `[CODESPACES]` 표시로 나중에 끄거나 지울 수 있게 남겼습니다.
+- **Sandpack**: `@codesandbox/sandpack-react` 2.20.0 추가(사용자 요청으로 새 운영 의존성 승인). 단계마다 혼자 동작하는 예제 25개(`curriculum/sandbox/examples/*.tsx`)를 `?raw`로 편집기에 넣고, `StageSandboxDialog`를 지연 로딩해 첫 화면 번들과 분리했습니다(빌드 시 별도 약 700kB 묶음). 미리보기가 흰 화면(로딩 중)에 멈추던 문제는 내장 브라우저에 맞추려고 넣었던 `initMode: "immediate"`가 개발 모드 StrictMode의 두 번 붙였다 떼기와 충돌해, 번들러는 `success`·`done`을 보냈는데 화면 쪽 Sandpack이 사라진 첫 미리보기를 바라본 것이 원인이었습니다(운영 빌드는 정상). 기본값(`lazy`)으로 되돌렸고, 예제가 실제로 import하는 패키지만 설치하도록 함께 바꿨습니다. pnpm 11이 Sandpack의 간접 의존성 `es5-ext` 설치 스크립트를 막으며 `--frozen-lockfile`이 종료 코드 1로 실패해, `pnpm-workspace.yaml`의 `allowBuilds`에 `es5-ext: false`를 명시했습니다.
+- **StackBlitz**: 백엔드가 없으므로 `dev:online` 스크립트가 `msw init public --no-save`(git 제외 파일인 `mockServiceWorker.js` 생성) 후 `vite --mode online`(`.env.online`, `VITE_DATA_SOURCE=mock`)으로 시작합니다.
+- **Codespaces**: `.devcontainer/devcontainer.json`(JDK 21·Node 22·docker-in-docker, 프론트 의존성 설치)과 `scripts/start-codespace.sh`(compose.dev.yml MySQL → bootRun → pnpm dev)를 추가했습니다. 정적 검사가 모든 `.json`을 엄격한 JSON으로 검사하므로 devcontainer.json에는 주석을 넣지 않았습니다.
+- **검증**: 프론트엔드 `eslint`·`tsc -b` 통과, Vitest 전체 110개 파일·341개 테스트 통과(예제 25개 존재·의존성 목록 일치, 편집기 지연 로딩 포함), `vite build` 성공. 내장 브라우저에서 편집기 대화상자·예제 코드·좌우 배치와 CodeSandbox 번들러 연결까지 확인했습니다. 로컬에서 `vite --mode online`이 더미 데이터 모드로 시작해 MSW 등록을 시도하는 것과, 메뉴·링크가 데스크톱 1280px·모바일 375px에서 넘침 없이 보이는 것을 확인했습니다. `bash -n`으로 시작 스크립트 문법 확인.
+- **미검증 범위**: 앱 내장 브라우저가 StackBlitz의 웹소켓·리소스와 서비스 워커 등록을 막아, StackBlitz에서 실제 설치·실행(특히 `.npmrc`의 `engine-strict`와 Node 22.12 요구, pnpm 11)과 MSW 동작은 확인하지 못했습니다. Codespaces 생성·실행도 GitHub 로그인이 필요해 확인하지 않았습니다. Sandpack 미리보기는 개발 서버에서 2단계(React만)·4단계(Zod·React Hook Form)·18단계(React 19 Actions)가 실제로 그려지는 것을 확인했고, 나머지 22개 단계 미리보기는 열어 보지 않았습니다(예제 자체는 tsc·ESLint 통과). StackBlitz·Codespaces 실제 실행은 일반 Chrome에서 확인해야 합니다.
+
 ## 2026-10-09 — 운영에서 학습용 회원 대체 끄기, CI 정적 검사 수정
 
 - **보안 체크리스트 2번**: `CurrentMemberProvider`에 `auth.allow-development-member`(`AUTH_ALLOW_DEVELOPMENT_MEMBER`, 기본 `true`)를 추가했습니다. `false`면 로그인 세션만 인정하고 `X-Member-Id` 헤더·1번 회원 대체 없이 401을 돌려줍니다. 운영 `compose.app.yml`은 `.env`로 덮어쓸 수 없게 `"false"`로 고정했습니다. 로컬 학습용 회원 전환은 그대로입니다. 학습 문서 조회 API는 회원 정보를 쓰지 않아 운영에서도 공개이고, 쓰기·업로드·개인 다이어그램만 로그인이 필요합니다.
