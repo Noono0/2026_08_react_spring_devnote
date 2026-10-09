@@ -1,3 +1,5 @@
 allowBuilds:
+  # Sandpack이 간접 의존하는 es5-ext의 postinstall은 콘솔 메시지만 출력하므로 실행하지 않는다.
+  es5-ext: false
   esbuild: true
   msw: false

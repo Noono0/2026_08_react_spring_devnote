@@ -1,0 +1,23 @@
+{
+  "name": "DevNote 전체 실습 (React + Spring Boot + MySQL)",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+  "features": {
+    "ghcr.io/devcontainers/features/java:1": { "version": "21", "installGradle": "false" },
+    "ghcr.io/devcontainers/features/node:1": { "version": "22" },
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+  "postCreateCommand": "cd frontend && corepack enable && pnpm install --frozen-lockfile && pnpm exec msw init public --no-save",
+  "forwardPorts": [5173, 8080],
+  "portsAttributes": {
+    "5173": { "label": "React 화면 (Vite)", "onAutoForward": "openBrowser" },
+    "8080": { "label": "Spring Boot API", "onAutoForward": "silent" }
+  },
+  "customizations": {
+    "codespaces": {
+      "openFiles": ["scripts/start-codespace.sh"]
+    },
+    "vscode": {
+      "extensions": ["vscjava.vscode-java-pack", "dbaeumer.vscode-eslint"]
+    }
+  }
+}
