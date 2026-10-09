@@ -1,30 +1,60 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { MemoryRouter } from "react-router-dom";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { findLearningGuideById } from "@/features/curriculum/data/learningGuides";
+import { useStageSandboxStore } from "@/features/curriculum/state/stageSandboxStore";
 import { OnlinePracticeMenu } from "./OnlinePracticeMenu";
+import { StageSandboxSection } from "./StageSandboxSection";
 
-// 실제 Sandpack은 외부 번들러(iframe)를 쓰므로 테스트에서는 가짜 대화상자로 바꾼다.
-vi.mock("@/features/curriculum/components/StageSandboxDialog", () => ({
-  default: ({ learningGuide, onRequestClose }: { learningGuide: { title: string }; onRequestClose: () => void }) => (
-    <div role="dialog" aria-label="편집기">
-      {learningGuide.title} 편집기
-      <button type="button" onClick={onRequestClose}>닫기</button>
-    </div>
-  ),
+// 실제 Sandpack은 외부 번들러(iframe)를 쓰므로 테스트에서는 가짜 패널로 바꾼다.
+vi.mock("@/features/curriculum/components/StageSandboxPanel", () => ({
+  default: ({ learningGuide }: { learningGuide: { title: string } }) => <p>{learningGuide.title} 편집기 패널</p>,
 }));
 
-describe("OnlinePracticeMenu", () => {
-  it("'이 화면에서 바로 편집'을 누르면 그때 편집기를 불러와 열고, 닫으면 사라진다", async () => {
-    const learningGuide = findLearningGuideById("todo");
-    if (!learningGuide) throw new Error("todo 가이드가 없습니다.");
-    render(<OnlinePracticeMenu learningGuide={learningGuide} />);
+beforeEach(() => {
+  useStageSandboxStore.setState({ expandedGuideId: null });
+  // jsdom에는 scrollIntoView가 없어 빈 함수로 채운다.
+  Element.prototype.scrollIntoView = vi.fn();
+});
 
-    // 누르기 전에는 편집기를 불러오지 않는다(지연 로딩).
-    expect(screen.queryByRole("dialog", { name: "편집기" })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /이 화면에서 바로 편집/ }));
+const renderTodoStage = (pathname = "/react/todos") => {
+  const learningGuide = findLearningGuideById("todo");
+  if (!learningGuide) throw new Error("todo 가이드가 없습니다.");
+  return render(
+    <MemoryRouter initialEntries={[pathname]}>
+      <OnlinePracticeMenu learningGuide={learningGuide} />
+      <StageSandboxSection />
+    </MemoryRouter>,
+  );
+};
 
-    expect(await screen.findByRole("dialog", { name: "편집기" })).toHaveTextContent("할 일 인라인 CRUD 편집기");
-    fireEvent.click(screen.getByRole("button", { name: "닫기" }));
-    expect(screen.queryByRole("dialog", { name: "편집기" })).not.toBeInTheDocument();
+describe("연습 화면 아래 직접 해 보기 영역", () => {
+  it("처음에는 접혀 있고, 펼칠 때만 편집기를 불러오며 다시 접을 수 있다", async () => {
+    renderTodoStage();
+    const toggle = screen.getByRole("button", { name: /2단계 직접 해 보기/ });
+
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByText("할 일 인라인 CRUD 편집기 패널")).not.toBeInTheDocument();
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(await screen.findByText("할 일 인라인 CRUD 편집기 패널")).toBeInTheDocument();
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByText("할 일 인라인 CRUD 편집기 패널")).not.toBeInTheDocument();
+  });
+
+  it("제목 옆 메뉴의 '이 화면 아래에서 바로 편집'을 누르면 아래 영역이 펼쳐진다", async () => {
+    renderTodoStage();
+    fireEvent.click(screen.getByRole("button", { name: /이 화면 아래에서 바로 편집/ }));
+
+    expect(screen.getByRole("button", { name: /2단계 직접 해 보기/ })).toHaveAttribute("aria-expanded", "true");
+    expect(await screen.findByText("할 일 인라인 CRUD 편집기 패널")).toBeInTheDocument();
+  });
+
+  it("학습 단계가 아닌 화면에서는 영역을 그리지 않는다", () => {
+    render(<MemoryRouter initialEntries={["/react"]}><StageSandboxSection /></MemoryRouter>);
+    expect(screen.queryByRole("button", { name: /직접 해 보기/ })).not.toBeInTheDocument();
   });
 });

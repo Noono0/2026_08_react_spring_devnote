@@ -46,12 +46,12 @@ Docker 실행 후 `/react`에서 아래 단계를 확인할 수 있습니다. �
 
 | 선택 | 실행 범위 | 특징 |
 |---|---|---|
-| 이 화면에서 바로 편집 (Sandpack) | 단계 핵심만 담은 연습 예제 | 사이트를 떠나지 않고 편집기·미리보기·콘솔이 열립니다. 예제는 `frontend/src/features/curriculum/sandbox/examples/`의 25개 파일이고, 파일 맨 위 주석의 `해 볼 것`부터 시작합니다. `처음 코드로 되돌리기`로 원래 예제로 돌아가며, 창을 닫으면 고친 내용은 사라집니다. 번들링은 CodeSandbox 서버가 하므로 인터넷이 필요합니다. |
+| 이 화면 아래에서 바로 편집 (Sandpack) | 단계 핵심만 담은 연습 예제 | 사이트를 떠나지 않고 연습 화면 맨 아래 `N단계 직접 해 보기` 영역이 펼쳐지며 편집기·미리보기·콘솔이 나옵니다. 메뉴 없이 그 영역의 제목 버튼으로 바로 펼치고 접을 수도 있습니다(넓은 화면은 좌우, 760px 이하는 위아래 배치). 예제는 `frontend/src/features/curriculum/sandbox/examples/`의 25개 파일이고, 파일 맨 위 주석의 `해 볼 것`부터 시작합니다. `처음 코드로 되돌리기`로 원래 예제로 돌아가며, 영역을 접거나 다른 화면으로 가면 고친 내용은 사라집니다. 번들링은 CodeSandbox 서버가 하므로 인터넷이 필요합니다. |
 | StackBlitz에서 실제 코드 열기 | 실제 `frontend/` 전체 | 로그인 불필요. `pnpm run dev:online`(`.env.online`, 더미 데이터 MSW)으로 시작하고 해당 단계 파일(`file=`)과 화면(`initialPath=`)을 바로 엽니다. GitHub의 `main` 브랜치를 엽니다. |
 | Codespaces에서 전체 실행 | 저장소 전체(React + Spring Boot + MySQL) | GitHub 로그인 필요. `.devcontainer/devcontainer.json`이 JDK 21·Node 22·Docker를 준비하고, 열린 뒤 터미널에서 `bash scripts/start-codespace.sh`를 실행하면 MySQL → 백엔드 → 프론트엔드 순서로 켜집니다. |
 
 - 사이트 안 편집기 예제는 실제 `.tsx` 파일이라 `tsc`·ESLint가 함께 검사하고, `stageSandboxes.test.ts`가 25단계 모두 예제가 있는지와 예제가 쓰는 패키지가 `sandboxSetup.ts`의 의존성 목록에 있는지 확인합니다. 의존성 버전은 `frontend/package.json`과 맞춥니다.
-- Sandpack(`@codesandbox/sandpack-react`)과 예제 원문은 편집기를 열 때만 내려받는 별도 묶음입니다. 첫 화면 크기에는 영향이 없습니다.
+- Sandpack(`@codesandbox/sandpack-react`)과 예제 원문은 아래 영역을 펼칠 때만 내려받는 별도 묶음(`StageSandboxPanel`)입니다. 펼침 상태는 `curriculum/state/stageSandboxStore.ts`(Zustand)가 제목 옆 메뉴와 아래 영역(`StageSandboxSection`, `ApplicationLayout`에서 렌더링) 사이에 공유합니다. 첫 화면 크기에는 영향이 없습니다.
 
 #### Codespaces 선택지 끄기·지우기
 

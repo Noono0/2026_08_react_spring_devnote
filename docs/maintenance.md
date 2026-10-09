@@ -2,6 +2,12 @@
 
 [문서 목록으로](../README.md) · [작업 규칙](../AGENTS.md) · [검증 명령](verification.md)
 
+## 2026-10-09 — 사이트 안 편집기를 모달에서 연습 화면 아래 펼치기·접기로 변경
+
+- **이유**: 모달 안 편집기가 작다는 의견에 따라, 연습 화면 맨 아래에 `N단계 직접 해 보기` 펼치기·접기 영역(`StageSandboxSection`)을 두고 `ApplicationLayout`의 `PageOutlet` 다음에 렌더링합니다. 제목 옆 메뉴의 `이 화면 아래에서 바로 편집`은 영역을 펼치고 그 위치로 스크롤합니다. 펼침 상태는 `stageSandboxStore.ts`(Zustand)가 공유하고, 다른 단계로 이동하면 자동으로 접힙니다.
+- **변경**: `StageSandboxDialog.tsx` → `StageSandboxPanel.tsx`(모달 제거, 지연 로딩 유지). 넓은 화면은 편집기·미리보기 좌우 560px, 760px 이하에서는 위아래 380px씩입니다. Sandpack 스타일이 나중에 붙어 같은 우선순위 규칙을 덮으므로 모바일 규칙은 `.stage-sandbox-body`로 우선순위를 높였습니다.
+- **검증**: `eslint`·`tsc -b` 통과, Vitest 110개 파일·344개 테스트 통과(접힘 기본값·토글·메뉴에서 펼치기·비학습 화면 미표시), `vite build` 성공. 내장 브라우저에서 1280px 좌우 배치와 375px 위아래 배치, 2단계 할 일 예제 미리보기 실행을 확인했습니다.
+
 ## 2026-10-09 — 학습 화면 직접 해 보기(사이트 안 편집기 Sandpack·StackBlitz·Codespaces)
 
 - **화면**: 1~25단계 제목 옆 `▶ 직접 해 보기` 메뉴(`OnlinePracticeMenu`, `<details>` 기반)에서 사이트 안 편집기(Sandpack)·StackBlitz·Codespaces 중 고릅니다. 처음 요청은 StackBlitz와 Sandpack이었는데 Sandpack 대신 Codespaces를 먼저 만들었고, 사용자 확인 후 Sandpack을 25단계 전부에 추가하고 Codespaces는 `SHOW_CODESPACES_OPTION`과 `[CODESPACES]` 표시로 나중에 끄거나 지울 수 있게 남겼습니다.

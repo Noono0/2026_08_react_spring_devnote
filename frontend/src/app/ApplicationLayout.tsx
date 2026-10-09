@@ -18,6 +18,7 @@
  */
 
 import { PageOutlet } from "@/app/components/PageOutlet";
+import { StageSandboxSection } from "@/features/curriculum/components/StageSandboxSection";
 import { ApplicationSidebar } from "@/app/components/ApplicationSidebar";
 import { ApplicationTopBar } from "@/app/components/ApplicationTopBar";
 import { DevelopmentDebugPanel } from "@/features/development/components/DevelopmentDebugPanel";
@@ -51,7 +52,11 @@ export const ApplicationLayout = () => {
 
               <main> 태그를 쓴 이유: 화면 낭독기(스크린 리더)에게
               "여기가 이 페이지의 본문이다"라고 알려주는 시맨틱 HTML이다. */}
-          <main className="application-main"><PageOutlet /></main>
+          <main className="application-main">
+            <PageOutlet />
+            {/* 연습 화면(1~25단계) 아래의 "직접 해 보기" 접기·펼치기 편집기. 다른 화면에서는 아무것도 그리지 않는다. */}
+            <StageSandboxSection />
+          </main>
         </div>
         {developmentMenuEnabled ? <DevelopmentDebugPanel /> : null}
       </div>

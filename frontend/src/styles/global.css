@@ -176,13 +176,24 @@ code { font-family: "JetBrains Mono", Consolas, monospace; }
 .online-practice-option { display: grid; gap: 3px; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 10px; color: var(--text-primary); }
 /* 메뉴 안의 "이 화면에서 바로 편집"은 링크가 아니라 버튼이라, 공통 버튼 색을 지우고 링크 선택지와 같게 맞춘다. */
 button.online-practice-option { width: 100%; min-height: 0; background: transparent; font-weight: 400; text-align: left; box-shadow: none; }
-.online-practice-loading { margin: 0; color: var(--text-secondary); font-size: 13px; }
-/* 사이트 안 편집기(Sandpack): 넓은 화면은 편집기·미리보기 좌우, 좁은 화면은 위아래 */
-.stage-sandbox-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; color: var(--text-secondary); font-size: 13px; }
-.stage-sandbox-layout { border-radius: 12px; }
-.stage-sandbox-console { margin-top: 8px; border-radius: 12px; }
+/* 연습 화면 아래 "직접 해 보기" 접기·펼치기 영역 */
+.stage-sandbox-section { margin-top: 32px; border: 1px solid var(--border-color); border-radius: 18px; background: var(--background-panel); scroll-margin-top: 16px; }
+.stage-sandbox-toggle { display: flex; width: 100%; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 16px 20px; border: 0; border-radius: 18px; color: var(--text-primary); background: transparent; text-align: left; box-shadow: none; }
+.stage-sandbox-toggle:hover { background: var(--primary-soft); }
+.stage-sandbox-toggle strong { font-size: 16px; }
+.stage-sandbox-toggle small { flex: 1 1 260px; color: var(--text-secondary); font-size: 13px; font-weight: 400; }
+.stage-sandbox-section.expanded .stage-sandbox-toggle { border-bottom: 1px solid var(--border-color); border-radius: 18px 18px 0 0; }
+.stage-sandbox-body { padding: 16px 20px 20px; }
+/* 사이트 안 편집기(Sandpack): 넓은 화면은 편집기·미리보기 좌우(높이 560px), 좁은 화면은 위아래 */
+.stage-sandbox-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; color: var(--text-secondary); font-size: 13px; }
+.stage-sandbox-layout { --sp-layout-height: 560px; border-radius: 12px; }
+.stage-sandbox-console { height: 160px; margin-top: 10px; border-radius: 12px; }
 @media (max-width: 760px) {
-  .stage-sandbox-layout { flex-direction: column; }
+  /* 위아래로 쌓으면 Sandpack 기본 flex(1 1 0)로 높이가 0이 되므로 편집기·미리보기 높이를 직접 정한다.
+     Sandpack 스타일이 나중에 붙어 같은 우선순위면 지므로 .stage-sandbox-body를 앞에 붙여 우선순위를 높였다. */
+  .stage-sandbox-body .stage-sandbox-layout { flex-direction: column; }
+  .stage-sandbox-body .stage-sandbox-layout > .stage-sandbox-editor, .stage-sandbox-body .stage-sandbox-layout > .stage-sandbox-preview { flex: none; height: 380px; }
+  .stage-sandbox-toggle, .stage-sandbox-body { padding-right: 14px; padding-left: 14px; }
 }
 .online-practice-option:hover, .online-practice-option:focus-visible { border-color: var(--primary-color); background: var(--primary-soft); }
 .online-practice-option strong { color: var(--primary-color); font-size: 14px; }
