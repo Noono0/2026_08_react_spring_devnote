@@ -20,6 +20,8 @@
  *   실제 소스 파일을 정리하는 용도로 쓰지 말고, 조각을 확인하는 용도로 쓰자.
  */
 
+import { formatSqlWithComments, SQL_INDENT_RANGE, type SqlCommentStyle } from "@/features/utility/utils/sqlFormatter";
+
 export type FormatterLanguage = "JSON" | "HTML" | "CSS" | "JAVASCRIPT" | "TYPESCRIPT" | "MARKDOWN" | "SQL";
 
 export interface FormatterOptions {
@@ -27,7 +29,18 @@ export interface FormatterOptions {
   quoteStyle: "DOUBLE" | "SINGLE";
   semicolons: boolean;
   sqlUppercase: boolean;
+  sqlIndentSize: number; // SQL 들여쓰기 칸 수(1~10). 다른 언어는 tabSize(2·4칸)를 쓴다.
+  sqlCommentStyle: SqlCommentStyle; // 코멘트 주석 형식: SQL은 -- , MyBatis는 /* */
 }
+
+export const defaultFormatterOptions: FormatterOptions = {
+  tabSize: 2,
+  quoteStyle: "DOUBLE",
+  semicolons: true,
+  sqlUppercase: true,
+  sqlIndentSize: SQL_INDENT_RANGE.initial,
+  sqlCommentStyle: "SQL",
+};
 
 /**
  * ★ 중괄호 기준으로 들여쓰기를 만든다. CSS·JS·TS가 공유하는 핵심 로직이다.
@@ -57,28 +70,7 @@ const indentBraces = (source: string, options: FormatterOptions): string => {
   }).join("\n");
 };
 
-/**
- * SQL을 읽기 좋게 편다.
- *
- * ★ 키워드를 두 등급으로 나눈 것이 핵심이다.
- *   - majorKeywords (SELECT, FROM, WHERE, JOIN...) → **앞에 줄바꿈**을 넣는다.
- *     쿼리의 큰 단락을 나누는 키워드라 줄이 바뀌어야 구조가 보인다.
- *   - logicalKeywords (AND, OR, AS, ON...) → 대소문자만 통일하고 줄은 안 바꾼다.
- *     이것까지 줄을 바꾸면 한 줄에 한 단어씩 놓여 오히려 읽기 나빠진다.
- *
- * `\b` 는 단어 경계다. 이게 없으면 컬럼명 "IN_DATE" 의 "IN" 이나
- * "FROM_ID" 의 "FROM" 같은 부분 문자열까지 키워드로 잡힌다.
- *
- * `LEFT JOIN` 을 `JOIN` 보다 앞에 둔 순서도 의도적이다.
- * 정규식은 먼저 맞는 것을 택하므로, JOIN이 앞에 있으면
- * "LEFT JOIN"의 JOIN만 잘려 "LEFT \nJOIN" 이 되어 버린다.
- */
-const formatSql = (source: string, uppercase: boolean): string => {
-  const majorKeywords = /\b(SELECT|FROM|WHERE|LEFT JOIN|RIGHT JOIN|INNER JOIN|JOIN|GROUP BY|ORDER BY|HAVING|LIMIT|OFFSET|INSERT INTO|VALUES|UPDATE|SET|DELETE FROM|UNION ALL|UNION)\b/gi;
-  const logicalKeywords = /\b(AND|OR|AS|ON|IN|IS|NOT|NULL|CASE|WHEN|THEN|ELSE|END)\b/gi;
-  const normalizeKeyword = (keyword: string): string => uppercase ? keyword.toUpperCase() : keyword.toLowerCase();
-  return source.replace(/\s+/g, " ").replace(majorKeywords, (keyword) => `\n${normalizeKeyword(keyword)}`).replace(logicalKeywords, normalizeKeyword).trim().split("\n").map((line) => line.trim()).join("\n");
-};
+// SQL 정리는 들여쓰기·코멘트 주석까지 다루느라 길어서 sqlFormatter.ts로 나눴다.
 
 /**
  * 언어에 맞는 정리 방식을 골라 실행한다.
@@ -89,7 +81,7 @@ const formatSql = (source: string, uppercase: boolean): string => {
  *   "어디가 잘못됐는지" 브라우저가 알려 준다.
  *   나머지 언어는 문자열 치환이라 틀린 문법도 조용히 통과한다.
  */
-export const formatSource = (language: FormatterLanguage, source: string, options: FormatterOptions = { tabSize: 2, quoteStyle: "DOUBLE", semicolons: true, sqlUppercase: true }): string => {
+export const formatSource = (language: FormatterLanguage, source: string, options: FormatterOptions = defaultFormatterOptions): string => {
   if (!source.trim()) return "";
 
   // JSON: 진짜 파싱 → 재출력. 가장 정확하다.
@@ -119,7 +111,7 @@ export const formatSource = (language: FormatterLanguage, source: string, option
   // 줄바꿈 통일, 빈 줄 3개 이상을 2개로, 줄 끝 공백 제거.
   if (language === "MARKDOWN") return source.replace(/\r\n/g, "\n").replace(/\n{3,}/g, "\n\n").split("\n").map((line) => line.replace(/[ \t]+$/g, "")).join("\n").trim();
 
-  return formatSql(source, options.sqlUppercase);
+  return formatSqlWithComments(source, { indentSize: options.sqlIndentSize, uppercase: options.sqlUppercase, commentStyle: options.sqlCommentStyle }).text;
 };
 
 /**

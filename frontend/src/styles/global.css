@@ -733,6 +733,14 @@ tbody tr:hover { background: color-mix(in srgb, var(--primary-color) 5%, var(--b
 .utility-card p { margin: 0; color: var(--text-secondary); line-height: 1.65; }
 .formatter-toolbar { display: flex; align-items: end; gap: 12px; margin-bottom: 16px; }
 .formatter-toolbar label { display: grid; gap: 6px; }
+/* SQL 들여쓰기 −/+ : 다른 옵션 라벨처럼 이름을 위에, 버튼과 칸 수를 아래 한 줄에 둔다. */
+.formatter-indent-stepper { display: grid; grid-template-columns: auto minmax(42px, auto) auto; align-items: center; gap: 6px; }
+.formatter-indent-stepper > span { grid-column: 1 / -1; color: var(--text-muted); font-size: 10px; font-weight: 800; }
+.formatter-indent-stepper button { min-width: 35px; min-height: 35px; padding: 4px 10px; font-size: 15px; line-height: 1; }
+.formatter-indent-stepper output { color: var(--text-primary); font-size: 12px; font-weight: 800; text-align: center; }
+/* SQL 테이블·칼럼 코멘트 입력 */
+.formatter-comment-source { display: grid; gap: 7px; margin-bottom: 14px; color: var(--text-secondary); font-size: 11px; font-weight: 800; }
+.formatter-comment-source textarea { min-height: 120px; resize: vertical; font-family: var(--font-mono, ui-monospace, SFMono-Regular, Consolas, monospace); font-size: 11px; line-height: 1.65; }
 .formatter-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .formatter-grid label { display: grid; gap: 8px; font-weight: 800; }
 .formatter-grid textarea { min-height: 480px; padding: 18px; font-family: Consolas, "Courier New", monospace; line-height: 1.55; resize: vertical; }

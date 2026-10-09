@@ -2,6 +2,13 @@
 
 [문서 목록으로](../README.md) · [작업 규칙](../AGENTS.md) · [검증 명령](verification.md)
 
+## 2026-10-09 — Code Formatter SQL 들여쓰기 1~10칸·코멘트 주석
+
+- **화면**: SQL 선택 시 들여쓰기를 `−`/`+`로 1~10칸(기본 4칸) 고르고, `주석 형식`(SQL `--` / MyBatis `/* */`)과 `테이블·칼럼 코멘트` 입력칸(인식한 코멘트 수 표시)을 추가했습니다. 다른 언어의 2·4칸 선택은 그대로입니다.
+- **구현**: 기존 정규식 SQL 정리를 `sqlTokenizer.ts`(문자열·주석·괄호·MyBatis `#{}` 구분) → `sqlFormatter.ts`(괄호 밖 절 나누기, 쉼표·AND/OR 줄바꿈, BETWEEN의 AND·CASE 안은 유지, 별칭 → 테이블 지도로 코멘트 찾기, 한글 너비를 고려한 주석 열 맞춤)로 바꿨습니다. 코멘트 입력은 `sqlCommentDictionary.ts`가 한 줄 형식·탭 3칸·MySQL DDL·`COMMENT ON`을 읽습니다. 원래 주석은 줄 끝에 유지하고 그 줄에는 새 코멘트를 붙이지 않아 재정리해도 중복되지 않습니다.
+- **검증**: `eslint`·`tsc -b` 통과, Vitest 109개 파일·345개 테스트 통과(`sqlFormatter.test.ts` 11개, `CodeFormatterPage.sql.test.tsx` 2개 추가), `vite build` 성공. 내장 브라우저에서 요청 예제 쿼리 + 코멘트 5줄, 들여쓰기 5칸으로 칼럼 4줄·테이블 1줄에 주석이 붙는 것을 확인했습니다.
+- **미지원**: 서브쿼리 안쪽 정리, MyBatis `<if>` 등 동적 태그, WHERE·GROUP BY 칼럼 코멘트, INSERT 칼럼 목록 코멘트.
+
 ## 2026-10-09 — 운영에서 학습용 회원 대체 끄기, CI 정적 검사 수정
 
 - **보안 체크리스트 2번**: `CurrentMemberProvider`에 `auth.allow-development-member`(`AUTH_ALLOW_DEVELOPMENT_MEMBER`, 기본 `true`)를 추가했습니다. `false`면 로그인 세션만 인정하고 `X-Member-Id` 헤더·1번 회원 대체 없이 401을 돌려줍니다. 운영 `compose.app.yml`은 `.env`로 덮어쓸 수 없게 `"false"`로 고정했습니다. 로컬 학습용 회원 전환은 그대로입니다. 학습 문서 조회 API는 회원 정보를 쓰지 않아 운영에서도 공개이고, 쓰기·업로드·개인 다이어그램만 로그인이 필요합니다.

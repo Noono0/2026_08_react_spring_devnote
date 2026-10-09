@@ -276,6 +276,8 @@ CSV는 단순히 `split(",")`로 나눌 수 없습니다. 이 예제의 `jsonCsv
 ### Formatter·Converter·Diff·JWT·Markdown
 
 - Code Formatter는 JSON을 실제 파서로 검증합니다. 다른 언어는 의존성을 늘리지 않은 경량 학습용 구현이므로 복잡한 JSX·Template Literal·SQL dialect 전체 AST를 지원하지 않습니다.
+- SQL은 들여쓰기를 `−`/`+`로 1~10칸 고르고, SELECT 목록·GROUP BY·ORDER BY·SET은 쉼표마다, WHERE·HAVING·ON 조건은 AND/OR마다 줄을 바꿉니다(JOIN은 한 칸, ON은 두 칸). 괄호 안(서브쿼리)은 한 줄로 두고 MyBatis 동적 태그는 정리하지 않습니다.
+- SQL `테이블·칼럼 코멘트`에 `users 유저테이블`, `users.id 유저아이디`, `orders_count 유저수`(AS 별칭) 같은 줄이나 DB 도구의 탭 3칸(테이블 ⇥ 칼럼 ⇥ 코멘트), MySQL `CREATE TABLE ... COMMENT`, `COMMENT ON ... IS`를 넣으면 SELECT 칼럼·FROM/JOIN 테이블·UPDATE SET 칼럼 줄 끝에 주석을 한 열로 맞춰 붙입니다. `u.id`는 FROM/JOIN 별칭(`users u`)으로 테이블을 찾고, AS 별칭 코멘트가 있으면 먼저 씁니다. 주석 형식은 쿼리를 바로 실행할 때 `SQL (--)`, MyBatis XML에 넣을 때 `MyBatis (/* */)`를 고릅니다(줄이 합쳐지면 `--` 뒤가 모두 주석이 될 수 있음). 원래 있던 주석은 그대로 두어 다시 정리해도 중복되지 않습니다. 구현은 `features/utility/utils/sqlTokenizer.ts`·`sqlCommentDictionary.ts`·`sqlFormatter.ts`입니다.
 - Data Converter의 XML은 `DOCTYPE`과 `ENTITY`를 거부해 외부 Entity를 통한 네트워크 접근을 막습니다. 경량 YAML은 Anchor·Alias·다중 문서를, JSON Schema는 `type`, `required`, `properties`, `items`, `enum`을 지원합니다.
 - Code Diff는 LCS 기반으로 최대 약 1,000줄씩 비교하며 원문을 저장하지 않습니다.
 - JWT Decoder는 Base64URL 디코딩만 합니다. 서명 검증이나 토큰 신뢰성 확인이 아니며 비밀키 입력·토큰 생성 기능을 제공하지 않습니다.

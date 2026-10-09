@@ -164,7 +164,7 @@
 | JSON·YAML·XML을 바꾸거나 DTO 초안 만들기 | `Data Converter` |
 | 긴 JSON에서 필요한 경로와 값 찾기 | `JSONPath Explorer` |
 | 정규식으로 검색·치환하고 Java/JavaScript 결과 비교 | `Regex Tester` |
-| 코드 정리, 두 버전 차이 보기 | `Code Formatter`, `Code Diff` |
+| 코드 정리, 두 버전 차이 보기 | `Code Formatter`(SQL은 들여쓰기 1~10칸·테이블/칼럼 코멘트 주석), `Code Diff` |
 | Markdown 작성·미리보기, JWT 내용 확인 | `Markdown Editor`, `JWT Decoder` |
 | 테스트용 행 생성, Cron 식 만들기 | `Test Data Generator`, `Cron Generator` |
 | 코드 조각을 회원별로 저장·검색 | `Developer Snippet` |
