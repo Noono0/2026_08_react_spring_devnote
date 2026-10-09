@@ -50,7 +50,10 @@ const StageSandboxPanel = ({ learningGuide }: StageSandboxPanelProperties) => {
         <SandpackCodeEditor showLineNumbers showTabs={false} wrapContent className="stage-sandbox-editor" />
         <SandpackPreview showOpenInCodeSandbox={false} className="stage-sandbox-preview" />
       </SandpackLayout>
-      {/* console.log 결과(20단계 렌더링 횟수 등)를 여기서 본다 */}
+      {/* console.log 결과(20단계 렌더링 횟수 등)를 여기서 본다. 이름 없는 빈 상자로 보이지 않게 제목을 붙였다. */}
+      <p className="stage-sandbox-console-title">
+        <strong>콘솔</strong> 코드의 <code>console.log()</code> 출력이 여기에 나옵니다. 비어 있으면 아직 출력한 내용이 없는 것입니다.
+      </p>
       <SandpackConsole className="stage-sandbox-console" />
     </SandpackProvider>
   );

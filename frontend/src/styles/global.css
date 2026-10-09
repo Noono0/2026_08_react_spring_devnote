@@ -189,7 +189,9 @@ button.online-practice-option { width: 100%; min-height: 0; background: transpar
 .stage-sandbox-layout { --sp-layout-height: 560px; border-radius: 12px; }
 /* Sandpack 스타일이 나중에 붙어 같은 우선순위 규칙을 덮으므로 .stage-sandbox-body를 앞에 붙였다.
    (높이가 0이 되면 콘솔이 안 보이고, 콘솔 지우기 버튼이 위 미리보기의 새로고침 버튼과 겹친다) */
-.stage-sandbox-body .stage-sandbox-console { height: 160px; margin-top: 10px; border-radius: 12px; }
+.stage-sandbox-body .stage-sandbox-console { height: 160px; border-radius: 12px; }
+.stage-sandbox-console-title { margin: 14px 0 6px; color: var(--text-secondary); font-size: 13px; }
+.stage-sandbox-console-title strong { margin-right: 6px; color: var(--text-primary); }
 /* 사이트 전체 button 규칙의 min-height(40px)가 Sandpack 아이콘 버튼(새로고침 등, 28px 원형)을 세로로 늘려 겹쳐 보이게 하므로 되돌린다. */
 .stage-sandbox-layout button, .stage-sandbox-console button { min-height: 0; }
 @media (max-width: 760px) {
