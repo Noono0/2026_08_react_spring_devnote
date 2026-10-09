@@ -33,6 +33,7 @@ import {
   type NavigationItem,
   type NavigationSubgroup,
 } from "@/app/navigation/navigationGroups";
+import { SidebarResizeHandle } from "@/app/components/SidebarResizeHandle";
 
 // ----------------------------------------------------------------------------
 // 메뉴 데이터(1·2)는 @/app/navigation/navigationGroups.ts에 있다. 탭 제목(DocumentTitle)도 같은 데이터를 쓴다.
@@ -360,6 +361,10 @@ export const ApplicationSidebar = () => {
           isMobileSidebarOpen이 false면 null → 아예 DOM에 존재하지 않는다.
           CSS로 숨기는 것과 달리, 없는 요소는 키보드로도 절대 선택되지 않아 더 안전하다. */}
       {isMobileSidebarOpen ? <button className="mobile-sidebar-backdrop" type="button" onClick={closeMobileSidebar} aria-label="모바일 사이드바 닫기" /> : null}
+
+      {/* 사이드바 오른쪽 가장자리 너비 조절 손잡이(PC, 펼쳐져 있을 때만).
+          사이드바(<aside>)는 세로 스크롤 영역이라 그 안에 두면 스크롤과 함께 움직이므로, 바깥에 고정 위치로 둔다. */}
+      {isSidebarCollapsed ? null : <SidebarResizeHandle />}
     </>
   );
 };

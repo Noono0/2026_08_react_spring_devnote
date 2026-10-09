@@ -32,7 +32,7 @@
   --sidebar-active: #27375f;
   --shadow-small: 0 6px 20px rgba(22, 32, 51, 0.07);
   --shadow-large: 0 22px 55px rgba(22, 32, 51, 0.15);
-  --sidebar-width: 286px;
+  --sidebar-width: 300px; /* 기본값. 사용자가 끌어 바꾸면 applicationUiStore가 <html>에 새 값을 넣는다 */
   --sidebar-collapsed-width: 82px;
   --topbar-height: 76px;
 }
@@ -98,6 +98,21 @@ code { font-family: "JetBrains Mono", Consolas, monospace; }
   transition: width 220ms ease, transform 220ms ease; box-shadow: 10px 0 32px rgba(5, 10, 20, 0.12);
 }
 .application-sidebar-collapsed { width: var(--sidebar-collapsed-width); }
+/* 사이드바 너비 조절 손잡이: 사이드바 오른쪽 가장자리에 고정. 너비 변수(--sidebar-width)를 따라 함께 움직인다. */
+.sidebar-resize-handle {
+  position: fixed; top: 0; bottom: 0; left: calc(var(--sidebar-width) - 4px); z-index: 101; width: 8px; min-height: 0; padding: 0;
+  border: 0; border-radius: 0; background: transparent; box-shadow: none; cursor: col-resize; transition: left 220ms ease, background-color 150ms ease;
+}
+.sidebar-resize-handle:hover, .sidebar-resize-handle:focus-visible, [data-sidebar-resizing] .sidebar-resize-handle { background: color-mix(in srgb, var(--primary-color) 55%, transparent); filter: none; }
+/* 끄는 동안에는 애니메이션을 꺼서 손을 바로 따라오게, 글자 선택도 막는다 */
+[data-sidebar-resizing] .application-sidebar, [data-sidebar-resizing] .application-content-shell, [data-sidebar-resizing] .sidebar-resize-handle { transition: none; }
+[data-sidebar-resizing] body { cursor: col-resize; user-select: none; }
+/* 메뉴 칸이 긴 설명 글 때문에 사이드바보다 넓어지지 않게(오른쪽 화살표가 잘리던 문제): 칸 최소 너비를 0으로, 넘치는 설명은 … 처리 */
+.sidebar-navigation, .sidebar-navigation-group, .sidebar-navigation-submenu, .sidebar-navigation-subgroup { grid-template-columns: minmax(0, 1fr); }
+.sidebar-navigation-link, .sidebar-group-toggle { min-width: 0; }
+.sidebar-navigation-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* 3단계 안쪽 목록은 들여쓰기를 줄여 가로 공간을 아낀다 */
+.sidebar-navigation-submenu .sidebar-navigation-submenu { margin-left: 12px; padding-left: 6px; }
 .sidebar-brand-row { display: flex; align-items: center; gap: 8px; min-height: 52px; margin-bottom: 20px; }
 .sidebar-brand { display: flex; min-width: 0; flex: 1; align-items: center; gap: 12px; color: var(--sidebar-text); }
 .sidebar-brand-mark {

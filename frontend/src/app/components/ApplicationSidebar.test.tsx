@@ -2,7 +2,7 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { ApplicationSidebar } from "@/app/components/ApplicationSidebar";
-import { useApplicationUiStore } from "@/app/state/applicationUiStore";
+import { SIDEBAR_WIDTH_RANGE, useApplicationUiStore } from "@/app/state/applicationUiStore";
 import { PortfolioLayout } from "@/features/portfolio/layouts/PortfolioLayout";
 
 vi.mock("@/features/auth/components/AuthenticationControls", () => ({
@@ -17,6 +17,37 @@ vi.mock("@/features/development/components/DataSourceToggle", () => ({
 
 beforeEach(() => {
   useApplicationUiStore.setState({ isSidebarCollapsed: false, isMobileSidebarOpen: false });
+});
+
+describe("사이드바 너비 조절", () => {
+  beforeEach(() => {
+    localStorage.removeItem("sidebarWidth");
+    useApplicationUiStore.getState().setSidebarWidth(SIDEBAR_WIDTH_RANGE.initial);
+  });
+
+  it("손잡이에서 ←/→(Shift는 크게)로 너비를 바꾸고, 범위(240~520px)를 넘지 않으며 CSS 변수와 저장소에 반영한다", () => {
+    render(<MemoryRouter initialEntries={["/"]}><ApplicationSidebar /></MemoryRouter>);
+    const handle = screen.getByRole("button", { name: "사이드바 너비 조절 (지금 300px)" });
+
+    fireEvent.keyDown(handle, { key: "ArrowRight" });
+    expect(screen.getByRole("button", { name: "사이드바 너비 조절 (지금 320px)" })).toBeInTheDocument();
+    expect(document.documentElement.style.getPropertyValue("--sidebar-width")).toBe("320px");
+    expect(localStorage.getItem("sidebarWidth")).toBe("320");
+
+    for (let count = 0; count < 10; count += 1) fireEvent.keyDown(handle, { key: "ArrowRight", shiftKey: true });
+    expect(useApplicationUiStore.getState().sidebarWidth).toBe(SIDEBAR_WIDTH_RANGE.max);
+    for (let count = 0; count < 10; count += 1) fireEvent.keyDown(handle, { key: "ArrowLeft", shiftKey: true });
+    expect(useApplicationUiStore.getState().sidebarWidth).toBe(SIDEBAR_WIDTH_RANGE.min);
+
+    fireEvent.doubleClick(handle); // 더블클릭하면 기본 너비
+    expect(useApplicationUiStore.getState().sidebarWidth).toBe(SIDEBAR_WIDTH_RANGE.initial);
+  });
+
+  it("사이드바를 접으면 너비 조절 손잡이를 숨긴다", () => {
+    useApplicationUiStore.setState({ isSidebarCollapsed: true });
+    render(<MemoryRouter initialEntries={["/"]}><ApplicationSidebar /></MemoryRouter>);
+    expect(screen.queryByRole("button", { name: /사이드바 너비 조절/ })).not.toBeInTheDocument();
+  });
 });
 
 describe("ApplicationSidebar", () => {
