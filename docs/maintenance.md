@@ -2,6 +2,12 @@
 
 [문서 목록으로](../README.md) · [작업 규칙](../AGENTS.md) · [검증 명령](verification.md)
 
+## 2026-10-10 — Code Formatter·SQL Formatter 입력·결과 문법 색
+
+- **화면**: Code Formatter와 SQL Formatter의 입력·결과 글자에 언어별 문법 색을 입혔습니다(SQL Formatter 결과는 Java 출력이면 Java 색). 색은 `:root`와 `[data-theme="dark"]`의 `--syntax-comment/keyword/string/number/tag/property/heading` 변수로 라이트는 진한 색, 다크는 밝은 색을 씁니다. Markdown 미리보기 코드 블록의 고정 색도 같은 변수로 바꿔 테마를 따릅니다.
+- **구현**: `HighlightedTextarea`가 색칠한 `<pre aria-hidden>` 위에 글자색만 투명한 textarea(caret·선택·입력·복사 그대로)를 같은 글꼴·크기·줄 높이·여백·테두리로 포개고 onScroll로 스크롤을 맞춥니다. 줄 나눔이 어긋나지 않게 `wrap="off"`이고, 아래 겹은 스크롤바 칸만큼 여유를 둬 맨 끝까지 같이 움직입니다. 색 조각은 `markdownRenderer.ts`에 있던 패턴을 옮긴 `syntaxHighlighter.ts`(JSON 키·HTML 속성·CSS 속성·SQL MyBatis 파라미터·Markdown 추가)가 만듭니다. 새 의존성은 없습니다.
+- **검증**: `eslint`·`tsc -b` 통과, `syntaxHighlighter.test.ts` 7개 포함 테스트 통과(기존 Markdown 색칠 테스트 유지), `vite build` 성공. 내장 브라우저에서 두 겹의 글꼴·줄 높이·여백·위치 일치, 가로 스크롤 맨 끝(457px)까지 동기화, 라이트(JSON 키 청록·문자열 초록)·다크(SQL 키워드 보라) 색을 확인했습니다.
+
 ## 2026-10-10 — SQL Formatter(dpriver 기본 기능)·테이블/칼럼 코멘트 주석
 
 - **화면**: SQL 전용 `SQL Formatter`(`/utilities/sql-formatter`, 사이드바·유틸리티 홈 등록)를 추가했습니다. 위에서 아래로 입력 → 옵션 표 → 버튼(정리하기·한 줄로 압축·예제·초기화·결과를 입력으로·옵션 기본값으로) → 테이블·칼럼 코멘트 → 결과(복사·다운로드)입니다. 옵션 표는 입력 폼처럼 "회색 이름 칸 | 버튼 칸"을 넓은 화면에서 한 줄에 두 쌍(4줄), 1100px 이하에서 한 쌍씩 놓아 세로로 길어지지 않게 했습니다. 옵션(정렬 방식·대소문자·쉼표·출력 형식·주석 형식)은 select 대신 기존 `segmented-buttons` 버튼 묶음으로, 고른 버튼만 밝게 칠하고 `aria-pressed`로 상태를 알립니다. 켜고 끄는 옵션(한 줄에 하나·AS 별칭 맞춤·AND/OR를 WHERE 아래에)은 켜졌을 때 밝아지는 토글 버튼입니다. Ctrl+Enter로 정리하고, 결과는 State에 두지 않고 마지막 입력과 지금 옵션으로 계산해 옵션을 바꾸면 바로 다시 정리됩니다. Code Formatter의 SQL은 같은 엔진 기본값 + 키워드 대·소문자만 남기고 `SQL 옵션 더 보기` 링크를 두었습니다(이 PR 처음에 넣었던 Code Formatter의 들여쓰기·코멘트 UI는 SQL Formatter로 옮김).

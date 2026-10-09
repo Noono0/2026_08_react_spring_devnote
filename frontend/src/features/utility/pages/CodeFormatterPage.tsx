@@ -3,6 +3,7 @@
 
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { HighlightedTextarea } from "@/features/utility/components/HighlightedTextarea";
 import { UtilityHelpDialog, UtilityPageTitle } from "@/features/utility/components/UtilityHelpDialog";
 import { copyText, downloadText } from "@/features/utility/utils/browserFileUtils";
 import { defaultFormatterOptions, formatSource, minifySource, type FormatterLanguage, type FormatterOptions } from "@/features/utility/utils/sourceFormatter";
@@ -65,7 +66,7 @@ export const CodeFormatterPage = () => {
         ) : null}
         <button type="button" onClick={() => run("FORMAT")}>정리하기</button><button type="button" className="ghost-button" onClick={() => run("MINIFY")}>Minify</button><button type="button" className="ghost-button" onClick={() => { setSource(""); setResult(""); setErrorMessage(""); }}>초기화</button>
       </div>
-      <div className="utility-editor-grid"><label><span>입력</span><textarea aria-label="포맷할 소스 입력" value={source} onChange={(event) => { setSource(event.target.value); setResult(""); }} spellCheck={false} /></label><label><span>결과</span><textarea aria-label="포맷 결과" value={result} readOnly spellCheck={false} placeholder="정리 또는 Minify 결과" /></label></div>
+      <div className="utility-editor-grid"><label><span>입력</span>{/* 입력·결과 글자에 언어별 문법 색을 입힌다(색은 라이트·다크 테마별 CSS 변수) */}<HighlightedTextarea language={language.toLowerCase()} aria-label="포맷할 소스 입력" value={source} onChange={(event) => { setSource(event.target.value); setResult(""); }} /></label><label><span>결과</span><HighlightedTextarea language={language.toLowerCase()} aria-label="포맷 결과" value={result} readOnly placeholder="정리 또는 Minify 결과" /></label></div>
       {errorMessage ? <p className="field-error" role="alert">문법 오류: {errorMessage}</p> : null}
       <div className="utility-result-actions"><span>입력 {new Blob([source]).size.toLocaleString("ko-KR")} bytes → 결과 {new Blob([result]).size.toLocaleString("ko-KR")} bytes</span><button type="button" className="ghost-button" disabled={!result} onClick={() => void copyText(result).then(() => applicationNotification.success("결과를 복사했습니다."))}>복사</button><button type="button" className="ghost-button" disabled={!result} onClick={() => downloadText(`formatted.${extension}`, result)}>다운로드</button></div>
       <div className="utility-warning"><strong>Formatter 범위</strong> JSON은 실제 파서로 검증합니다. 그 외 언어는 학습용 경량 정리기이므로 복잡한 Template Literal, JSX, CSS 함수, SQL dialect의 완전한 AST 포맷팅은 지원하지 않습니다. SQL의 정렬 방식·들여쓰기·코멘트 주석·Java 출력은 SQL Formatter에서 고를 수 있습니다.</div>

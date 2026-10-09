@@ -1,4 +1,5 @@
 import DOMPurify from "dompurify";
+import { highlightSegments } from "@/features/utility/utils/syntaxHighlighter";
 
 // markdownRenderer.ts — 마크다운 글을 HTML로 바꾸는 작은 변환기(제목·목록·체크리스트·표·인용·코드 블록 색칠)
 // ★ 먼저 모든 글자의 HTML 특수문자를 이스케이프하고, 허용한 문법만 태그로 바꾼 뒤, 마지막에 DOMPurify로 한 번 더 정화한다(XSS 방지).
@@ -20,66 +21,12 @@ const renderInline = (value: string): string => escapeHtml(value)
   // Markdown에는 밑줄 표준 문법이 없어 정확한 <u> 태그만 제한적으로 되살립니다.
   .replace(/&lt;u&gt;([\s\S]*?)&lt;\/u&gt;/g, "<u>$1</u>");
 
-type SyntaxTokenType = "comment" | "keyword" | "number" | "string" | "tag";
-
-// 코드 블록 색칠용: 언어별 주석·키워드·숫자·문자열 패턴을 찾아 <span class="syntax-종류">으로 감싼다(CSS가 색을 입힌다).
-const tokenPatterns: Record<string, RegExp> = {
-  javascript: /(\/\*[\s\S]*?\*\/|\/\/[^\n]*|`(?:\\.|[^`\\])*`|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\b(?:as|async|await|break|case|catch|class|const|continue|default|delete|do|else|export|extends|false|finally|for|from|function|if|import|in|instanceof|let|new|null|of|return|static|super|switch|this|throw|true|try|typeof|undefined|var|void|while|yield)\b|\b\d+(?:\.\d+)?\b)/g,
-  typescript: /(\/\*[\s\S]*?\*\/|\/\/[^\n]*|`(?:\\.|[^`\\])*`|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\b(?:abstract|any|as|async|await|boolean|break|case|catch|class|const|continue|declare|default|delete|do|else|enum|export|extends|false|finally|for|from|function|if|implements|import|in|instanceof|interface|keyof|let|never|new|null|number|of|private|protected|public|readonly|return|static|string|super|switch|this|throw|true|try|type|typeof|undefined|unknown|var|void|while|yield)\b|\b\d+(?:\.\d+)?\b)/g,
-  java: /(\/\*[\s\S]*?\*\/|\/\/[^\n]*|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\b(?:abstract|boolean|break|byte|case|catch|char|class|continue|default|do|double|else|enum|extends|false|final|finally|float|for|if|implements|import|instanceof|int|interface|long|native|new|null|package|private|protected|public|return|short|static|strictfp|super|switch|synchronized|this|throw|throws|transient|true|try|void|volatile|while)\b|\b\d+(?:\.\d+)?\b)/g,
-  json: /("(?:\\.|[^"\\])*"|\b(?:true|false|null)\b|-?\b\d+(?:\.\d+)?(?:e[+-]?\d+)?\b)/gi,
-  python: /(#[^\n]*|"""[\s\S]*?"""|'''[\s\S]*?'''|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\b(?:and|as|assert|async|await|break|class|continue|def|del|elif|else|except|False|finally|for|from|global|if|import|in|is|lambda|None|nonlocal|not|or|pass|raise|return|True|try|while|with|yield)\b|\b\d+(?:\.\d+)?\b)/g,
-  sql: /(--[^\n]*|\/\*[\s\S]*?\*\/|'(?:''|[^'])*'|"(?:""|[^"])*"|\b(?:add|alter|and|as|asc|by|case|create|delete|desc|distinct|drop|else|end|exists|false|from|full|group|having|in|inner|insert|into|is|join|left|like|limit|not|null|on|or|order|outer|primary|references|right|select|set|table|then|true|union|unique|update|values|when|where)\b|\b\d+(?:\.\d+)?\b)/gi,
-  bash: /(#[^\n]*|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\b(?:case|do|done|elif|else|esac|export|fi|for|function|if|in|local|readonly|return|then|until|while)\b|\b\d+(?:\.\d+)?\b)/g,
-};
-
-const tokenType = (token: string, language: string): SyntaxTokenType => {
-  if (token.startsWith("//") || token.startsWith("/*") || token.startsWith("#") || token.startsWith("--")) return "comment";
-  if (/^["'`]/.test(token)) return "string";
-  if (/^-?\d/.test(token)) return "number";
-  if (language === "html") return "tag";
-  return "keyword";
-};
-
-const highlightCode = (source: string, requestedLanguage: string): string => {
-  const language = requestedLanguage.toLocaleLowerCase();
-  if (language === "html") {
-    return source.split(/(<!--[\s\S]*?-->|<\/?[a-zA-Z][^>]*>)/g).map((token) => {
-      if (token.startsWith("<!--")) return `<span class="syntax-comment">${escapeHtml(token)}</span>`;
-      if (token.startsWith("<")) return `<span class="syntax-tag">${escapeHtml(token)}</span>`;
-      return escapeHtml(token);
-    }).join("");
-  }
-  if (language === "css") {
-    const pattern = /(\/\*[\s\S]*?\*\/|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|#[a-fA-F\d]{3,8}\b|\b\d+(?:\.\d+)?(?:px|rem|em|%|s|ms|vh|vw)?\b)/g;
-    const highlighted: string[] = [];
-    let previousEnd = 0;
-    let match = pattern.exec(source);
-    while (match) {
-      highlighted.push(escapeHtml(source.slice(previousEnd, match.index)));
-      const type: SyntaxTokenType = match[0].startsWith("/*") ? "comment" : /^["']/.test(match[0]) ? "string" : "number";
-      highlighted.push(`<span class="syntax-${type}">${escapeHtml(match[0])}</span>`);
-      previousEnd = match.index + match[0].length;
-      match = pattern.exec(source);
-    }
-    highlighted.push(escapeHtml(source.slice(previousEnd)));
-    return highlighted.join("");
-  }
-  const pattern = tokenPatterns[language];
-  if (!pattern) return escapeHtml(source);
-  pattern.lastIndex = 0;
-  const highlighted: string[] = [];
-  let previousEnd = 0;
-  let match = pattern.exec(source);
-  while (match) {
-    highlighted.push(escapeHtml(source.slice(previousEnd, match.index)));
-    highlighted.push(`<span class="syntax-${tokenType(match[0], language)}">${escapeHtml(match[0])}</span>`);
-    previousEnd = match.index + match[0].length;
-    match = pattern.exec(source);
-  }
-  highlighted.push(escapeHtml(source.slice(previousEnd)));
-  return highlighted.join("");
-};
+// 코드 블록 색칠: 공통 색칠기(syntaxHighlighter.ts)가 나눈 조각을 <span class="syntax-종류">로 감싼다(색은 CSS 변수가 테마별로 정한다).
+// 조각 글자는 반드시 이스케이프한다(코드 안의 <script> 같은 글자가 태그가 되지 않게).
+const highlightCode = (source: string, requestedLanguage: string): string =>
+  highlightSegments(source, requestedLanguage)
+    .map((segment) => (segment.type ? `<span class="syntax-${segment.type}">${escapeHtml(segment.text)}</span>` : escapeHtml(segment.text)))
+    .join("");
 
 type TableAlignment = "left" | "center" | "right";
 

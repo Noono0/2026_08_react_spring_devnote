@@ -18,6 +18,7 @@
  * 실제 변환: utils/sqlFormatter.ts(정리), sqlCommentDictionary.ts(코멘트 읽기), sqlCodeOutput.ts(Java 코드 출력)
  */
 import { useId, useState, type KeyboardEvent, type ReactNode } from "react";
+import { HighlightedTextarea } from "@/features/utility/components/HighlightedTextarea";
 import { UtilityHelpDialog, UtilityPageTitle } from "@/features/utility/components/UtilityHelpDialog";
 import { copyText, downloadText } from "@/features/utility/utils/browserFileUtils";
 import { minifySource } from "@/features/utility/utils/sourceFormatter";
@@ -174,7 +175,7 @@ export const SqlFormatterPage = () => {
       <div className="sql-formatter-main">
         <label className="sql-formatter-field">
           <span>SQL 입력 <small>(Ctrl+Enter로 정리)</small></span>
-          <textarea aria-label="정리할 SQL 입력" value={source} onChange={(event) => changeSource(event.target.value)} onKeyDown={handleSourceKeyDown} spellCheck={false} />
+          <HighlightedTextarea language="sql" aria-label="정리할 SQL 입력" value={source} onChange={(event) => changeSource(event.target.value)} onKeyDown={handleSourceKeyDown} />
         </label>
 
         {/* 옵션 표: 넓은 화면은 "이름|버튼|이름|버튼" 두 쌍씩 4줄, 좁은 화면은 한 쌍씩 */}
@@ -232,7 +233,8 @@ export const SqlFormatterPage = () => {
 
         <label className="sql-formatter-field">
           <span>결과</span>
-          <textarea aria-label="정리 결과" value={result} readOnly spellCheck={false} placeholder="정리하기 또는 한 줄로 압축 결과가 여기에 나옵니다." />
+          {/* 결과가 Java 코드면 Java 색, SQL이면 SQL 색 */}
+          <HighlightedTextarea language={outputTarget === "SQL" ? "sql" : "java"} aria-label="정리 결과" value={result} readOnly placeholder="정리하기 또는 한 줄로 압축 결과가 여기에 나옵니다." />
         </label>
         <div className="utility-result-actions">
           <span>입력 {new Blob([source]).size.toLocaleString("ko-KR")} bytes → 결과 {new Blob([result]).size.toLocaleString("ko-KR")} bytes</span>
