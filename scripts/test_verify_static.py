@@ -50,6 +50,15 @@ class StaticVerificationTest(unittest.TestCase):
             self.assertFalse(verifier.resolve_import(source, "./empty"))
             self.assertFalse(verifier.resolve_import(source, "./missing"))
 
+    def test_vite_query_suffix_is_ignored_when_resolving_imports(self):
+        # 25단계 화면은 테스트 파일 원문을 "./CheckoutCalculator.test.tsx?raw"로 가져온다. ?raw는 파일 이름이 아니다.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "sample.test.tsx").touch()
+            source = root / "page.tsx"
+            self.assertTrue(verifier.resolve_import(source, "./sample.test.tsx?raw"))
+            self.assertFalse(verifier.resolve_import(source, "./missing.tsx?raw"))
+
     def test_nested_shell_scripts_are_included_in_syntax_checks(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

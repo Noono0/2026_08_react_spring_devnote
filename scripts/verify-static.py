@@ -135,6 +135,8 @@ def check_typescript_syntax() -> None:
 def resolve_import(source_path: Path, import_value: str) -> bool:
     if not (import_value.startswith("./") or import_value.startswith("../") or import_value.startswith("@/")):
         return True
+    # Vite 쿼리 접미사(?raw, ?url 등)는 "파일을 어떤 형태로 가져올지"일 뿐 파일 이름이 아니므로 떼고 찾는다.
+    import_value = import_value.split("?", 1)[0]
     base_path = FRONTEND_ROOT / "src" / import_value[2:] if import_value.startswith("@/") else source_path.parent / import_value
     candidates = [
         base_path,
