@@ -131,6 +131,16 @@ code { font-family: "JetBrains Mono", Consolas, monospace; }
   border-radius: 7px; color: #d5dfff; background: rgba(255,255,255,.09); font-size: 12px;
 }
 .sidebar-navigation-submenu { display: grid; gap: 7px; margin-left: 18px; padding-left: 8px; border-left: 1px solid rgba(255,255,255,.12); }
+/* 3단계 묶음(유틸리티 종류별): 그룹 버튼보다 낮고 작게, 메뉴 개수를 작은 글자로 */
+.sidebar-navigation-subgroup { display: grid; gap: 7px; }
+.sidebar-subgroup-toggle { min-height: 40px; gap: 10px; padding-block: 4px; border-radius: 11px; color: var(--sidebar-muted); }
+.sidebar-subgroup-toggle .sidebar-navigation-symbol { transform: scale(.86); }
+.sidebar-subgroup-toggle .sidebar-group-toggle-copy strong { font-size: 12px; }
+.sidebar-subgroup-toggle .sidebar-group-toggle-copy small { margin-left: auto; color: var(--sidebar-muted); font-size: 10px; }
+.sidebar-subgroup-toggle[aria-expanded="true"] { color: var(--sidebar-text); }
+/* 접혀 있어도 지금 화면이 이 묶음 안에 있으면 표시 */
+.sidebar-subgroup-toggle.contains-active { color: #dce5ff; border-color: rgba(126, 155, 255, .28); }
+.sidebar-subgroup-toggle .sidebar-group-arrow { width: 22px; min-width: 22px; height: 22px; font-size: 11px; }
 .application-sidebar-collapsed .sidebar-group-toggle { justify-content: center; padding-inline: 8px; }
 .application-sidebar-collapsed .sidebar-group-arrow { display: none; }
 .application-sidebar-collapsed .sidebar-navigation-submenu { margin-left: 0; padding-left: 0; border-left: 0; }

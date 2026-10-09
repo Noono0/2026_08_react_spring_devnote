@@ -2,6 +2,12 @@
 
 [문서 목록으로](../README.md) · [작업 규칙](../AGENTS.md) · [검증 명령](verification.md)
 
+## 2026-10-10 — 사이드바 유틸리티 메뉴 3단계
+
+- **화면**: 유틸리티 메뉴가 25개로 길어져 3단계로 나눴습니다. 2단계에는 `유틸리티 홈`·`웹 크롤링 도구`만 두고, 나머지는 유틸리티 홈(`UtilityHomePage`) 분류와 같은 5개 묶음(`API 개발·테스트` 5, `데이터 변환·조회` 4, `코드 작성 보조` 7, `설계·분석` 4, `보안·기록` 3)을 접고 펼칩니다. 묶음 제목 옆에 메뉴 개수를 보이고, 지금 화면이 들어 있는 묶음은 접혀 있어도 테두리로 표시합니다. 유틸리티 화면으로 바로 들어오면 그 화면의 묶음까지 펼칩니다.
+- **구현**: `navigationGroups.ts`에 `NavigationSubgroup`과 그룹의 `subgroups`, 전체 메뉴를 펴는 `flattenNavigationItems`를 추가했습니다(탭 제목 `pageTitle.ts`도 3단계 메뉴까지 찾음). `ApplicationSidebar`는 그룹 접기와 같은 `expandedGroupIds` Set에 `"그룹id:묶음id"` 키로 묶음 상태를 함께 담고(함수형 업데이트·불변성 그대로), `aria-expanded`·`aria-controls`로 버튼과 하위 목록을 연결합니다.
+- **검증**: `ApplicationSidebar.test.tsx`에 묶음 펼치기·접기와 바로 들어왔을 때 자동 펼침 테스트를 추가했습니다. 내장 브라우저에서 `/utilities/sql-formatter`로 들어오면 `코드 작성 보조`만 펼쳐지고 SQL Formatter가 현재 메뉴로 표시되는 것을 확인했습니다.
+
 ## 2026-10-10 — SQL Formatter 대문자 기본값·복잡한 예제·문장별 별칭
 
 - **기본값**: 함수·테이블/칼럼 이름 대소문자 기본값을 `대문자`로 바꿨습니다(문자열·따옴표 이름·MyBatis `#{}`는 그대로). dpriver 모양(함수 Count·이름 그대로)은 `DPRIVER_CASE_OPTIONS`로 남겨 Code Formatter의 SQL과 dpriver 비교 테스트가 씁니다.

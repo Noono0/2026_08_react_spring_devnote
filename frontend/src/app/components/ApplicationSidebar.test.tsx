@@ -33,13 +33,30 @@ describe("ApplicationSidebar", () => {
     expect(within(navigation).getByRole("link", { name: /^고급/ })).toBeInTheDocument();
     expect(within(navigation).queryByRole("link", { name: /API Workspace/ })).not.toBeInTheDocument();
 
+    // 유틸리티: 2단계(홈·크롤링 도구)는 바로 보이고, 나머지는 종류별 묶음(3단계)을 펼쳐야 보인다.
     fireEvent.click(within(navigation).getByRole("button", { name: "각종 유틸리티 게시판 메뉴 펼치기" }));
+    expect(within(navigation).getByRole("link", { name: /웹 크롤링 도구/ })).toHaveAttribute("href", "/utilities/crawler");
+    expect(within(navigation).queryByRole("link", { name: /API Workspace/ })).not.toBeInTheDocument();
+
+    fireEvent.click(within(navigation).getByRole("button", { name: "API 개발·테스트 메뉴 펼치기" }));
     expect(within(navigation).getByRole("link", { name: /API Workspace/ })).toHaveAttribute("href", "/utilities/api-workspace");
     expect(within(navigation).getByRole("link", { name: /OpenAPI Studio/ })).toHaveAttribute("href", "/utilities/api-workspace/openapi");
+    fireEvent.click(within(navigation).getByRole("button", { name: "데이터 변환·조회 메뉴 펼치기" }));
     expect(within(navigation).getByRole("link", { name: /JSONPath Explorer/ })).toHaveAttribute("href", "/utilities/jsonpath");
+    fireEvent.click(within(navigation).getByRole("button", { name: "설계·분석 메뉴 펼치기" }));
     expect(within(navigation).getByRole("link", { name: /Dependency Analyzer/ })).toHaveAttribute("href", "/utilities/dependencies");
+    fireEvent.click(within(navigation).getByRole("button", { name: "API 개발·테스트 메뉴 접기" }));
+    expect(within(navigation).queryByRole("link", { name: /API Workspace/ })).not.toBeInTheDocument();
     expect(within(navigation).queryByText("추후 추가 예정")).not.toBeInTheDocument();
     expect(within(navigation).queryByText("초급 CRUD")).not.toBeInTheDocument();
+  });
+
+  it("유틸리티 화면으로 바로 들어오면 그 화면이 들어 있는 3단계 묶음까지 펼쳐 현재 메뉴를 보여 준다", () => {
+    render(<MemoryRouter initialEntries={["/utilities/sql-formatter"]}><ApplicationSidebar /></MemoryRouter>);
+    const navigation = screen.getByRole("navigation", { name: "전체 사이트 메뉴" });
+    expect(within(navigation).getByRole("button", { name: "코드 작성 보조 메뉴 접기" })).toHaveAttribute("aria-expanded", "true");
+    expect(within(navigation).getByRole("link", { name: /SQL Formatter/ })).toHaveAttribute("aria-current", "page");
+    expect(within(navigation).getByRole("button", { name: "API 개발·테스트 메뉴 펼치기" })).toHaveAttribute("aria-expanded", "false");
   });
 
   it("그룹 버튼으로 상세 메뉴를 접고 펼치며 화살표와 접근성 상태를 함께 바꾼다", () => {
