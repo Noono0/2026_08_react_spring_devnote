@@ -24,7 +24,7 @@
 import { useEffect, useMemo, useRef, type CSSProperties } from "react";
 import { SandpackCodeEditor, SandpackConsole, SandpackLayout, SandpackPreview, SandpackProvider, useSandpack } from "@codesandbox/sandpack-react";
 import { useApplicationUiStore } from "@/app/state/applicationUiStore";
-import { SandboxResizeHandle } from "@/features/curriculum/components/SandboxResizeHandle";
+import { SandboxResizeHandle, type ResizeAxis } from "@/features/curriculum/components/SandboxResizeHandle";
 import type { LearningGuide } from "@/features/curriculum/data/learningGuides";
 import { selectSandboxDependencies } from "@/features/curriculum/sandbox/sandboxSetup";
 import { createSandboxStyles, isSandboxThemeChoice, resolveSandboxTheme, sandboxEditorThemes, sandboxThemeChoices, sandboxThemeLabels } from "@/features/curriculum/sandbox/sandboxThemes";
@@ -96,9 +96,9 @@ const StageSandboxPanel = ({ learningGuide }: StageSandboxPanelProperties) => {
 
   // 방향키 한 번에 바꿀 양. 지금 값은 getState()로 "가장 최신 값"을 읽는다.
   // (렌더링 때 받아 둔 값을 쓰면 키를 빠르게 여러 번 누를 때 옛날 값으로 계산되는 stale closure가 생길 수 있다)
-  const stepEditorWidth = (direction: -1 | 1, large: boolean): void =>
+  const stepEditorWidth = (_axis: ResizeAxis, direction: -1 | 1, large: boolean): void =>
     setEditorWidthPercent(useStageSandboxStore.getState().editorWidthPercent + direction * (large ? 15 : 5));
-  const stepLayoutHeight = (direction: -1 | 1, large: boolean): void =>
+  const stepLayoutHeight = (_axis: ResizeAxis, direction: -1 | 1, large: boolean): void =>
     setLayoutHeight(useStageSandboxStore.getState().layoutHeight + direction * (large ? 120 : 40));
 
   // CSS 변수로 크기를 넘긴다. 타입 단언(as) 없이 "--"로 시작하는 이름을 쓸 수 있게 타입을 넓혔다.

@@ -183,7 +183,9 @@ button.online-practice-option { width: 100%; min-height: 0; background: transpar
 .stage-sandbox-toggle strong { font-size: 16px; }
 .stage-sandbox-toggle small { flex: 1 1 260px; color: var(--text-secondary); font-size: 13px; font-weight: 400; }
 .stage-sandbox-section.expanded .stage-sandbox-toggle { border-bottom: 1px solid var(--border-color); border-radius: 18px 18px 0 0; }
-.stage-sandbox-body { padding: 16px 20px 20px; }
+.stage-sandbox-body { position: relative; padding: 16px 20px 24px; }
+/* 상자 너비를 조절해도 본문 밖으로 넘치지 않게 한다(StageSandboxSection이 style.width를 넣는다). */
+.stage-sandbox-section { max-width: 100%; }
 /* 사이트 안 편집기(Sandpack): 넓은 화면은 편집기·미리보기 좌우(높이 560px), 좁은 화면은 위아래 */
 .stage-sandbox-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; color: var(--text-secondary); font-size: 13px; }
 .stage-sandbox-toolbar-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
@@ -200,6 +202,11 @@ button.online-practice-option { width: 100%; min-height: 0; background: transpar
 .stage-sandbox-resize-handle.vertical { flex: 0 0 10px; align-self: stretch; cursor: col-resize; }
 .stage-sandbox-layout .stage-sandbox-resize-handle.vertical { min-height: 0; }
 .stage-sandbox-resize-handle.horizontal { width: 100%; min-height: 0; height: 12px; margin-top: 4px; border-radius: 6px; cursor: row-resize; }
+/* 상자 오른쪽 아래 모서리(◢): 학습 가이드 모달의 크기 조절 손잡이와 같은 모양·위치 */
+.stage-sandbox-resize-handle.corner {
+  position: absolute; right: 4px; bottom: 4px; width: 22px; min-height: 0; height: 22px;
+  border-radius: 6px; background: transparent; cursor: nwse-resize; font-size: 13px;
+}
 .stage-sandbox-resize-handle:hover, .stage-sandbox-resize-handle:focus-visible { color: #fff; background: var(--primary-color); filter: none; }
 .stage-sandbox-resize-handle:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
 /* Sandpack 스타일이 나중에 붙어 같은 우선순위 규칙을 덮으므로 .stage-sandbox-body를 앞에 붙였다.
