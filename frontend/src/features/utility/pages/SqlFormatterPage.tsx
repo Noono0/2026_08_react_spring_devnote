@@ -11,13 +11,14 @@
  *   aria-pressed: 화면 낭독기에 "눌림(선택됨)" 상태를 알린다(색만으로 상태를 알리지 않기 위해).
  *
  * [상태 설계]
- *   결과 글자는 State에 저장하지 않는다. "마지막으로 정리를 누른 SQL(lastRun)"만 저장하고,
- *   결과는 렌더링할 때 지금 옵션으로 계산한다(파생 값). 그래서 정리한 뒤 옵션을 바꾸면 결과가 바로 다시 그려지고,
- *   결과와 옵션이 어긋나는 일이 없다. 입력을 고치면 lastRun을 비워 예전 결과가 남지 않게 한다.
+ *   결과 글자는 State에 저장하지 않고, 렌더링할 때 "지금 입력 + 옵션 + 결과 방식(정리/압축)"으로 계산한다(파생 값).
+ *   그래서 입력칸에 글자를 칠 때마다(onChange) 결과가 바로 바뀌고, 옵션을 눌러도 바로 다시 정리된다.
+ *   ★ keyup이 아니라 onChange: 마우스 붙여넣기·한글 조합 입력·자동 완성은 keyup이 오지 않거나 늦다.
+ *   ★ useDeferredValue: 긴 SQL을 붙여 넣어 정리가 무거워져도 입력칸은 먼저 반응하고 결과는 뒤따라 계산한다.
  *
  * 실제 변환: utils/sqlFormatter.ts(정리), sqlCommentDictionary.ts(코멘트 읽기), sqlCodeOutput.ts(Java 코드 출력)
  */
-import { useId, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useDeferredValue, useId, useState, type ReactNode } from "react";
 import { HighlightedTextarea } from "@/features/utility/components/HighlightedTextarea";
 import { UtilityHelpDialog, UtilityPageTitle } from "@/features/utility/components/UtilityHelpDialog";
 import { copyText, downloadText } from "@/features/utility/utils/browserFileUtils";
@@ -117,22 +118,25 @@ function ToggleButton({ label, pressed, onChange }: { label: string; pressed: bo
 }
 
 type FormatOptionsWithoutDictionary = Omit<SqlFormatOptions, "dictionary">;
+type ResultMode = "FORMAT" | "MINIFY";
 
 export const SqlFormatterPage = () => {
   const [source, setSource] = useState(exampleSql);
   const [options, setOptions] = useState<FormatOptionsWithoutDictionary>(defaultSqlFormatOptions);
   const [outputTarget, setOutputTarget] = useState<SqlOutputTarget>("SQL");
   const [commentSource, setCommentSource] = useState("");
-  // 마지막으로 실행한 동작과 그때의 입력. 결과는 이 값과 지금 옵션으로 계산한다.
-  const [lastRun, setLastRun] = useState<{ mode: "FORMAT" | "MINIFY"; source: string } | null>(null);
+  const [resultMode, setResultMode] = useState<ResultMode>("FORMAT");
   const [helpOpen, setHelpOpen] = useState(false);
 
   const commentDictionary = parseSqlCommentDictionary(commentSource);
   const commentEntryCount = countDictionaryEntries(commentDictionary);
   const formatOptions: SqlFormatOptions = { ...options, dictionary: commentEntryCount > 0 ? commentDictionary : undefined };
 
-  // ── 파생 값: 결과 ──────────────────────────────
-  const resultSql = !lastRun ? "" : lastRun.mode === "FORMAT" ? formatSqlWithComments(lastRun.source, formatOptions).text : minifySource("SQL", lastRun.source);
+  // ── 파생 값: 결과(입력하면 바로 계산) ──────────────────────────────
+  // 입력칸은 source로 바로 그리고, 결과는 한 박자 늦어도 되는 deferredSource로 계산한다.
+  const deferredSource = useDeferredValue(source);
+  const formatted = resultMode === "FORMAT" ? formatSqlWithComments(deferredSource, formatOptions) : { text: minifySource("SQL", deferredSource), addedCommentCount: 0 };
+  const resultSql = formatted.text;
   const result = convertSqlOutput(resultSql, outputTarget);
 
   const changeOption = <K extends keyof FormatOptionsWithoutDictionary>(key: K, value: FormatOptionsWithoutDictionary[K]): void =>
@@ -140,29 +144,6 @@ export const SqlFormatterPage = () => {
   const changeIndent = (amount: -1 | 1): void =>
     changeOption("indentSize", Math.min(SQL_INDENT_RANGE.max, Math.max(SQL_INDENT_RANGE.min, options.indentSize + amount)));
 
-  const format = (): void => {
-    if (!source.trim()) {
-      applicationNotification.warning("정리할 SQL을 입력해 주세요.");
-      return;
-    }
-    setLastRun({ mode: "FORMAT", source });
-    const { addedCommentCount } = formatSqlWithComments(source, formatOptions);
-    applicationNotification.success("SQL을 정리했습니다.", commentEntryCount > 0 ? `코멘트 주석 ${addedCommentCount}개를 붙였습니다.` : undefined);
-  };
-  const minify = (): void => {
-    setLastRun({ mode: "MINIFY", source });
-    applicationNotification.success("SQL을 한 줄로 압축했습니다.");
-  };
-  const changeSource = (nextSource: string): void => {
-    setSource(nextSource);
-    setLastRun(null); // 입력이 바뀌면 예전 결과는 지운다
-  };
-  /** Ctrl+Enter(맥은 Cmd+Enter)로 정리 — dpriver와 같은 단축키 */
-  const handleSourceKeyDown = (keyboardEvent: KeyboardEvent<HTMLTextAreaElement>): void => {
-    if (keyboardEvent.key !== "Enter" || !(keyboardEvent.ctrlKey || keyboardEvent.metaKey)) return;
-    keyboardEvent.preventDefault();
-    format();
-  };
 
   return (
     <section className="site-page utility-workbench-page">
@@ -174,8 +155,8 @@ export const SqlFormatterPage = () => {
       />
       <div className="sql-formatter-main">
         <label className="sql-formatter-field">
-          <span>SQL 입력 <small>(Ctrl+Enter로 정리)</small></span>
-          <HighlightedTextarea language="sql" aria-label="정리할 SQL 입력" value={source} onChange={(event) => changeSource(event.target.value)} onKeyDown={handleSourceKeyDown} />
+          <span>SQL 입력 <small>(입력하면 아래 결과에 바로 정리됩니다)</small></span>
+          <HighlightedTextarea language="sql" aria-label="정리할 SQL 입력" value={source} onChange={(event) => setSource(event.target.value)} />
         </label>
 
         {/* 옵션 표: 넓은 화면은 "이름|버튼|이름|버튼" 두 쌍씩 4줄, 좁은 화면은 한 쌍씩 */}
@@ -217,11 +198,14 @@ export const SqlFormatterPage = () => {
         </div>
 
         <div className="sql-formatter-actions">
-          <button type="button" onClick={format}>정리하기</button>
-          <button type="button" className="ghost-button" onClick={minify}>한 줄로 압축</button>
-          <button type="button" className="ghost-button" onClick={() => { changeSource(exampleSql); setCommentSource(exampleComments); }}>예제</button>
-          <button type="button" className="ghost-button" onClick={() => changeSource("")}>초기화</button>
-          <button type="button" className="ghost-button" disabled={!resultSql} onClick={() => changeSource(resultSql)}>결과를 입력으로</button>
+          {/* 결과 방식: 고른 버튼만 밝게. 입력하면 고른 방식으로 바로 결과가 나온다. */}
+          <div className="segmented-buttons" role="group" aria-label="결과 방식">
+            <button type="button" className={resultMode === "FORMAT" ? "active" : undefined} aria-pressed={resultMode === "FORMAT"} onClick={() => setResultMode("FORMAT")}>정리</button>
+            <button type="button" className={resultMode === "MINIFY" ? "active" : undefined} aria-pressed={resultMode === "MINIFY"} onClick={() => setResultMode("MINIFY")}>한 줄로 압축</button>
+          </div>
+          <button type="button" className="ghost-button" onClick={() => { setSource(exampleSql); setCommentSource(exampleComments); }}>예제</button>
+          <button type="button" className="ghost-button" onClick={() => setSource("")}>초기화</button>
+          <button type="button" className="ghost-button" disabled={!resultSql} onClick={() => setSource(resultSql)}>결과를 입력으로</button>
           <button type="button" className="ghost-button sql-formatter-reset" onClick={() => setOptions(defaultSqlFormatOptions)}>옵션 기본값으로</button>
         </div>
 
@@ -234,10 +218,14 @@ export const SqlFormatterPage = () => {
         <label className="sql-formatter-field">
           <span>결과</span>
           {/* 결과가 Java 코드면 Java 색, SQL이면 SQL 색 */}
-          <HighlightedTextarea language={outputTarget === "SQL" ? "sql" : "java"} aria-label="정리 결과" value={result} readOnly placeholder="정리하기 또는 한 줄로 압축 결과가 여기에 나옵니다." />
+          <HighlightedTextarea language={outputTarget === "SQL" ? "sql" : "java"} aria-label="정리 결과" value={result} readOnly placeholder="입력하면 여기에 바로 정리 결과가 나옵니다." />
         </label>
         <div className="utility-result-actions">
-          <span>입력 {new Blob([source]).size.toLocaleString("ko-KR")} bytes → 결과 {new Blob([result]).size.toLocaleString("ko-KR")} bytes</span>
+          <span>
+            입력 {new Blob([source]).size.toLocaleString("ko-KR")} bytes → 결과 {new Blob([result]).size.toLocaleString("ko-KR")} bytes
+            {/* 알림 창 대신 여기 글자로: 입력할 때마다 알림이 뜨면 방해되므로 */}
+            {commentEntryCount > 0 && resultMode === "FORMAT" && resultSql ? ` · 코멘트 주석 ${formatted.addedCommentCount}개` : ""}
+          </span>
           <button type="button" className="ghost-button" disabled={!result} onClick={() => void copyText(result).then(() => applicationNotification.success("결과를 복사했습니다."))}>복사</button>
           <button type="button" className="ghost-button" disabled={!result} onClick={() => downloadText(outputTarget === "SQL" ? "formatted.sql" : "FormattedSql.java", result)}>다운로드</button>
         </div>
@@ -249,8 +237,8 @@ export const SqlFormatterPage = () => {
         <article>
           <h3>사용 방법</h3>
           <ol>
-            <li>SQL을 입력하고 정리하기(또는 Ctrl+Enter)를 누릅니다.</li>
-            <li>입력 아래 옵션 버튼을 누르면 결과가 바로 다시 정리됩니다. 고른 버튼이 밝게 표시됩니다.</li>
+            <li>SQL을 입력하면 아래 결과에 바로 정리됩니다(정리 버튼이 필요 없습니다).</li>
+            <li>옵션·결과 방식(정리/한 줄로 압축) 버튼을 누르면 결과가 바로 다시 정리됩니다. 고른 버튼이 밝게 표시됩니다.</li>
             <li>테이블·칼럼 코멘트를 넣으면 칼럼·테이블 줄 끝에 주석이 붙습니다. 쿼리를 바로 실행할 때는 SQL(--), MyBatis XML에 넣을 때는 MyBatis(/* */)를 고르세요.</li>
             <li>결과를 복사·다운로드하거나, 결과를 입력으로 옮겨 다시 다듬습니다.</li>
           </ol>
@@ -266,7 +254,7 @@ export const SqlFormatterPage = () => {
         </article>
         <article>
           <h3>학습 포인트</h3>
-          <p>결과를 State에 저장하지 않고 "마지막 입력 + 지금 옵션"으로 계산하는 파생 값 패턴, 그리고 SQL을 토큰(문자열·주석·괄호)으로 나눈 뒤 서브쿼리를 재귀로 정리하는 방법을 볼 수 있습니다.</p>
+          <p>결과를 State에 저장하지 않고 "지금 입력 + 옵션"으로 바로 계산하는 파생 값 패턴과 입력이 버벅이지 않게 하는 useDeferredValue, 그리고 SQL을 토큰(문자열·주석·괄호)으로 나눈 뒤 서브쿼리를 재귀로 정리하는 방법을 볼 수 있습니다.</p>
         </article>
       </UtilityHelpDialog>
     </section>

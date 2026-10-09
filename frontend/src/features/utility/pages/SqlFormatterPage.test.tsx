@@ -10,10 +10,9 @@ const result = () => screen.getByRole("textbox", { name: "정리 결과" });
 const optionButton = (groupName: string, buttonName: string) => within(screen.getByRole("group", { name: groupName })).getByRole("button", { name: buttonName });
 
 describe("SQL Formatter 화면", () => {
-  it("Ctrl+Enter로 정리하고, 정리한 뒤 옵션 버튼을 누르면 결과가 바로 다시 정리되며 고른 버튼만 눌림 상태가 된다", () => {
+  it("입력하면 버튼 없이 바로 정리되고, 옵션 버튼을 누르면 바로 다시 정리되며 고른 버튼만 눌림 상태가 된다", () => {
     renderPage();
     typeSql("select a, b from t");
-    fireEvent.keyDown(screen.getByRole("textbox", { name: "정리할 SQL 입력" }), { key: "Enter", ctrlKey: true });
     expect(result()).toHaveValue("SELECT a,\n       b\nFROM   t");
 
     fireEvent.click(optionButton("키워드", "소문자"));
@@ -28,8 +27,18 @@ describe("SQL Formatter 화면", () => {
     expect(stackButton).toHaveAttribute("aria-pressed", "false");
     expect(result()).toHaveValue("select a, b\nfrom   t");
 
-    typeSql("select 1"); // 입력을 고치면 예전 결과는 지운다
+    typeSql("select 1"); // 입력을 고치면 결과도 바로 바뀐다
+    expect(result()).toHaveValue("select 1");
+    typeSql("");
     expect(result()).toHaveValue("");
+  });
+
+  it("결과 방식을 '한 줄로 압축'으로 바꾸면 압축 결과가 바로 나온다", () => {
+    renderPage();
+    typeSql("select a,\n  b\nfrom t");
+    fireEvent.click(optionButton("결과 방식", "한 줄로 압축"));
+    expect(result()).toHaveValue("select a,b from t");
+    expect(optionButton("결과 방식", "한 줄로 압축")).toHaveAttribute("aria-pressed", "true");
   });
 
   it("들여쓰기 방식에서는 −/+로 1~10칸을 고르고 끝에서는 버튼을 막는다", () => {
@@ -45,25 +54,23 @@ describe("SQL Formatter 화면", () => {
     expect(decrease).toBeDisabled();
   });
 
-  it("코멘트를 넣고 MyBatis 형식으로 정리하면 /* */ 주석이 붙고, Java 출력으로도 바꿀 수 있다", () => {
+  it("코멘트를 넣고 MyBatis 형식을 고르면 /* */ 주석이 바로 붙고, Java 출력으로도 바꿀 수 있다", () => {
     renderPage();
     typeSql("select m.member_id from members m");
     fireEvent.change(screen.getByRole("textbox", { name: "테이블·칼럼 코멘트 입력" }), { target: { value: "members 회원테이블\nmembers.member_id 회원아이디" } });
     expect(screen.getByText(/인식한 코멘트 2개/)).toBeInTheDocument();
     fireEvent.click(optionButton("주석 형식", "MyBatis /* */"));
-    fireEvent.click(screen.getByRole("button", { name: "정리하기" }));
     expect(result()).toHaveValue("SELECT m.member_id /* 회원아이디 */\nFROM   members m   /* 회원테이블 */");
+    expect(screen.getByText(/코멘트 주석 2개/)).toBeInTheDocument();
 
     fireEvent.click(optionButton("출력 형식", "Java StringBuilder"));
     expect(result()).toHaveDisplayValue(/^StringBuilder sql = new StringBuilder\(\);\nsql\.append\("SELECT m\.member_id/);
   });
 
-  it("결과를 입력으로 옮기면 입력이 결과로 바뀌고 결과는 비워진다", () => {
+  it("결과를 입력으로 옮기면 입력이 결과로 바뀐다", () => {
     renderPage();
     typeSql("select a from t");
-    fireEvent.click(screen.getByRole("button", { name: "정리하기" }));
     fireEvent.click(screen.getByRole("button", { name: "결과를 입력으로" }));
     expect(screen.getByRole("textbox", { name: "정리할 SQL 입력" })).toHaveValue("SELECT a\nFROM   t");
-    expect(result()).toHaveValue("");
   });
 });

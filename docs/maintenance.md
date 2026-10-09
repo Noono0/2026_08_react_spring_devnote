@@ -2,6 +2,12 @@
 
 [문서 목록으로](../README.md) · [작업 규칙](../AGENTS.md) · [검증 명령](verification.md)
 
+## 2026-10-10 — Code Formatter·SQL Formatter 입력하면 바로 정리
+
+- **화면**: 두 화면 모두 정리 버튼 없이 입력칸에 쓰면 결과가 바로 나옵니다. `정리하기`·`Minify`(`한 줄로 압축`) 버튼은 결과 방식 버튼 묶음(`정리 | 압축`)으로 바꿨고, SQL Formatter의 Ctrl+Enter는 필요 없어져 뺐습니다. 입력할 때마다 알림이 뜨지 않도록 정리 완료 알림을 없애고, 붙인 코멘트 수는 결과 아래 글자로 보여 줍니다. JSON 문법 오류는 입력 중 잠깐씩 생기므로 `role="alert"` 대신 `aria-live="polite"`로 알립니다.
+- **구현**: keyup이 아니라 onChange(붙여넣기·한글 조합·자동 완성 포함)로 입력을 받고, 결과는 State 없이 "지금 입력 + 언어/옵션 + 결과 방식"으로 계산하는 파생 값입니다. `useDeferredValue`로 긴 입력에서도 입력칸이 먼저 반응하고 결과 계산은 뒤따르게 했습니다.
+- **검증**: `eslint`·`tsc -b` 통과, `CodeFormatterPage.live.test.tsx`(바로 정리·오류·압축)와 바뀐 `SqlFormatterPage.test.tsx`(5개) 포함 테스트 통과, `vite build` 성공. 내장 브라우저에서 SQL 입력칸에 직접 타이핑하면 결과가 바로 정리되는 것을 확인했습니다.
+
 ## 2026-10-10 — Code Formatter·SQL Formatter 입력·결과 문법 색
 
 - **화면**: Code Formatter와 SQL Formatter의 입력·결과 글자에 언어별 문법 색을 입혔습니다(SQL Formatter 결과는 Java 출력이면 Java 색). 색은 `:root`와 `[data-theme="dark"]`의 `--syntax-comment/keyword/string/number/tag/property/heading` 변수로 라이트는 진한 색, 다크는 밝은 색을 씁니다. Markdown 미리보기 코드 블록의 고정 색도 같은 변수로 바꿔 테마를 따릅니다.
