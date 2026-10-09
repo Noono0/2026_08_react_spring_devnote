@@ -12,7 +12,7 @@ vi.mock("@/features/curriculum/components/StageSandboxPanel", () => ({
 }));
 
 beforeEach(() => {
-  useStageSandboxStore.setState({ expandedGuideId: null });
+  useStageSandboxStore.setState({ expandedGuideId: null, maximized: false });
   // jsdom에는 scrollIntoView가 없어 빈 함수로 채운다.
   Element.prototype.scrollIntoView = vi.fn();
 });
@@ -51,6 +51,28 @@ describe("연습 화면 아래 직접 해 보기 영역", () => {
 
     expect(screen.getByRole("button", { name: /2단계 직접 해 보기/ })).toHaveAttribute("aria-expanded", "true");
     expect(await screen.findByText("할 일 인라인 CRUD 편집기 패널")).toBeInTheDocument();
+  });
+
+  it("크게 보기는 창 전체로 펼치고, Esc나 접기로 원래 크기로 돌아오며 뒤 페이지 스크롤을 되돌린다", () => {
+    const { container } = renderTodoStage();
+    const toggle = screen.getByRole("button", { name: /2단계 직접 해 보기/ });
+    fireEvent.click(toggle);
+
+    const maximizeButton = screen.getByRole("button", { name: "크게 보기" });
+    fireEvent.click(maximizeButton);
+    const section = container.querySelector(".stage-sandbox-section");
+    expect(section).toHaveClass("maximized");
+    expect(screen.getByRole("button", { name: "원래 크기로 (Esc)" })).toHaveAttribute("aria-pressed", "true");
+    expect(document.body.style.overflow).toBe("hidden");
+
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    expect(section).not.toHaveClass("maximized");
+    expect(document.body.style.overflow).toBe("");
+
+    fireEvent.click(screen.getByRole("button", { name: "크게 보기" }));
+    fireEvent.click(toggle); // 크게 보는 중에 접으면 크게 보기도 끝난다
+    expect(section).not.toHaveClass("maximized");
+    expect(document.body.style.overflow).toBe("");
   });
 
   it("학습 단계가 아닌 화면에서는 영역을 그리지 않는다", () => {

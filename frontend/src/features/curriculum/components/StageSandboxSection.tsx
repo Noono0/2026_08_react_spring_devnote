@@ -13,8 +13,13 @@
  * [상자 크기 조절]
  *   펼친 상자 오른쪽 아래 모서리(◢)를 끌면 상자 너비와 편집기 높이가 함께 바뀐다(학습 가이드 모달과 같은 사용법).
  *   너비는 본문 폭보다 커지지 않고(CSS max-width: 100%), 본문 폭까지 넓히면 "본문 폭 전체"(기본값)로 저장한다.
+ *
+ * [크게 보기]
+ *   본문 폭보다 넓게 쓰고 싶을 때 "크게 보기"를 누르면 상자가 브라우저 창 전체(사이드바 위까지)를 덮는다(CSS position: fixed).
+ *   다시 누르거나 Esc를 누르면 원래 자리로 돌아온다. 크게 보는 동안에는 뒤 페이지가 스크롤되지 않게 body 스크롤을 막는다.
+ *   Esc 처리·스크롤 막기는 브라우저(document·body)를 직접 건드리는 일이라 useEffect에서 하고, 끝날 때 반드시 되돌린다(cleanup).
  */
-import { lazy, Suspense, useRef } from "react";
+import { lazy, Suspense, useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import { findLearningGuideByPathname, ROADMAP_LAST_STAGE_NUMBER } from "@/features/curriculum/data/learningGuides";
 import { SandboxResizeHandle, type ResizeAxis } from "@/features/curriculum/components/SandboxResizeHandle";
@@ -27,6 +32,11 @@ export const StageSandboxSection = () => {
   const learningGuide = findLearningGuideByPathname(location.pathname);
   const expandedGuideId = useStageSandboxStore((state) => state.expandedGuideId);
   const toggle = useStageSandboxStore((state) => state.toggle);
+  const maximized = useStageSandboxStore((state) => state.maximized);
+  const setMaximized = useStageSandboxStore((state) => state.setMaximized);
+  // 펼친 단계와 지금 단계가 같을 때만 펼쳐 보인다(다른 단계로 이동하면 자동으로 접힘).
+  const expanded = learningGuide !== undefined && expandedGuideId === learningGuide.guideId;
+  const isMaximized = expanded && maximized;
   const sectionWidth = useStageSandboxStore((state) => state.sectionWidth);
   const layoutHeight = useStageSandboxStore((state) => state.layoutHeight);
   const setSectionWidth = useStageSandboxStore((state) => state.setSectionWidth);
@@ -72,33 +82,57 @@ export const StageSandboxSection = () => {
     setLayoutHeight(SANDBOX_LAYOUT_HEIGHT_RANGE.initial);
   };
 
+  // 크게 보는 동안: Esc로 원래 크기, 뒤 페이지 스크롤 막기. 크게 보기가 끝나거나 화면을 떠나면 cleanup이 되돌린다.
+  useEffect(() => {
+    if (!isMaximized) return undefined;
+    const handleKeyDown = (keyboardEvent: KeyboardEvent): void => {
+      if (keyboardEvent.key !== "Escape") return;
+      // 코드 편집기 안의 Esc는 편집기가 쓴다(Tab 키로 들여쓰기하던 상태에서 빠져나오기). 그때는 닫지 않는다.
+      if (keyboardEvent.target instanceof Element && keyboardEvent.target.closest(".cm-editor")) return;
+      setMaximized(false);
+    };
+    const previousBodyOverflow = document.body.style.overflow;
+    document.addEventListener("keydown", handleKeyDown);
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = previousBodyOverflow;
+    };
+  }, [isMaximized, setMaximized]);
+
   // 로드맵 안내(0단계)·실험실·없는 주소에서는 그리지 않는다.
   if (!learningGuide || learningGuide.stageNumber < 1 || learningGuide.stageNumber > ROADMAP_LAST_STAGE_NUMBER) return null;
-  // 펼친 단계와 지금 단계가 같을 때만 펼쳐 보인다(다른 단계로 이동하면 자동으로 접힘).
-  const expanded = expandedGuideId === learningGuide.guideId;
   const panelId = `${STAGE_SANDBOX_SECTION_ID}-panel`;
 
   return (
     <section
       ref={sectionRef}
-      // 펼쳤을 때만 저장된 너비를 쓴다(접힌 제목 줄은 항상 본문 폭).
-      style={expanded && sectionWidth !== null ? { width: sectionWidth } : undefined}
+      // 펼쳤을 때만 저장된 너비를 쓴다(접힌 제목 줄은 항상 본문 폭, 크게 보기는 창 전체).
+      style={expanded && !isMaximized && sectionWidth !== null ? { width: sectionWidth } : undefined}
       id={STAGE_SANDBOX_SECTION_ID}
-      className={`stage-sandbox-section${expanded ? " expanded" : ""}`}
+      className={`stage-sandbox-section${expanded ? " expanded" : ""}${isMaximized ? " maximized" : ""}`}
       aria-labelledby={`${STAGE_SANDBOX_SECTION_ID}-title`}
     >
-      <button
-        type="button"
-        id={`${STAGE_SANDBOX_SECTION_ID}-title`}
-        className="stage-sandbox-toggle"
-        aria-expanded={expanded}
-        aria-controls={panelId}
-        onClick={() => toggle(learningGuide.guideId)}
-      >
-        <span aria-hidden="true">{expanded ? "▾" : "▸"}</span>
-        <strong>{learningGuide.stageNumber}단계 직접 해 보기</strong>
-        <small>사이트 안 편집기에서 이 단계 연습 예제를 고쳐 바로 실행합니다</small>
-      </button>
+      <div className="stage-sandbox-header">
+        <button
+          type="button"
+          id={`${STAGE_SANDBOX_SECTION_ID}-title`}
+          className="stage-sandbox-toggle"
+          aria-expanded={expanded}
+          aria-controls={panelId}
+          onClick={() => toggle(learningGuide.guideId)}
+        >
+          <span aria-hidden="true">{expanded ? "▾" : "▸"}</span>
+          <strong>{learningGuide.stageNumber}단계 직접 해 보기</strong>
+          <small>사이트 안 편집기에서 이 단계 연습 예제를 고쳐 바로 실행합니다</small>
+        </button>
+        {expanded ? (
+          // aria-pressed: 눌린(켜진) 상태를 화면 낭독기에 알리는 토글 버튼
+          <button type="button" className="secondary-button stage-sandbox-maximize" aria-pressed={isMaximized} onClick={() => setMaximized(!isMaximized)}>
+            {isMaximized ? "원래 크기로 (Esc)" : "크게 보기"}
+          </button>
+        ) : null}
+      </div>
       {expanded ? (
         <div id={panelId} className="stage-sandbox-body">
           <Suspense fallback={<p className="state-panel" role="status">편집기를 불러오는 중입니다…</p>}>

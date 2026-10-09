@@ -182,14 +182,27 @@ button.online-practice-option { width: 100%; min-height: 0; background: transpar
 .stage-sandbox-toggle:hover { background: var(--primary-soft); }
 .stage-sandbox-toggle strong { font-size: 16px; }
 .stage-sandbox-toggle small { flex: 1 1 260px; color: var(--text-secondary); font-size: 13px; font-weight: 400; }
-.stage-sandbox-section.expanded .stage-sandbox-toggle { border-bottom: 1px solid var(--border-color); border-radius: 18px 18px 0 0; }
+.stage-sandbox-header { display: flex; align-items: center; gap: 8px; }
+.stage-sandbox-header .stage-sandbox-toggle { flex: 1 1 auto; min-width: 0; }
+.stage-sandbox-maximize { flex: 0 0 auto; margin-right: 14px; }
+.stage-sandbox-section.expanded .stage-sandbox-header { border-bottom: 1px solid var(--border-color); }
+.stage-sandbox-section.expanded .stage-sandbox-toggle { border-radius: 18px 0 0 0; }
+/* 크게 보기: 브라우저 창 전체를 덮는다. z-index는 사이드바(100)·디버그 버튼(130)보다 위다.
+   너비는 창 전체를 쓰므로 ◢(상자 너비 조절)는 숨긴다. */
+.stage-sandbox-section.maximized {
+  position: fixed; inset: 0; z-index: 150; width: auto; max-width: none; margin: 0;
+  overflow: auto; border: 0; border-radius: 0; overscroll-behavior: contain;
+}
+.stage-sandbox-section.maximized .stage-sandbox-header { position: sticky; top: 0; z-index: 1; background: var(--background-panel); }
+.stage-sandbox-section.maximized .stage-sandbox-toggle { border-radius: 0; }
+.stage-sandbox-section.maximized .stage-sandbox-resize-handle.corner { display: none; }
 .stage-sandbox-body { position: relative; padding: 16px 20px 24px; }
 /* 상자 너비를 조절해도 본문 밖으로 넘치지 않게 한다(StageSandboxSection이 style.width를 넣는다). */
 .stage-sandbox-section { max-width: 100%; }
 /* 사이트 안 편집기(Sandpack): 넓은 화면은 편집기·미리보기 좌우(높이 560px), 좁은 화면은 위아래 */
 .stage-sandbox-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; color: var(--text-secondary); font-size: 13px; }
 .stage-sandbox-toolbar-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.stage-sandbox-theme { display: inline-flex; align-items: center; gap: 6px; color: var(--text-primary); font-weight: 700; }
+.stage-sandbox-theme { display: inline-flex; align-items: center; gap: 6px; color: var(--text-primary); font-weight: 700; white-space: nowrap; }
 .stage-sandbox-theme select { min-height: 36px; padding: 4px 8px; border: 1px solid var(--border-color); border-radius: 9px; color: var(--text-primary); background: var(--background-panel); }
 /* 크기는 StageSandboxPanel이 .stage-sandbox-frame에 CSS 변수(--sp-layout-height, --sandbox-editor-width)로 넣는다. */
 .stage-sandbox-layout { border-radius: 12px; }

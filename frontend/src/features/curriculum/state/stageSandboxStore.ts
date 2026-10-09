@@ -49,12 +49,14 @@ const readSavedTheme = (): SandboxThemeChoice => {
 
 interface StageSandboxState {
   expandedGuideId: string | null;
+  maximized: boolean; // "크게 보기"(브라우저 창 전체) 중인지. 저장하지 않고, 펼치기·접기를 하면 항상 원래 크기로 돌아간다.
   themeChoice: SandboxThemeChoice;
   editorWidthPercent: number;
   layoutHeight: number;
   sectionWidth: number | null; // null = 본문 폭 전체
   expand: (guideId: string) => void;
   toggle: (guideId: string) => void;
+  setMaximized: (maximized: boolean) => void;
   setThemeChoice: (themeChoice: SandboxThemeChoice) => void;
   setEditorWidthPercent: (editorWidthPercent: number) => void;
   setLayoutHeight: (layoutHeight: number) => void;
@@ -63,12 +65,14 @@ interface StageSandboxState {
 
 export const useStageSandboxStore = create<StageSandboxState>()((set) => ({
   expandedGuideId: null,
+  maximized: false,
   themeChoice: readSavedTheme(),
   editorWidthPercent: readSavedSize(EDITOR_WIDTH_STORAGE_KEY, SANDBOX_EDITOR_WIDTH_RANGE),
   layoutHeight: readSavedSize(LAYOUT_HEIGHT_STORAGE_KEY, SANDBOX_LAYOUT_HEIGHT_RANGE),
   sectionWidth: readSavedSectionWidth(),
-  expand: (guideId) => set({ expandedGuideId: guideId }),
-  toggle: (guideId) => set((state) => ({ expandedGuideId: state.expandedGuideId === guideId ? null : guideId })),
+  expand: (guideId) => set({ expandedGuideId: guideId, maximized: false }),
+  toggle: (guideId) => set((state) => ({ expandedGuideId: state.expandedGuideId === guideId ? null : guideId, maximized: false })),
+  setMaximized: (maximized) => set({ maximized }),
   setThemeChoice: (themeChoice) => {
     localStorage.setItem(THEME_STORAGE_KEY, themeChoice); // 다음 방문·다른 단계에서도 기억
     set({ themeChoice });
