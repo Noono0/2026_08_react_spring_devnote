@@ -1,6 +1,6 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { SqlFormatterPage } from "./SqlFormatterPage";
 
 const renderPage = () => render(<MemoryRouter><SqlFormatterPage /></MemoryRouter>);
@@ -72,5 +72,17 @@ describe("SQL Formatter 화면", () => {
     typeSql("select a from t");
     fireEvent.click(screen.getByRole("button", { name: "결과를 입력으로" }));
     expect(screen.getByRole("textbox", { name: "정리할 SQL 입력" })).toHaveValue("SELECT a\nFROM   t");
+  });
+
+  it("결과 복사는 결과 칸의 글자를 클립보드에 넣고, 결과가 없으면 누를 수 없다", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    renderPage();
+    typeSql("select a from t");
+    fireEvent.click(screen.getByRole("button", { name: "결과 복사" }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith("SELECT a\nFROM   t"));
+
+    typeSql("");
+    expect(screen.getByRole("button", { name: "결과 복사" })).toBeDisabled();
   });
 });

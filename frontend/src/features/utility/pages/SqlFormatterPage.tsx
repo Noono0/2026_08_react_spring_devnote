@@ -206,6 +206,8 @@ export const SqlFormatterPage = () => {
           <button type="button" className="ghost-button" onClick={() => { setSource(exampleSql); setCommentSource(exampleComments); }}>예제</button>
           <button type="button" className="ghost-button" onClick={() => setSource("")}>초기화</button>
           <button type="button" className="ghost-button" disabled={!resultSql} onClick={() => setSource(resultSql)}>결과를 입력으로</button>
+          {/* 결과 칸 아래까지 내려가지 않고 바로 복사(출력 형식이 Java면 Java 코드를 복사) */}
+          <button type="button" className="ghost-button" disabled={!result} onClick={() => void copyText(result).then(() => applicationNotification.success("결과를 복사했습니다."))}>결과 복사</button>
           <button type="button" className="ghost-button sql-formatter-reset" onClick={() => setOptions(defaultSqlFormatOptions)}>옵션 기본값으로</button>
         </div>
 
