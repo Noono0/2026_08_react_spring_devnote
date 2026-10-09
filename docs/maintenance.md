@@ -2,12 +2,14 @@
 
 [문서 목록으로](../README.md) · [작업 규칙](../AGENTS.md) · [검증 명령](verification.md)
 
-## 2026-10-09 — Code Formatter SQL 들여쓰기 1~10칸·코멘트 주석
+## 2026-10-10 — SQL Formatter(dpriver 기본 기능)·테이블/칼럼 코멘트 주석
 
-- **화면**: SQL 선택 시 들여쓰기를 `−`/`+`로 1~10칸(기본 4칸) 고르고, `주석 형식`(SQL `--` / MyBatis `/* */`)과 `테이블·칼럼 코멘트` 입력칸(인식한 코멘트 수 표시)을 추가했습니다. 다른 언어의 2·4칸 선택은 그대로입니다.
-- **구현**: 기존 정규식 SQL 정리를 `sqlTokenizer.ts`(문자열·주석·괄호·MyBatis `#{}` 구분) → `sqlFormatter.ts`(괄호 밖 절 나누기, 쉼표·AND/OR 줄바꿈, BETWEEN의 AND·CASE 안은 유지, 별칭 → 테이블 지도로 코멘트 찾기, 한글 너비를 고려한 주석 열 맞춤)로 바꿨습니다. 코멘트 입력은 `sqlCommentDictionary.ts`가 한 줄 형식·탭 3칸·MySQL DDL·`COMMENT ON`을 읽습니다. 원래 주석은 줄 끝에 유지하고 그 줄에는 새 코멘트를 붙이지 않아 재정리해도 중복되지 않습니다.
-- **검증**: `eslint`·`tsc -b` 통과, Vitest 109개 파일·345개 테스트 통과(`sqlFormatter.test.ts` 11개, `CodeFormatterPage.sql.test.tsx` 2개 추가), `vite build` 성공. 내장 브라우저에서 요청 예제 쿼리 + 코멘트 5줄, 들여쓰기 5칸으로 칼럼 4줄·테이블 1줄에 주석이 붙는 것을 확인했습니다.
-- **미지원**: 서브쿼리 안쪽 정리, MyBatis `<if>` 등 동적 태그, WHERE·GROUP BY 칼럼 코멘트, INSERT 칼럼 목록 코멘트.
+- **화면**: SQL 전용 `SQL Formatter`(`/utilities/sql-formatter`, 사이드바·유틸리티 홈 등록)를 추가했습니다. 왼쪽 입력·버튼(정리하기·한 줄로 압축·예제·초기화·결과를 입력으로)·결과(복사·다운로드), 오른쪽 옵션(정렬 방식·대소문자·쉼표·목록·AND/OR·출력 형식·주석 형식·기본값으로), 아래 테이블·칼럼 코멘트 입력입니다. Ctrl+Enter로 정리하고, 결과는 State에 두지 않고 마지막 입력과 지금 옵션으로 계산해 옵션을 바꾸면 바로 다시 정리됩니다. Code Formatter의 SQL은 같은 엔진 기본값 + 키워드 대·소문자만 남기고 `SQL 옵션 더 보기` 링크를 두었습니다(이 PR 처음에 넣었던 Code Formatter의 들여쓰기·코멘트 UI는 SQL Formatter로 옮김).
+- **엔진**: `sqlTokenizer.ts`(문자열·주석·괄호·MyBatis `#{}` 구분) → `sqlFormatter.ts`. 기본 `키워드 정렬`은 dpriver 기본 출력과 같은 모양입니다(7칸 키워드 열, AS 별칭 열 맞춤, CASE의 WHEN·ELSE 펼침, JOIN 7칸·ON 14칸, AND/OR 오른쪽 맞춤, `IN ( 'a', 'b' )`, 서브쿼리 재귀 정리, INSERT 칼럼·VALUES 한 줄에 하나, 문장 사이 빈 줄). `들여쓰기 칸 수`는 1~10칸. 대소문자는 키워드(대문자)·함수(첫 글자 대문자)·이름(그대로)을 따로 고르고, 점 뒤 이름(u.order)과 따옴표 이름은 키워드로 보지 않습니다. `sqlCodeOutput.ts`가 Java 문자열·StringBuilder(줄마다 
+, 따옴표·역슬래시 escape)로 바꿉니다.
+- **코멘트 주석**: `sqlCommentDictionary.ts`가 한 줄 형식·탭 3칸·MySQL DDL·`COMMENT ON`을 읽고, 별칭 → 테이블 지도(서브쿼리는 자기 별칭 포함)로 SELECT 칼럼·FROM/JOIN 테이블·SET 칼럼 줄 끝에 `--` 또는 `/* */` 주석을 한글 너비를 고려해 한 열로 맞춥니다. 원래 주석이 있는 항목에는 붙이지 않아 재정리해도 중복되지 않습니다.
+- **검증**: `eslint`·`tsc -b` 통과, Vitest 109개 파일·351개 테스트 통과(`sqlFormatter.test.ts` 15개 — dpriver 기본 출력과 같은 결과인지 비교 포함, `SqlFormatterPage.test.tsx` 4개), `vite build` 성공. 내장 브라우저에서 dpriver에 같은 SQL을 넣은 결과와 줄 단위로 같음, 예제 + 코멘트 6개 정리, 375px에서 옵션이 아래로 내려가고 가로 넘침 없음을 확인했습니다.
+- **미지원(dpriver에 있음)**: DB 종류별 문법, 테이블·칼럼·별칭 이름 대소문자 개별 지정, Compact 모드(최대 줄 길이), HTML·C#·PHP 등 출력, Dataflow 시각화, MyBatis 동적 태그 정리.
 
 ## 2026-10-09 — 운영에서 학습용 회원 대체 끄기, CI 정적 검사 수정
 

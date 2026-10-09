@@ -136,6 +136,13 @@ const utilityGroups: UtilityGroup[] = [
         useCase: "로그에서 복사한 한 줄짜리 JSON이나 SQL을 읽어야 할 때",
       },
       {
+        to: "/utilities/sql-formatter",
+        symbol: "SQL",
+        title: "SQL Formatter",
+        description: "SQL을 키워드 정렬·들여쓰기로 정리하고 테이블·칼럼 코멘트를 주석으로 붙입니다.",
+        useCase: "MyBatis XML이나 쿼리에 칼럼 설명 주석을 달면서 읽기 좋게 정리할 때",
+      },
+      {
         to: "/utilities/diff",
         symbol: "±",
         title: "Code Diff",

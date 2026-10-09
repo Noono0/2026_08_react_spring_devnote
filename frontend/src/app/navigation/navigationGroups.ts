@@ -75,6 +75,7 @@ export const utilityNavigationGroup: NavigationGroup = {
     { label: "Mock API", description: "지연·오류·순차 응답", route: "/utilities/api-workspace/mock", symbol: "MK" },
     { label: "Regex Tester", description: "정규식 검색·치환", route: "/utilities/regex", symbol: ".*" },
     { label: "Code Formatter", description: "HTML·JS·CSS·SQL 정리", route: "/utilities/formatter", symbol: "{}" },
+    { label: "SQL Formatter", description: "SQL 정렬·코멘트 주석·Java 출력", route: "/utilities/sql-formatter", symbol: "SQL" },
     { label: "Data Converter", description: "JSON·YAML·XML 변환", route: "/utilities/converter", symbol: "CV" },
     { label: "JSON ↔ CSV", description: "JSON과 CSV 상호 변환", route: "/utilities/json-csv", symbol: "⇄" },
     { label: "Code Diff", description: "두 코드 차이 비교", route: "/utilities/diff", symbol: "±" },

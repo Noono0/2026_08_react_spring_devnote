@@ -114,6 +114,7 @@ const JsonCsvConverterPage = lazy(async () => {
 // 아래부터는 위 두 개와 똑같은 일을 한 줄로 압축해서 쓴 것이다.
 // `(await import("경로")).ExportName` → 파일을 받아온 뒤 그 안의 이름 하나를 꺼낸다.
 const CodeFormatterPage = lazy(async () => ({ default: (await import("@/features/utility/pages/CodeFormatterPage")).CodeFormatterPage }));
+const SqlFormatterPage = lazy(async () => ({ default: (await import("@/features/utility/pages/SqlFormatterPage")).SqlFormatterPage }));
 const RegexTesterPage = lazy(async () => ({ default: (await import("@/features/utility/pages/RegexTesterPage")).RegexTesterPage }));
 const DataConverterPage = lazy(async () => ({ default: (await import("@/features/utility/pages/DataConverterPage")).DataConverterPage }));
 const CodeDiffPage = lazy(async () => ({ default: (await import("@/features/utility/pages/CodeDiffPage")).CodeDiffPage }));
@@ -216,6 +217,7 @@ export const App = () => (
             <Route path="json-csv" element={<Suspense fallback={<div className="portfolio-state-panel">JSON CSV Converter를 불러오는 중입니다.</div>}><JsonCsvConverterPage /></Suspense>} />
             <Route path="regex" element={<Suspense fallback={<UtilityLazyFallback name="Regex Tester" />}><RegexTesterPage /></Suspense>} />
             <Route path="formatter" element={<Suspense fallback={<UtilityLazyFallback name="Code Formatter" />}><CodeFormatterPage /></Suspense>} />
+            <Route path="sql-formatter" element={<Suspense fallback={<UtilityLazyFallback name="SQL Formatter" />}><SqlFormatterPage /></Suspense>} />
             <Route path="converter" element={<Suspense fallback={<UtilityLazyFallback name="Data Converter" />}><DataConverterPage /></Suspense>} />
             <Route path="diff" element={<Suspense fallback={<UtilityLazyFallback name="Code Diff" />}><CodeDiffPage /></Suspense>} />
             <Route path="jwt" element={<Suspense fallback={<UtilityLazyFallback name="JWT Decoder" />}><JwtDecoderPage /></Suspense>} />

@@ -20,7 +20,7 @@
  *   실제 소스 파일을 정리하는 용도로 쓰지 말고, 조각을 확인하는 용도로 쓰자.
  */
 
-import { formatSqlWithComments, SQL_INDENT_RANGE, type SqlCommentStyle } from "@/features/utility/utils/sqlFormatter";
+import { formatSqlWithComments } from "@/features/utility/utils/sqlFormatter";
 
 export type FormatterLanguage = "JSON" | "HTML" | "CSS" | "JAVASCRIPT" | "TYPESCRIPT" | "MARKDOWN" | "SQL";
 
@@ -28,9 +28,7 @@ export interface FormatterOptions {
   tabSize: 2 | 4;
   quoteStyle: "DOUBLE" | "SINGLE";
   semicolons: boolean;
-  sqlUppercase: boolean;
-  sqlIndentSize: number; // SQL 들여쓰기 칸 수(1~10). 다른 언어는 tabSize(2·4칸)를 쓴다.
-  sqlCommentStyle: SqlCommentStyle; // 코멘트 주석 형식: SQL은 -- , MyBatis는 /* */
+  sqlUppercase: boolean; // SQL 세부 옵션(정렬 방식·들여쓰기·코멘트 주석)은 SQL Formatter 화면에 있다
 }
 
 export const defaultFormatterOptions: FormatterOptions = {
@@ -38,8 +36,6 @@ export const defaultFormatterOptions: FormatterOptions = {
   quoteStyle: "DOUBLE",
   semicolons: true,
   sqlUppercase: true,
-  sqlIndentSize: SQL_INDENT_RANGE.initial,
-  sqlCommentStyle: "SQL",
 };
 
 /**
@@ -111,7 +107,8 @@ export const formatSource = (language: FormatterLanguage, source: string, option
   // 줄바꿈 통일, 빈 줄 3개 이상을 2개로, 줄 끝 공백 제거.
   if (language === "MARKDOWN") return source.replace(/\r\n/g, "\n").replace(/\n{3,}/g, "\n\n").split("\n").map((line) => line.replace(/[ \t]+$/g, "")).join("\n").trim();
 
-  return formatSqlWithComments(source, { indentSize: options.sqlIndentSize, uppercase: options.sqlUppercase, commentStyle: options.sqlCommentStyle }).text;
+  // SQL: dpriver식 키워드 정렬(sqlFormatter.ts 기본값). 여기서는 키워드 대·소문자만 고른다.
+  return formatSqlWithComments(source, { keywordCase: options.sqlUppercase ? "UPPER" : "LOWER" }).text;
 };
 
 /**
