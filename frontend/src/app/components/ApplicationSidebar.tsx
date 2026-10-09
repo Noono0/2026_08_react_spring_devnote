@@ -31,7 +31,9 @@ import {
   utilityNavigationGroup,
   type NavigationGroup,
   type NavigationItem,
+  type NavigationSubgroup,
 } from "@/app/navigation/navigationGroups";
+import { SidebarResizeHandle } from "@/app/components/SidebarResizeHandle";
 
 // ----------------------------------------------------------------------------
 // 메뉴 데이터(1·2)는 @/app/navigation/navigationGroups.ts에 있다. 탭 제목(DocumentTitle)도 같은 데이터를 쓴다.
@@ -81,8 +83,17 @@ const getInitiallyExpandedGroups = (pathname: string): Set<string> => {
   if (pathname.startsWith("/react")) expandedGroups.add(reactNavigationGroup.id);
   if (pathname.startsWith("/utilities")) expandedGroups.add(utilityNavigationGroup.id);
   if (pathname.startsWith("/admin")) expandedGroups.add(administratorNavigationGroup.id);
+  // 3단계: 지금 화면이 들어 있는 작은 묶음도 펼친다(예: /utilities/sql-formatter → "코드 작성 보조").
+  for (const subgroup of utilityNavigationGroup.subgroups ?? []) {
+    if (subgroup.items.some((navigationItem) => isNavigationItemActive(pathname, navigationItem))) {
+      expandedGroups.add(getSubgroupKey(utilityNavigationGroup, subgroup));
+    }
+  }
   return expandedGroups;
 };
+
+/** 작은 묶음(3단계)의 접기/펼치기 키. 그룹 키와 겹치지 않게 "그룹id:묶음id"로 만든다. */
+const getSubgroupKey = (navigationGroup: NavigationGroup, subgroup: NavigationSubgroup): string => `${navigationGroup.id}:${subgroup.id}`;
 
 // ----------------------------------------------------------------------------
 // 4. 컴포넌트 본체
@@ -186,7 +197,7 @@ export const ApplicationSidebar = () => {
    * 그대로 쓸 수 있어서 props로 일일이 넘겨줄 필요가 없기 때문이다.
    * 다만 규모가 더 커지면 별도 컴포넌트로 분리하는 게 낫다.
    */
-  const renderNavigationItems = (navigationGroup: NavigationGroup) => navigationGroup.items.map((navigationItem) => {
+  const renderNavigationItems = (navigationItems: NavigationItem[]) => navigationItems.map((navigationItem) => {
     // JSX는 변수에 담아 뒀다가 나중에 꺼내 쓸 수 있다. (아래 두 갈래에서 재사용한다)
     //
     // `<>...</>` = Fragment(프래그먼트).
@@ -233,6 +244,39 @@ export const ApplicationSidebar = () => {
       <Link className={`sidebar-navigation-link${active ? " active" : ""}`} key={navigationItem.route} to={navigationItem.route} onClick={closeMobileSidebar} title={isSidebarCollapsed ? navigationItem.label : undefined} aria-current={active ? "page" : undefined}>
         {navigationContent}
       </Link>
+    );
+  });
+
+  /**
+   * 그룹 안의 작은 묶음(3단계 메뉴)을 그린다. 묶음 제목 버튼을 누르면 그 안의 메뉴를 접고 편다.
+   * 그룹 접기와 같은 Set(expandedGroupIds)과 toggleNavigationGroup을 키만 다르게("그룹id:묶음id") 해서 함께 쓴다.
+   * 지금 화면이 묶음 안에 있으면(접혀 있어도) 묶음 제목을 강조해 "어디에 있는지" 알 수 있게 한다.
+   */
+  const renderSubgroups = (navigationGroup: NavigationGroup) => (navigationGroup.subgroups ?? []).map((subgroup) => {
+    const subgroupKey = getSubgroupKey(navigationGroup, subgroup);
+    const expanded = expandedGroupIds.has(subgroupKey);
+    const submenuId = `sidebar-submenu-${navigationGroup.id}-${subgroup.id}`;
+    const containsActivePage = subgroup.items.some((navigationItem) => isNavigationItemActive(location.pathname, navigationItem));
+    return (
+      <div className="sidebar-navigation-subgroup" key={subgroup.id}>
+        <button
+          type="button"
+          className={`sidebar-group-toggle sidebar-subgroup-toggle${containsActivePage ? " contains-active" : ""}`}
+          aria-expanded={expanded}
+          aria-controls={submenuId}
+          aria-label={`${subgroup.title} 메뉴 ${expanded ? "접기" : "펼치기"}`}
+          title={isSidebarCollapsed ? subgroup.title : undefined}
+          onClick={() => toggleNavigationGroup(subgroupKey)}
+        >
+          <span className="sidebar-navigation-symbol" aria-hidden="true">{subgroup.symbol}</span>
+          <span className="sidebar-expandable-content sidebar-group-toggle-copy">
+            <strong>{subgroup.title}</strong>
+            <small aria-hidden="true">{subgroup.items.length}</small>
+            <span className="sidebar-group-arrow" aria-hidden="true">{expanded ? "▴" : "▾"}</span>
+          </span>
+        </button>
+        {expanded ? <div className="sidebar-navigation-submenu" id={submenuId}>{renderNavigationItems(subgroup.items)}</div> : null}
+      </div>
     );
   });
 
@@ -288,9 +332,9 @@ export const ApplicationSidebar = () => {
                 // onClick={() => toggleNavigationGroup(id)} 처럼 화살표로 감싼 이유:
                 //   인자를 넘겨야 하기 때문이다. 감싸지 않고 toggleNavigationGroup(id)라고 쓰면
                 //   그리는 즉시 실행돼 버려서 무한 루프에 빠진다.
-                return <><button type="button" className="sidebar-group-toggle" aria-expanded={expanded} aria-controls={submenuId} aria-label={`${navigationGroup.title} 메뉴 ${expanded ? "접기" : "펼치기"}`} onClick={() => toggleNavigationGroup(navigationGroup.id)}><span className="sidebar-navigation-symbol" aria-hidden="true">{navigationGroup.symbol}</span><span className="sidebar-expandable-content sidebar-group-toggle-copy"><strong>{navigationGroup.title}</strong><span className="sidebar-group-arrow" aria-hidden="true">{expanded ? "▴" : "▾"}</span></span></button>{expanded ? <div className="sidebar-navigation-submenu" id={submenuId}>{renderNavigationItems(navigationGroup)}</div> : null}</>;
+                return <><button type="button" className="sidebar-group-toggle" aria-expanded={expanded} aria-controls={submenuId} aria-label={`${navigationGroup.title} 메뉴 ${expanded ? "접기" : "펼치기"}`} onClick={() => toggleNavigationGroup(navigationGroup.id)}><span className="sidebar-navigation-symbol" aria-hidden="true">{navigationGroup.symbol}</span><span className="sidebar-expandable-content sidebar-group-toggle-copy"><strong>{navigationGroup.title}</strong><span className="sidebar-group-arrow" aria-hidden="true">{expanded ? "▴" : "▾"}</span></span></button>{expanded ? <div className="sidebar-navigation-submenu" id={submenuId}>{renderNavigationItems(navigationGroup.items)}{renderSubgroups(navigationGroup)}</div> : null}</>;
               // ↓ 여기가 삼항 연산자의 `:` 쪽. 접을 수 없는 그룹은 제목 + 목록만 그린다.
-              })() : <><h2 className="sidebar-group-title sidebar-expandable-content">{navigationGroup.title}</h2>{renderNavigationItems(navigationGroup)}</>}
+              })() : <><h2 className="sidebar-group-title sidebar-expandable-content">{navigationGroup.title}</h2>{renderNavigationItems(navigationGroup.items)}</>}
             </section>
           ))}
         </nav>
@@ -317,6 +361,10 @@ export const ApplicationSidebar = () => {
           isMobileSidebarOpen이 false면 null → 아예 DOM에 존재하지 않는다.
           CSS로 숨기는 것과 달리, 없는 요소는 키보드로도 절대 선택되지 않아 더 안전하다. */}
       {isMobileSidebarOpen ? <button className="mobile-sidebar-backdrop" type="button" onClick={closeMobileSidebar} aria-label="모바일 사이드바 닫기" /> : null}
+
+      {/* 사이드바 오른쪽 가장자리 너비 조절 손잡이(PC, 펼쳐져 있을 때만).
+          사이드바(<aside>)는 세로 스크롤 영역이라 그 안에 두면 스크롤과 함께 움직이므로, 바깥에 고정 위치로 둔다. */}
+      {isSidebarCollapsed ? null : <SidebarResizeHandle />}
     </>
   );
 };

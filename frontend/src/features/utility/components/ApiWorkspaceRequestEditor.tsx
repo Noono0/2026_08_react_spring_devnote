@@ -4,6 +4,7 @@ import type {
   RequestBodyType,
   RequestEditorSection,
 } from "@/features/utility/types/apiWorkspaceTypes";
+import { HighlightedTextarea } from "@/shared/ui/HighlightedTextarea";
 import { createEmptyFormDataEntry } from "@/features/utility/utils/apiWorkspaceUtils";
 import { ApiKeyValueEditor } from "@/features/utility/components/ApiKeyValueEditor";
 
@@ -83,7 +84,7 @@ export const ApiWorkspaceRequestEditor = ({ request, activeSection, onSectionCha
               {bodyTypes.map((bodyType) => <label key={bodyType.value}><input type="radio" name="request-body-type" value={bodyType.value} checked={request.bodyType === bodyType.value} onChange={() => updateRequest({ bodyType: bodyType.value })} />{bodyType.label}</label>)}
             </div>
             {request.bodyType === "NONE" ? <div className="api-inline-notice"><strong>Body가 없는 요청입니다.</strong><p>GET·HEAD 요청은 일반적으로 Body를 보내지 않습니다.</p></div> : null}
-            {request.bodyType === "JSON" || request.bodyType === "TEXT" ? <textarea className="api-code-editor" value={request.bodyText} spellCheck={false} aria-label={`${request.bodyType} Request Body`} placeholder={request.bodyType === "JSON" ? '{\n  "title": "DevNote"\n}' : "전송할 텍스트를 입력하세요."} onChange={(event) => updateRequest({ bodyText: event.target.value })} /> : null}
+            {request.bodyType === "JSON" || request.bodyType === "TEXT" ? <HighlightedTextarea language={request.bodyType === "JSON" ? "json" : "text"} className="api-code-editor" value={request.bodyText} aria-label={`${request.bodyType} Request Body`} placeholder={request.bodyType === "JSON" ? '{\n  "title": "DevNote"\n}' : "전송할 텍스트를 입력하세요."} onChange={(event) => updateRequest({ bodyText: event.target.value })} /> : null}
             {request.bodyType === "FORM_URLENCODED" ? <ApiKeyValueEditor entries={request.formData} keyLabel="Field" valueLabel="Value" emptyMessage="Form Field가 없습니다." onChange={(entries) => updateRequest({ formData: entries.map((entry) => ({ ...entry, valueType: "TEXT" as const })) })} /> : null}
             {request.bodyType === "FORM_DATA" ? (
               <div className="api-key-value-editor">

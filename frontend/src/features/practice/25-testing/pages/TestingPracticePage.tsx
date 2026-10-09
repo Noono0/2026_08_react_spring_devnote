@@ -16,6 +16,7 @@
  */
 
 import { LearningGuideTitle } from "@/features/curriculum/components/LearningGuideTitle";
+import { HighlightedCode } from "@/shared/ui/HighlightedTextarea";
 import { CheckoutCalculator } from "@/features/practice/25-testing/components/CheckoutCalculator";
 import checkoutCalculatorTestSource from "@/features/practice/25-testing/components/CheckoutCalculator.test.tsx?raw";
 
@@ -50,7 +51,7 @@ export const TestingPracticePage = () => (
     <article className="practice-card practice-code-card">
       <h2>CheckoutCalculator.test.tsx</h2>
       {/* 긴 코드 블록은 가로 스크롤이 생기므로 tabIndex로 키보드 포커스를 받게 해 키보드로도 스크롤할 수 있게 한다. */}
-      <pre tabIndex={0} aria-label="계산기 테스트 코드"><code>{checkoutCalculatorTestSource}</code></pre>
+      <HighlightedCode tabIndex={0} aria-label="계산기 테스트 코드" language="typescript" code={checkoutCalculatorTestSource} />
     </article>
   </section>
 );

@@ -1,6 +1,7 @@
 // JsonCsvConverterPage.tsx — JSON ↔ CSV 변환 화면(입력 2MB 이하, 미리보기 50행). 변환은 utils/jsonCsvConverter.ts.
 
 import { useMemo, useState, type ChangeEvent } from "react";
+import { HighlightedTextarea } from "@/shared/ui/HighlightedTextarea";
 import { applicationNotification } from "@/shared/notification/applicationNotification";
 import { ModalDialog } from "@/shared/ui/ModalDialog";
 import {
@@ -160,7 +161,7 @@ export const JsonCsvConverterPage = () => {
       <div className="data-converter-grid">
         <article className="data-converter-editor">
           <header><div><h2>{labels.input}</h2><span>{new Blob([source]).size.toLocaleString("ko-KR")} / {MAXIMUM_INPUT_SIZE_BYTES.toLocaleString("ko-KR")} bytes</span></div></header>
-          <textarea value={source} aria-label={labels.input} spellCheck={false} placeholder={`${labels.input} 내용을 붙여넣으세요.`} onChange={(event) => { setSource(event.target.value); resetResult(); }} />
+          <HighlightedTextarea language={direction === "JSON_TO_CSV" ? "json" : "text"} value={source} aria-label={labels.input} placeholder={`${labels.input} 내용을 붙여넣으세요.`} onChange={(event) => { setSource(event.target.value); resetResult(); }} />
         </article>
 
         <div className="data-converter-actions">
@@ -170,7 +171,7 @@ export const JsonCsvConverterPage = () => {
 
         <article className="data-converter-editor">
           <header><div><h2>{labels.output}</h2>{conversionResult ? <span>{conversionResult.rowCount.toLocaleString("ko-KR")}행</span> : null}</div><div><button type="button" className="ghost-button" disabled={!conversionResult} onClick={() => void copyResult()}>복사</button><button type="button" className="ghost-button" disabled={!conversionResult} onClick={downloadResult}>다운로드</button></div></header>
-          {errorMessage ? <div className="data-converter-error" role="alert"><strong>변환할 수 없습니다.</strong><p>{errorMessage}</p></div> : <textarea value={conversionResult?.output ?? ""} aria-label={labels.output} readOnly spellCheck={false} placeholder="변환 결과가 여기에 표시됩니다." />}
+          {errorMessage ? <div className="data-converter-error" role="alert"><strong>변환할 수 없습니다.</strong><p>{errorMessage}</p></div> : <HighlightedTextarea language={direction === "CSV_TO_JSON" ? "json" : "text"} value={conversionResult?.output ?? ""} aria-label={labels.output} readOnly placeholder="변환 결과가 여기에 표시됩니다." />}
         </article>
       </div>
 

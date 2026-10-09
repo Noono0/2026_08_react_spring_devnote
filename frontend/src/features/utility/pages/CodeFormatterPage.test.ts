@@ -9,7 +9,7 @@ describe("formatSource", () => {
     expect(formatSource("SQL", "   ")).toBe("");
   });
 
-  it("SQL 키워드를 대문자로 정리한다", () => {
-    expect(formatSource("SQL", "select * from members where id = 1")).toContain("SELECT *\nFROM members\nWHERE id = 1");
+  it("SQL 키워드를 대문자로 바꾸고 키워드 칸(7칸)에 맞춰 정리한다", () => {
+    expect(formatSource("SQL", "select * from members where id = 1")).toBe("SELECT *\nFROM   members\nWHERE  id = 1");
   });
 });

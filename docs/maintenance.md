@@ -2,6 +2,53 @@
 
 [문서 목록으로](../README.md) · [작업 규칙](../AGENTS.md) · [검증 명령](verification.md)
 
+## 2026-10-10 — 코드·데이터 입력·결과 문법 색 전체 적용
+
+- **적용 화면**: 코드·데이터 형식을 입력하거나 보여 주는 곳에 공통 문법 색을 넣었습니다. Markdown Editor(입력·문법 도움말 예시), Data Converter(입력·결과·JSON Schema·JSON Tree), JSON ↔ CSV(JSON 쪽), JSONPath Explorer(입력·결과), JWT Decoder(Header·Payload), API Workspace(요청 Body·응답 Pretty/Raw·Actual Request·생성 코드·cURL), OpenAPI Studio(문서 JSON/YAML·Request 예시), Mock API(응답 Body·테스트 응답), WebSocket·SSE(보낼 메시지·로그 데이터), SQL Schema·ERD(DDL), Dependency Analyzer(package.json·Gradle), Developer Snippet(편집·카드, 고른 언어), 25단계 학습 테스트 코드. 일반 글(게시판·댓글), 로그, 정규식, Cron, CSV, Code Diff(이미 diff 색)는 문법 색이 일반적이지 않아 그대로 둡니다.
+- **공통화**: 화면마다 따로 만든 색칠은 없고, 여러 기능이 쓰게 되어 `HighlightedTextarea`(+ 읽기 전용 `HighlightedCode`)를 `shared/ui`로, `syntaxHighlighter`를 `shared/lib`로 옮겼습니다. YAML 색칠, 언어 별칭(yml·ts·xml·gradle·curl 등), 형식을 모르는 글의 첫 글자 짐작(`guessCodeLanguage`), 줄바꿈 모드(`wrapLines`, 두 겹 모두 `scrollbar-gutter: stable`로 같은 폭에서 줄바꿈), `ref` 전달(Markdown 도구 모음)을 추가했습니다. `className`은 textarea에 붙고 글꼴·여백·테두리는 공통 규칙이 덮어써 두 겹이 어긋나지 않습니다.
+- **검증**: `eslint`·`tsc -b` 통과, 전체 테스트 통과(YAML·별칭·짐작 테스트 추가, API 응답 테스트는 글자가 색 조각으로 나뉘어 `<code>` 전체 글자로 찾도록 수정), `vite build` 성공. 내장 브라우저에서 Markdown 입력의 두 겹 글꼴·줄 높이·폭(450px) 일치와 긴 줄 줄바꿈 일치, Data Converter 다크 모드 JSON·YAML 색을 확인했습니다.
+
+## 2026-10-10 — 사이드바 너비 조절·잘림 수정
+
+- **화면**: PC에서 사이드바 오른쪽 가장자리를 끌어 너비를 240~520px로 바꿉니다(기본 300px, 기존 286px에서 3단계 메뉴를 위해 넓힘). 손잡이에 포커스를 두고 ←/→(Shift는 크게)로도 조절하고, 더블클릭하면 기본 너비로 돌아갑니다. 사이드바를 접었거나 모바일에서는 손잡이를 숨깁니다.
+- **구현**: `applicationUiStore`에 `sidebarWidth`·`setSidebarWidth`(범위 맞춤·`localStorage` 저장·읽을 때 검사)를 두고, 테마처럼 `<html>`의 `--sidebar-width` CSS 변수에 반영해 사이드바 너비와 본문 왼쪽 여백이 함께 움직입니다. `SidebarResizeHandle`은 사이드바 스크롤 영역 바깥에 고정 위치로 두고, 끄는 동안 `data-sidebar-resizing`으로 애니메이션을 끕니다.
+- **수정**: 긴 설명 글(줄바꿈 없음) 때문에 메뉴 칸이 사이드바보다 넓어져 오른쪽 화살표가 잘리던 문제를 grid 칸 `minmax(0, 1fr)`·말줄임(…)으로 고쳤고, 3단계 안쪽 들여쓰기를 줄였습니다.
+- **검증**: 사이드바 테스트에 방향키·범위·더블클릭·접힘 시 숨김 테스트를 추가했습니다. 내장 브라우저에서 잘리는 메뉴 0개, 끌어서 300→410px(본문 여백 함께 이동·저장)을 확인했습니다.
+
+## 2026-10-10 — 사이드바 유틸리티 메뉴 3단계
+
+- **화면**: 유틸리티 메뉴가 25개로 길어져 3단계로 나눴습니다. 2단계에는 `유틸리티 홈`·`웹 크롤링 도구`만 두고, 나머지는 유틸리티 홈(`UtilityHomePage`) 분류와 같은 5개 묶음(`API 개발·테스트` 5, `데이터 변환·조회` 4, `코드 작성 보조` 7, `설계·분석` 4, `보안·기록` 3)을 접고 펼칩니다. 묶음 제목 옆에 메뉴 개수를 보이고, 지금 화면이 들어 있는 묶음은 접혀 있어도 테두리로 표시합니다. 유틸리티 화면으로 바로 들어오면 그 화면의 묶음까지 펼칩니다.
+- **구현**: `navigationGroups.ts`에 `NavigationSubgroup`과 그룹의 `subgroups`, 전체 메뉴를 펴는 `flattenNavigationItems`를 추가했습니다(탭 제목 `pageTitle.ts`도 3단계 메뉴까지 찾음). `ApplicationSidebar`는 그룹 접기와 같은 `expandedGroupIds` Set에 `"그룹id:묶음id"` 키로 묶음 상태를 함께 담고(함수형 업데이트·불변성 그대로), `aria-expanded`·`aria-controls`로 버튼과 하위 목록을 연결합니다.
+- **검증**: `ApplicationSidebar.test.tsx`에 묶음 펼치기·접기와 바로 들어왔을 때 자동 펼침 테스트를 추가했습니다. 내장 브라우저에서 `/utilities/sql-formatter`로 들어오면 `코드 작성 보조`만 펼쳐지고 SQL Formatter가 현재 메뉴로 표시되는 것을 확인했습니다.
+
+## 2026-10-10 — SQL Formatter 대문자 기본값·복잡한 예제·문장별 별칭
+
+- **기본값**: 함수·테이블/칼럼 이름 대소문자 기본값을 `대문자`로 바꿨습니다(문자열·따옴표 이름·MyBatis `#{}`는 그대로). dpriver 모양(함수 Count·이름 그대로)은 `DPRIVER_CASE_OPTIONS`로 남겨 Code Formatter의 SQL과 dpriver 비교 테스트가 씁니다.
+- **복잡한 예제**: `복잡한 예제` 버튼이 `sqlFormatterExamples.ts`의 쿼리(WITH, 스칼라 서브쿼리, CASE, 서브쿼리 JOIN, EXISTS, NOT IN, LIMIT/OFFSET, MyBatis 파라미터, UPDATE)와 MySQL `CREATE TABLE ... COMMENT` 6개 테이블(코멘트 31개)을 넣습니다. 주석 20개가 붙습니다.
+- **수정**: 여러 문장이면 별칭 지도를 문장(;)마다 따로 만듭니다. 앞 SELECT의 `member_grades` 때문에 뒤 UPDATE의 `GRADE_ID`가 두 테이블 칼럼으로 보여 주석이 빠지던 문제를 고쳤습니다(회귀 테스트 추가).
+- **검증**: `eslint`·`tsc -b` 통과, Vitest 111개 파일·364개 테스트 통과, `vite build` 성공.
+
+## 2026-10-10 — Code Formatter·SQL Formatter 입력하면 바로 정리
+
+- **화면**: 두 화면 모두 정리 버튼 없이 입력칸에 쓰면 결과가 바로 나옵니다. `정리하기`·`Minify`(`한 줄로 압축`) 버튼은 결과 방식 버튼 묶음(`정리 | 압축`)으로 바꿨고, SQL Formatter의 Ctrl+Enter는 필요 없어져 뺐습니다. SQL Formatter는 `결과를 입력으로` 옆에 `결과 복사`(출력 형식이 Java면 Java 코드 복사, 결과가 없으면 비활성)를 두어 결과 칸 아래까지 내려가지 않고 복사합니다. 입력할 때마다 알림이 뜨지 않도록 정리 완료 알림을 없애고, 붙인 코멘트 수는 결과 아래 글자로 보여 줍니다. JSON 문법 오류는 입력 중 잠깐씩 생기므로 `role="alert"` 대신 `aria-live="polite"`로 알립니다.
+- **구현**: keyup이 아니라 onChange(붙여넣기·한글 조합·자동 완성 포함)로 입력을 받고, 결과는 State 없이 "지금 입력 + 언어/옵션 + 결과 방식"으로 계산하는 파생 값입니다. `useDeferredValue`로 긴 입력에서도 입력칸이 먼저 반응하고 결과 계산은 뒤따르게 했습니다.
+- **검증**: `eslint`·`tsc -b` 통과, `CodeFormatterPage.live.test.tsx`(바로 정리·오류·압축)와 바뀐 `SqlFormatterPage.test.tsx`(5개) 포함 테스트 통과, `vite build` 성공. 내장 브라우저에서 SQL 입력칸에 직접 타이핑하면 결과가 바로 정리되는 것을 확인했습니다.
+
+## 2026-10-10 — Code Formatter·SQL Formatter 입력·결과 문법 색
+
+- **화면**: Code Formatter와 SQL Formatter의 입력·결과 글자에 언어별 문법 색을 입혔습니다(SQL Formatter 결과는 Java 출력이면 Java 색). 색은 `:root`와 `[data-theme="dark"]`의 `--syntax-comment/keyword/string/number/tag/property/heading` 변수로 라이트는 진한 색, 다크는 밝은 색을 씁니다. Markdown 미리보기 코드 블록의 고정 색도 같은 변수로 바꿔 테마를 따릅니다.
+- **구현**: `HighlightedTextarea`가 색칠한 `<pre aria-hidden>` 위에 글자색만 투명한 textarea(caret·선택·입력·복사 그대로)를 같은 글꼴·크기·줄 높이·여백·테두리로 포개고 onScroll로 스크롤을 맞춥니다. 줄 나눔이 어긋나지 않게 `wrap="off"`이고, 아래 겹은 스크롤바 칸만큼 여유를 둬 맨 끝까지 같이 움직입니다. 색 조각은 `markdownRenderer.ts`에 있던 패턴을 옮긴 `syntaxHighlighter.ts`(JSON 키·HTML 속성·CSS 속성·SQL MyBatis 파라미터·Markdown 추가)가 만듭니다. 새 의존성은 없습니다.
+- **검증**: `eslint`·`tsc -b` 통과, `syntaxHighlighter.test.ts` 7개 포함 테스트 통과(기존 Markdown 색칠 테스트 유지), `vite build` 성공. 내장 브라우저에서 두 겹의 글꼴·줄 높이·여백·위치 일치, 가로 스크롤 맨 끝(457px)까지 동기화, 라이트(JSON 키 청록·문자열 초록)·다크(SQL 키워드 보라) 색을 확인했습니다.
+
+## 2026-10-10 — SQL Formatter(dpriver 기본 기능)·테이블/칼럼 코멘트 주석
+
+- **화면**: SQL 전용 `SQL Formatter`(`/utilities/sql-formatter`, 사이드바·유틸리티 홈 등록)를 추가했습니다. 위에서 아래로 입력 → 옵션 표 → 버튼(정리하기·한 줄로 압축·예제·초기화·결과를 입력으로·옵션 기본값으로) → 테이블·칼럼 코멘트 → 결과(복사·다운로드)입니다. 옵션 표는 입력 폼처럼 "회색 이름 칸 | 버튼 칸"을 넓은 화면에서 한 줄에 두 쌍(4줄), 1100px 이하에서 한 쌍씩 놓아 세로로 길어지지 않게 했습니다. 옵션(정렬 방식·대소문자·쉼표·출력 형식·주석 형식)은 select 대신 기존 `segmented-buttons` 버튼 묶음으로, 고른 버튼만 밝게 칠하고 `aria-pressed`로 상태를 알립니다. 켜고 끄는 옵션(한 줄에 하나·AS 별칭 맞춤·AND/OR를 WHERE 아래에)은 켜졌을 때 밝아지는 토글 버튼입니다. Ctrl+Enter로 정리하고, 결과는 State에 두지 않고 마지막 입력과 지금 옵션으로 계산해 옵션을 바꾸면 바로 다시 정리됩니다. Code Formatter의 SQL은 같은 엔진 기본값 + 키워드 대·소문자만 남기고 `SQL 옵션 더 보기` 링크를 두었습니다(이 PR 처음에 넣었던 Code Formatter의 들여쓰기·코멘트 UI는 SQL Formatter로 옮김).
+- **엔진**: `sqlTokenizer.ts`(문자열·주석·괄호·MyBatis `#{}` 구분) → `sqlFormatter.ts`. 기본 `키워드 정렬`은 dpriver 기본 출력과 같은 모양입니다(7칸 키워드 열, AS 별칭 열 맞춤, CASE의 WHEN·ELSE 펼침, JOIN 7칸·ON 14칸, AND/OR 오른쪽 맞춤, `IN ( 'a', 'b' )`, 서브쿼리 재귀 정리, INSERT 칼럼·VALUES 한 줄에 하나, 문장 사이 빈 줄). `들여쓰기 칸 수`는 1~10칸. 대소문자는 키워드(대문자)·함수(첫 글자 대문자)·이름(그대로)을 따로 고르고, 점 뒤 이름(u.order)과 따옴표 이름은 키워드로 보지 않습니다. `sqlCodeOutput.ts`가 Java 문자열·StringBuilder(줄마다 
+, 따옴표·역슬래시 escape)로 바꿉니다.
+- **코멘트 주석**: `sqlCommentDictionary.ts`가 한 줄 형식·탭 3칸·MySQL DDL·`COMMENT ON`을 읽고, 별칭 → 테이블 지도(서브쿼리는 자기 별칭 포함)로 SELECT 칼럼·FROM/JOIN 테이블·SET 칼럼 줄 끝에 `--` 또는 `/* */` 주석을 한글 너비를 고려해 한 열로 맞춥니다. 원래 주석이 있는 항목에는 붙이지 않아 재정리해도 중복되지 않습니다.
+- **검증**: `eslint`·`tsc -b` 통과, Vitest 109개 파일·351개 테스트 통과(`sqlFormatter.test.ts` 15개 — dpriver 기본 출력과 같은 결과인지 비교 포함, `SqlFormatterPage.test.tsx` 4개), `vite build` 성공. 내장 브라우저에서 dpriver에 같은 SQL을 넣은 결과와 줄 단위로 같음, 예제 + 코멘트 6개 정리, 375px에서 옵션이 아래로 내려가고 가로 넘침 없음을 확인했습니다.
+- **미지원(dpriver에 있음)**: DB 종류별 문법, 테이블·칼럼·별칭 이름 대소문자 개별 지정, Compact 모드(최대 줄 길이), HTML·C#·PHP 등 출력, Dataflow 시각화, MyBatis 동적 태그 정리.
+
 ## 2026-10-09 — 직접 해 보기 크게 보기
 
 - **화면**: 상자 제목 줄 오른쪽 `크게 보기`(`aria-pressed` 토글)로 상자가 브라우저 창 전체를 덮습니다(`position: fixed`, z-index 150로 사이드바·디버그 버튼 위). 제목 줄은 위에 고정되고, `◢`는 숨깁니다. `원래 크기로 (Esc)`·Esc·접기·펼치기로 돌아옵니다. 코드 편집기 안의 Esc는 편집기(Tab 들여쓰기 빠져나오기)가 쓰므로 닫지 않습니다.

@@ -22,6 +22,7 @@
  *   - applicationTheme    : 라이트/다크 테마
  *   - isSidebarCollapsed  : 사이드바 접힘 여부 (PC)
  *   - isMobileSidebarOpen : 사이드바 열림 여부 (모바일 오버레이)
+ *   - sidebarWidth        : 사이드바 너비(PC, 오른쪽 가장자리를 끌어 조절)
  *
  * ★ 주의: 서버에서 받아온 데이터(문서 목록 등)는 여기 넣지 않는다.
  *   그건 TanStack Query가 담당한다. "UI 상태"와 "서버 상태"는 분리하는 게 원칙이다.
@@ -35,14 +36,16 @@ export type ApplicationTheme = "light" | "dark";
 
 /**
  * 스토어의 설계도(타입).
- * 위쪽 3개는 "값", 아래쪽 5개는 "값을 바꾸는 함수"다.
+ * 위쪽 4개는 "값", 아래쪽 6개는 "값을 바꾸는 함수"다.
  * Zustand는 값과 함수를 한 객체 안에 같이 담는 스타일이다.
  */
 interface ApplicationUiState {
   applicationTheme: ApplicationTheme;
   isSidebarCollapsed: boolean;
   isMobileSidebarOpen: boolean;
+  sidebarWidth: number;
   setApplicationTheme: (applicationTheme: ApplicationTheme) => void;
+  setSidebarWidth: (sidebarWidth: number) => void;
   toggleApplicationTheme: () => void;
   toggleSidebarCollapsed: () => void;
   openMobileSidebar: () => void;
@@ -103,6 +106,36 @@ const initialApplicationTheme = getInitialApplicationTheme();
 applyApplicationTheme(initialApplicationTheme);
 
 /**
+ * 사이드바 너비 범위(px). 너무 좁으면 메뉴 글자가 안 보이고, 너무 넓으면 본문이 좁아진다.
+ * initial은 3단계 메뉴(유틸리티 묶음)까지 설명 글이 덜 잘리도록 잡은 기본값이다.
+ */
+export const SIDEBAR_WIDTH_RANGE = { min: 240, max: 520, initial: 300 } as const;
+
+/** 값을 범위 안의 정수로 맞춘다. */
+export const clampSidebarWidth = (width: number): number =>
+  Math.round(Math.min(SIDEBAR_WIDTH_RANGE.max, Math.max(SIDEBAR_WIDTH_RANGE.min, width)));
+
+/** 저장된 너비를 읽는다. 없거나 숫자가 아니면 기본값, 범위를 벗어나면 범위 안으로 맞춘다(테마와 같은 이유로 검사). */
+const getInitialSidebarWidth = (): number => {
+  const savedText = localStorage.getItem("sidebarWidth");
+  const savedWidth = savedText === null ? Number.NaN : Number(savedText);
+  return Number.isFinite(savedWidth) ? clampSidebarWidth(savedWidth) : SIDEBAR_WIDTH_RANGE.initial;
+};
+
+/**
+ * 너비를 CSS 변수(--sidebar-width)로 <html>에 넣는다.
+ * 사이드바 너비와 본문 왼쪽 여백(margin-left)이 같은 변수를 쓰므로 둘이 함께 움직인다.
+ * (테마처럼 React 바깥의 <html>에 반영하므로 DOM을 직접 다룬다)
+ */
+const applySidebarWidth = (sidebarWidth: number): void => {
+  document.documentElement.style.setProperty("--sidebar-width", `${sidebarWidth}px`);
+};
+
+// 테마와 같은 이유로 첫 화면 전에 미리 적용한다(너비가 번쩍 바뀌는 깜빡임 방지).
+const initialSidebarWidth = getInitialSidebarWidth();
+applySidebarWidth(initialSidebarWidth);
+
+/**
  * 실제 스토어를 만든다.
  *
  * `create<타입>((set, get) => ({ ... }))` 형태로 쓴다.
@@ -120,8 +153,17 @@ export const useApplicationUiStore = create<ApplicationUiState>((set, get) => ({
   isSidebarCollapsed: localStorage.getItem("isSidebarCollapsed") === "true",
   // 모바일 메뉴는 저장하지 않는다. 새로고침하면 항상 닫힌 상태로 시작하는 게 자연스럽다.
   isMobileSidebarOpen: false,
+  sidebarWidth: initialSidebarWidth,
 
   // ── 상태를 바꾸는 함수들 ────────────────────────────────
+
+  /** 사이드바 너비를 범위 안으로 맞춰 저장·반영한다. */
+  setSidebarWidth: (sidebarWidth) => {
+    const nextSidebarWidth = clampSidebarWidth(sidebarWidth);
+    localStorage.setItem("sidebarWidth", String(nextSidebarWidth));
+    applySidebarWidth(nextSidebarWidth);
+    set({ sidebarWidth: nextSidebarWidth });
+  },
 
   /** 테마를 특정 값으로 직접 지정한다. */
   setApplicationTheme: (applicationTheme) => {

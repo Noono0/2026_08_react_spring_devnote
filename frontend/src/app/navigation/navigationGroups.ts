@@ -20,14 +20,30 @@ export interface NavigationItem {
   matchChildren?: boolean;
 }
 
+/**
+ * 그룹 안의 작은 묶음(3단계 메뉴). 메뉴가 많은 그룹(유틸리티)을 종류별로 나눠 접고 펼친다.
+ *   1단계: 그룹(각종 유틸리티 게시판) → 2단계: 바로 가는 메뉴(유틸리티 홈·웹 크롤링 도구) + 작은 묶음 → 3단계: 묶음 안의 메뉴
+ */
+export interface NavigationSubgroup {
+  id: string;                // 그룹 안에서 겹치지 않는 키(접기/펼치기 상태에 "그룹id:묶음id"로 쓴다)
+  title: string;
+  symbol: string;
+  items: NavigationItem[];
+}
+
 /** 메뉴 묶음(그룹) 하나의 모양. */
 export interface NavigationGroup {
   id: string;                // 접기/펼치기 상태를 구분하는 고유 키
   title: string;             // 그룹 제목
   symbol: string;
   collapsible: boolean;      // true면 클릭해서 접었다 폈다 할 수 있는 그룹
-  items: NavigationItem[];   // `[]`는 "이 타입의 배열"이라는 뜻
+  items: NavigationItem[];   // `[]`는 "이 타입의 배열"이라는 뜻. 그룹을 펼치면 바로 보이는 메뉴(2단계)
+  subgroups?: NavigationSubgroup[]; // 있으면 items 아래에 접고 펴는 작은 묶음(3단계)으로 보여 준다
 }
+
+/** 그룹의 모든 메뉴(2단계 + 3단계)를 한 줄로 편다. 탭 제목 찾기 등에 쓴다. */
+export const flattenNavigationItems = (navigationGroup: NavigationGroup): NavigationItem[] =>
+  [...navigationGroup.items, ...(navigationGroup.subgroups ?? []).flatMap((subgroup) => subgroup.items)];
 
 // ----------------------------------------------------------------------------
 // 2. 실제 메뉴 데이터
@@ -61,6 +77,7 @@ export const reactNavigationGroup: NavigationGroup = {
   ],
 };
 
+// 유틸리티는 메뉴가 많아 3단계로 나눈다. 묶음 이름·순서는 유틸리티 홈(UtilityHomePage) 분류와 맞췄다.
 export const utilityNavigationGroup: NavigationGroup = {
   id: "utilities",
   title: "각종 유틸리티 게시판",
@@ -69,28 +86,66 @@ export const utilityNavigationGroup: NavigationGroup = {
   items: [
     { label: "유틸리티 홈", description: "개발 도구 전체 보기", route: "/utilities", symbol: "UT" },
     { label: "웹 크롤링 도구", description: "로그인·선택자·AND/OR 수집", route: "/utilities/crawler", symbol: "CR" },
-    { label: "API Workspace", description: "요청·Collection·Runner", route: "/utilities/api-workspace", symbol: "API" },
-    { label: "OpenAPI Studio", description: "API 문서·Collection 가져오기", route: "/utilities/api-workspace/openapi", symbol: "OAS" },
-    { label: "WebSocket · SSE", description: "실시간 연결·메시지 로그", route: "/utilities/api-workspace/realtime", symbol: "WS" },
-    { label: "Mock API", description: "지연·오류·순차 응답", route: "/utilities/api-workspace/mock", symbol: "MK" },
-    { label: "Regex Tester", description: "정규식 검색·치환", route: "/utilities/regex", symbol: ".*" },
-    { label: "Code Formatter", description: "HTML·JS·CSS·SQL 정리", route: "/utilities/formatter", symbol: "{}" },
-    { label: "Data Converter", description: "JSON·YAML·XML 변환", route: "/utilities/converter", symbol: "CV" },
-    { label: "JSON ↔ CSV", description: "JSON과 CSV 상호 변환", route: "/utilities/json-csv", symbol: "⇄" },
-    { label: "Code Diff", description: "두 코드 차이 비교", route: "/utilities/diff", symbol: "±" },
-    { label: "JWT Decoder", description: "JWT Header·Payload 확인", route: "/utilities/jwt", symbol: "JWT" },
-    { label: "Markdown Editor", description: "마크다운 작성·미리보기", route: "/utilities/markdown", symbol: "M↓" },
-    { label: "Test Data Generator", description: "테스트용 데이터 생성", route: "/utilities/test-data", symbol: "TG" },
-    { label: "Developer Snippet", description: "회원별 코드 조각 CRUD", route: "/utilities/snippets", symbol: "</>" },
-    { label: "Cron Generator", description: "Cron 표현식 만들기", route: "/utilities/cron", symbol: "◷" },
-    { label: "Quick Tools", description: "문자열·케이스 빠른 변환", route: "/utilities/tools", symbol: "Aa" },
-    { label: "투표", description: "토픽 생성·참여·결과", route: "/utilities/polls", symbol: "%" },
-    { label: "JSONPath Explorer", description: "JSON 경로 검색·추출", route: "/utilities/jsonpath", symbol: "JP" },
-    { label: "Diagram Designer", description: "ERD·순서도 작성·저장·버전관리", route: "/utilities/diagrams", symbol: "ERD", matchChildren: true },
-    { label: "SQL Schema · ERD", description: "DDL 테이블 관계 시각화", route: "/utilities/sql-erd", symbol: "DB" },
-    { label: "Log Analyzer", description: "Exception·Root Cause 분석", route: "/utilities/log-analyzer", symbol: "LOG" },
-    { label: "CORS Inspector", description: "CORS·보안 Header 진단", route: "/utilities/cors-inspector", symbol: "CO" },
-    { label: "Dependency Analyzer", description: "NPM·Gradle 의존성 분석", route: "/utilities/dependencies", symbol: "DP" },
+  ],
+  subgroups: [
+    {
+      id: "api",
+      title: "API 개발·테스트",
+      symbol: "API",
+      items: [
+        { label: "API Workspace", description: "요청·Collection·Runner", route: "/utilities/api-workspace", symbol: "API" },
+        { label: "OpenAPI Studio", description: "API 문서·Collection 가져오기", route: "/utilities/api-workspace/openapi", symbol: "OAS" },
+        { label: "WebSocket · SSE", description: "실시간 연결·메시지 로그", route: "/utilities/api-workspace/realtime", symbol: "WS" },
+        { label: "Mock API", description: "지연·오류·순차 응답", route: "/utilities/api-workspace/mock", symbol: "MK" },
+        { label: "CORS Inspector", description: "CORS·보안 Header 진단", route: "/utilities/cors-inspector", symbol: "CO" },
+      ],
+    },
+    {
+      id: "data",
+      title: "데이터 변환·조회",
+      symbol: "DT",
+      items: [
+        { label: "Data Converter", description: "JSON·YAML·XML 변환", route: "/utilities/converter", symbol: "CV" },
+        { label: "JSON ↔ CSV", description: "JSON과 CSV 상호 변환", route: "/utilities/json-csv", symbol: "⇄" },
+        { label: "JSONPath Explorer", description: "JSON 경로 검색·추출", route: "/utilities/jsonpath", symbol: "JP" },
+        { label: "Test Data Generator", description: "테스트용 데이터 생성", route: "/utilities/test-data", symbol: "TG" },
+      ],
+    },
+    {
+      id: "code",
+      title: "코드 작성 보조",
+      symbol: "CD",
+      items: [
+        { label: "Code Formatter", description: "HTML·JS·CSS·SQL 정리", route: "/utilities/formatter", symbol: "{}" },
+        { label: "SQL Formatter", description: "SQL 정렬·코멘트 주석·Java 출력", route: "/utilities/sql-formatter", symbol: "SQL" },
+        { label: "Code Diff", description: "두 코드 차이 비교", route: "/utilities/diff", symbol: "±" },
+        { label: "Regex Tester", description: "정규식 검색·치환", route: "/utilities/regex", symbol: ".*" },
+        { label: "Cron Generator", description: "Cron 표현식 만들기", route: "/utilities/cron", symbol: "◷" },
+        { label: "Markdown Editor", description: "마크다운 작성·미리보기", route: "/utilities/markdown", symbol: "M↓" },
+        { label: "Quick Tools", description: "문자열·케이스 빠른 변환", route: "/utilities/tools", symbol: "Aa" },
+      ],
+    },
+    {
+      id: "design",
+      title: "설계·분석",
+      symbol: "ERD",
+      items: [
+        { label: "Diagram Designer", description: "ERD·순서도 작성·저장·버전관리", route: "/utilities/diagrams", symbol: "ERD", matchChildren: true },
+        { label: "SQL Schema · ERD", description: "DDL 테이블 관계 시각화", route: "/utilities/sql-erd", symbol: "DB" },
+        { label: "Log Analyzer", description: "Exception·Root Cause 분석", route: "/utilities/log-analyzer", symbol: "LOG" },
+        { label: "Dependency Analyzer", description: "NPM·Gradle 의존성 분석", route: "/utilities/dependencies", symbol: "DP" },
+      ],
+    },
+    {
+      id: "record",
+      title: "보안·기록",
+      symbol: "SEC",
+      items: [
+        { label: "JWT Decoder", description: "JWT Header·Payload 확인", route: "/utilities/jwt", symbol: "JWT" },
+        { label: "Developer Snippet", description: "회원별 코드 조각 CRUD", route: "/utilities/snippets", symbol: "</>" },
+        { label: "투표", description: "토픽 생성·참여·결과", route: "/utilities/polls", symbol: "%" },
+      ],
+    },
   ],
 };
 

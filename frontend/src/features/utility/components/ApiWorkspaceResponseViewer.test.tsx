@@ -21,7 +21,8 @@ describe("ApiWorkspaceResponseViewer", () => {
     expect(screen.getByText("https://api.example.com/members?page=1")).toBeInTheDocument();
     expect(screen.getByText("••••••••")).toBeInTheDocument();
     expect(screen.queryByText("CORS 오류")).not.toBeInTheDocument();
-    expect(screen.getByText('{"name":"DevNote"}')).toBeInTheDocument();
+    // 문법 색 때문에 글자가 여러 <span>으로 나뉘므로, <code> 전체 글자로 찾는다.
+    expect(screen.getByText((_, element) => element?.tagName === "CODE" && element.textContent === '{"name":"DevNote"}')).toBeInTheDocument();
   });
 
   it("Actual Request 탭 선택을 부모 상태로 전달한다", () => {

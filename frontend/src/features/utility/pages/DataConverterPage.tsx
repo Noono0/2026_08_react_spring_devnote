@@ -1,6 +1,7 @@
 // DataConverterPage.tsx — JSON·YAML·XML 변환, TypeScript interface·Java record 생성, JSON Schema 검사 도구(utils/dataConverter.ts)
 
 import { useMemo, useState } from "react";
+import { HighlightedCode, HighlightedTextarea } from "@/shared/ui/HighlightedTextarea";
 import { UtilityHelpDialog, UtilityPageTitle } from "@/features/utility/components/UtilityHelpDialog";
 import { copyText, downloadText } from "@/features/utility/utils/browserFileUtils";
 import { formatStructuredData, generateJavaRecords, generateTypeScriptInterfaces, parseStructuredData, sortObjectKeys, validateJsonSchema, type StructuredFormat } from "@/features/utility/utils/dataConverter";
@@ -94,15 +95,15 @@ export const DataConverterPage = () => {
         <button type="button" className="ghost-button" onClick={() => { setSource(""); setResult(""); setErrorMessage(""); }}>초기화</button>
       </div>
       <div className="utility-editor-grid">
-        <label><span>{inputFormat} 입력 · {new Blob([source]).size.toLocaleString("ko-KR")} bytes</span><textarea aria-label={`${inputFormat} 입력`} value={source} spellCheck={false} onChange={(event) => { setSource(event.target.value); setResult(""); }} /></label>
+        <label><span>{inputFormat} 입력 · {new Blob([source]).size.toLocaleString("ko-KR")} bytes</span><HighlightedTextarea language={inputFormat.toLowerCase()} aria-label={`${inputFormat} 입력`} value={source} onChange={(event) => { setSource(event.target.value); setResult(""); }} /></label>
         {mode === "SCHEMA"
-          ? <label><span>JSON Schema 입력</span><textarea aria-label="JSON Schema 입력" value={schemaSource} spellCheck={false} onChange={(event) => { setSchemaSource(event.target.value); setResult(""); }} /></label>
-          : <label><span>{mode === "CONVERT" ? `${outputFormat} 결과` : mode === "JAVA" ? "Java record 초안" : "TypeScript Interface 초안"}</span><textarea aria-label="변환 결과" value={result} readOnly spellCheck={false} placeholder="변환 결과가 여기에 표시됩니다." /></label>}
+          ? <label><span>JSON Schema 입력</span><HighlightedTextarea language="json" aria-label="JSON Schema 입력" value={schemaSource} onChange={(event) => { setSchemaSource(event.target.value); setResult(""); }} /></label>
+          : <label><span>{mode === "CONVERT" ? `${outputFormat} 결과` : mode === "JAVA" ? "Java record 초안" : "TypeScript Interface 초안"}</span><HighlightedTextarea language={mode === "CONVERT" ? outputFormat.toLowerCase() : mode === "JAVA" ? "java" : "typescript"} aria-label="변환 결과" value={result} readOnly placeholder="변환 결과가 여기에 표시됩니다." /></label>}
       </div>
       {errorMessage ? <p className="field-error" role="alert">{errorMessage}</p> : null}
       {mode === "SCHEMA" && result ? <pre className={`tool-result-card${result.startsWith("✓") ? "" : " error-state"}`} aria-live="polite">{result}</pre> : null}
       <div className="utility-result-actions"><span>{parsedPreview !== undefined ? "✓ 입력 문법을 해석할 수 있습니다." : "입력 문법을 확인하는 중입니다."}</span><button type="button" className="ghost-button" disabled={!result} onClick={() => void copyText(result).then(() => applicationNotification.success("결과를 복사했습니다."))}>복사</button><button type="button" className="ghost-button" disabled={!result} onClick={() => downloadText(outputFileName, result)}>다운로드</button></div>
-      {parsedPreview !== undefined ? <details className="json-tree-preview"><summary>JSON Tree 형태로 구조 확인</summary><pre>{JSON.stringify(parsedPreview, null, 2)}</pre></details> : null}
+      {parsedPreview !== undefined ? <details className="json-tree-preview"><summary>JSON Tree 형태로 구조 확인</summary><HighlightedCode language="json" code={JSON.stringify(parsedPreview, null, 2)} /></details> : null}
       <div className="utility-warning"><strong>{mode === "SCHEMA" ? "Schema 지원 범위" : "DTO 생성 안내"}</strong> {mode === "SCHEMA" ? "학습용 검증기는 type, required, properties, items, enum을 지원합니다. oneOf, anyOf, $ref 같은 고급 키워드는 별도 Schema 라이브러리가 필요한 확장 과제입니다." : "생성 코드는 데이터 한 건을 보고 추론한 초안입니다. nullable, 배열의 여러 타입, 날짜·금액 타입과 Validation은 프로젝트 규칙에 맞게 검토해 주세요."}</div>
       <UtilityHelpDialog isOpen={helpOpen} title="Data Converter" description="서로 다른 구조화 데이터 형식을 하나의 JavaScript 값으로 바꾼 뒤 원하는 형식으로 출력합니다." onClose={() => setHelpOpen(false)}>
         <article><h3>처리 흐름</h3><ol><li>입력 포맷의 파서로 문법을 검증합니다.</li><li>공통 객체·배열 구조로 변환합니다.</li><li>키 정렬 옵션을 적용합니다.</li><li>선택한 포맷 또는 DTO 코드로 직렬화합니다.</li></ol></article>
