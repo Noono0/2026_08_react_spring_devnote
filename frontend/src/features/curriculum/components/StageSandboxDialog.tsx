@@ -12,7 +12,7 @@
  */
 import { SandpackCodeEditor, SandpackConsole, SandpackLayout, SandpackPreview, SandpackProvider, useSandpack } from "@codesandbox/sandpack-react";
 import type { LearningGuide } from "@/features/curriculum/data/learningGuides";
-import { sandboxDependencies, sandboxStyles } from "@/features/curriculum/sandbox/sandboxSetup";
+import { sandboxStyles, selectSandboxDependencies } from "@/features/curriculum/sandbox/sandboxSetup";
 import { stageSandboxSources } from "@/features/curriculum/sandbox/stageSandboxes";
 import { ModalDialog } from "@/shared/ui/ModalDialog";
 
@@ -48,7 +48,8 @@ const StageSandboxDialog = ({ learningGuide, isOpen, onRequestClose }: StageSand
           key={learningGuide.guideId}
           template="react-ts"
           files={{ "/App.tsx": source, "/styles.css": sandboxStyles }}
-          customSetup={{ dependencies: sandboxDependencies }}
+          // 이 예제가 import하는 패키지만 설치한다(필요 없는 패키지 때문에 미리보기가 멈추지 않게).
+          customSetup={{ dependencies: selectSandboxDependencies(source) }}
           // initMode "immediate": 사용자가 버튼을 눌러 연 창이므로 "화면에 보이면 시작"을 기다리지 않고 바로 실행한다.
           options={{ activeFile: "/App.tsx", visibleFiles: ["/App.tsx"], recompileMode: "delayed", recompileDelay: 500, initMode: "immediate" }}
         >

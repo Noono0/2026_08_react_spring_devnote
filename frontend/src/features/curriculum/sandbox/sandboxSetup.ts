@@ -18,6 +18,28 @@ export const sandboxDependencies: Record<string, string> = {
   zustand: "5.0.8",
 };
 
+/** import 경로 → 패키지 이름. "react-dom/client" → "react-dom", "@tanstack/react-query" → 그대로, "zustand/middleware" → "zustand" */
+export const toPackageName = (specifier: string): string =>
+  specifier.startsWith("@") ? specifier.split("/").slice(0, 2).join("/") : specifier.split("/")[0] ?? specifier;
+
+/**
+ * 예제가 실제로 import하는 패키지만 골라 설치 목록을 만든다(react·react-dom은 항상 포함).
+ *
+ * ★ 왜 전부 넣지 않을까?
+ *   목록의 패키지는 쓰지 않아도 편집기가 모두 내려받는다. 그중 하나라도 받기에 실패하면
+ *   React만 쓰는 예제까지 미리보기가 "로딩 중"에서 멈춰 흰 화면이 된다.
+ *   꼭 필요한 것만 넣으면 더 빨리 뜨고, 실패할 곳도 줄어든다.
+ */
+export const selectSandboxDependencies = (source: string): Record<string, string> => {
+  const selected: Record<string, string> = { react: sandboxDependencies.react ?? "", "react-dom": sandboxDependencies["react-dom"] ?? "" };
+  for (const match of source.matchAll(/from "([^".][^"]*)"/g)) {
+    const packageName = toPackageName(match[1] ?? "");
+    const version = sandboxDependencies[packageName];
+    if (version) selected[packageName] = version;
+  }
+  return selected;
+};
+
 /** 모든 예제가 함께 쓰는 최소 스타일. 예제 코드는 이 클래스 이름만 쓴다. */
 export const sandboxStyles = `
 * { box-sizing: border-box; }

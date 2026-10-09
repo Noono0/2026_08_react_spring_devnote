@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { roadmapLearningGuides } from "@/features/curriculum/data/learningGuides";
-import { sandboxDependencies } from "./sandboxSetup";
+import { sandboxDependencies, selectSandboxDependencies, toPackageName } from "./sandboxSetup";
 import { stageSandboxSources } from "./stageSandboxes";
 
 describe("stageSandboxes", () => {
@@ -20,10 +20,15 @@ describe("stageSandboxes", () => {
     Object.entries(stageSandboxSources).forEach(([guideId, source]) => {
       for (const match of source.matchAll(importPattern)) {
         const specifier = match[1] ?? "";
-        // "react-dom/client" → "react-dom", "@tanstack/react-query" → 그대로, "zustand/middleware" → "zustand"
-        const packageName = specifier.startsWith("@") ? specifier.split("/").slice(0, 2).join("/") : specifier.split("/")[0] ?? "";
-        expect(sandboxDependencies[packageName], `${guideId}: ${specifier}`).toBeDefined();
+        expect(sandboxDependencies[toPackageName(specifier)], `${guideId}: ${specifier}`).toBeDefined();
       }
     });
+  });
+
+  it("예제마다 실제로 쓰는 패키지만 설치한다(React만 쓰는 예제는 react·react-dom만)", () => {
+    expect(Object.keys(selectSandboxDependencies(stageSandboxSources.todo ?? "")).sort()).toEqual(["react", "react-dom"]);
+    expect(Object.keys(selectSandboxDependencies(stageSandboxSources.zustand ?? "")).sort()).toEqual(["react", "react-dom", "zustand"]);
+    expect(Object.keys(selectSandboxDependencies(stageSandboxSources.product ?? "")).sort())
+      .toEqual(["@hookform/resolvers", "react", "react-dom", "react-hook-form", "zod"]);
   });
 });
