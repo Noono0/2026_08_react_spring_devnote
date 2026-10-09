@@ -611,7 +611,7 @@ scp -i <키> opc@<공인IP>:~/devnote-backups/*.gz ./
 | 순서 | 항목 | 현재 상태 | 공개 전 조치 |
 |---|---|---|---|
 | 1 | 웹 크롤러 API 인증 | ✅ 2026-10-08 적용. `CrawlerAccessInterceptor`가 `/api/v1/utilities/crawler/**` 전체를 슈퍼관리자 전용으로 막음(401/403). 운영은 `CRAWLER_BROWSER_MODE=remote`가 기본이라 이 서버에서 Chromium을 띄우지 않음 | 크롤러를 쓰려면 `.env.app`에 `CRAWLER_REMOTE_BROWSER_URL`(Tailscale 사설망의 PC Chrome 주소)을 넣는다. 설정 순서는 [크롤러 가이드](crawler.md#원격-브라우저로-실행-내-pc--tailscale) |
-| 2 | 비로그인 요청의 회원 처리 | `CurrentMemberProvider` 가 세션이 없으면 1번 회원(슈퍼관리자)으로 처리하고 `X-Member-Id` 헤더로 다른 회원도 지정 가능. 학습 문서·다이어그램·파일 업로드가 이 방식을 사용 | 운영 프로필에서 헤더·기본값 대체를 끄고, 업로드·다이어그램은 로그인을 요구. (24시간 지난 미사용 `TEMP` 파일은 매일 자동 정리됨) |
+| 2 | 비로그인 요청의 회원 처리 | ✅ 2026-10-09 적용. 운영 `compose.app.yml`이 `AUTH_ALLOW_DEVELOPMENT_MEMBER=false`로 고정되어 `CurrentMemberProvider`가 로그인 세션만 인정하고 `X-Member-Id`를 무시함(없으면 401). 학습 문서 조회는 계속 공개 | 없음. 로컬은 학습용 회원 전환이 그대로 동작 |
 | 3 | 서버 정규식 실행 제한 | ✅ 2026-10-08 적용. 입력을 `DeadlineCharSequence`로 감싸 `charAt()`마다 1초 제한·중단 신호를 확인하므로, 사전 검사를 통과한 느린 패턴도 작업 스레드 계산이 실제로 멈춤(`JavaRegexServiceTest`가 느린 요청 2번 뒤 정상 요청 처리를 확인) | 없음 |
 | 4 | 관리자 비밀번호 교체 | 5번 절의 경고처럼 첫 기동 뒤에는 해시 변경이 반영되지 않음 | 공개 전에 SQL 로 비밀번호를 교체하고 로그인 확인 |
 | 5 | 로컬 DEBUG 로그의 비밀번호 | `MethodLoggingAspect` 가 `MemberPasswordService.encode/matches` 의 문자열 인자를 그대로 기록(운영 INFO 레벨에서는 출력 안 됨) | 비밀번호 서비스는 로깅 대상에서 제외 |

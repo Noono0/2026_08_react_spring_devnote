@@ -53,6 +53,9 @@ server:
 
 auth:
   remember-me-duration: ${AUTH_REMEMBER_ME_DURATION:30d}
+  # 로그인하지 않은 요청을 X-Member-Id 헤더 또는 1번 회원으로 대신 처리할지(학습용 회원 전환, CurrentMemberProvider).
+  # 로컬은 true, 운영(compose.app.yml)은 false로 끈다. false면 로그인 세션이 없을 때 401.
+  allow-development-member: ${AUTH_ALLOW_DEVELOPMENT_MEMBER:true}
   # 로그인 무차별 대입 방어(LoginAttemptLimiter): 같은 IP·아이디로 failure-window 안에 max-failures번 틀리면 lock-duration 동안 잠근다.
   login-limit:
     max-failures: ${AUTH_LOGIN_MAX_FAILURES:5}
