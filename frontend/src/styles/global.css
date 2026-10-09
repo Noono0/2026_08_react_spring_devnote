@@ -189,7 +189,19 @@ button.online-practice-option { width: 100%; min-height: 0; background: transpar
 .stage-sandbox-toolbar-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .stage-sandbox-theme { display: inline-flex; align-items: center; gap: 6px; color: var(--text-primary); font-weight: 700; }
 .stage-sandbox-theme select { min-height: 36px; padding: 4px 8px; border: 1px solid var(--border-color); border-radius: 9px; color: var(--text-primary); background: var(--background-panel); }
-.stage-sandbox-layout { --sp-layout-height: 560px; border-radius: 12px; }
+/* 크기는 StageSandboxPanel이 .stage-sandbox-frame에 CSS 변수(--sp-layout-height, --sandbox-editor-width)로 넣는다. */
+.stage-sandbox-layout { border-radius: 12px; }
+.stage-sandbox-body .stage-sandbox-layout > .stage-sandbox-editor { flex: 0 0 var(--sandbox-editor-width, 50%); min-width: 0; }
+/* 크기 조절 손잡이. touch-action: none은 터치로 끌 때 화면이 대신 스크롤되지 않게 한다. */
+.stage-sandbox-resize-handle {
+  display: flex; align-items: center; justify-content: center; padding: 0; border: 0; border-radius: 0;
+  color: var(--text-secondary); background: var(--border-color); box-shadow: none; touch-action: none; user-select: none;
+}
+.stage-sandbox-resize-handle.vertical { flex: 0 0 10px; align-self: stretch; cursor: col-resize; }
+.stage-sandbox-layout .stage-sandbox-resize-handle.vertical { min-height: 0; }
+.stage-sandbox-resize-handle.horizontal { width: 100%; min-height: 0; height: 12px; margin-top: 4px; border-radius: 6px; cursor: row-resize; }
+.stage-sandbox-resize-handle:hover, .stage-sandbox-resize-handle:focus-visible { color: #fff; background: var(--primary-color); filter: none; }
+.stage-sandbox-resize-handle:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
 /* Sandpack 스타일이 나중에 붙어 같은 우선순위 규칙을 덮으므로 .stage-sandbox-body를 앞에 붙였다.
    (높이가 0이 되면 콘솔이 안 보이고, 콘솔 지우기 버튼이 위 미리보기의 새로고침 버튼과 겹친다) */
 .stage-sandbox-body .stage-sandbox-console { height: 160px; border-radius: 12px; }
@@ -203,6 +215,8 @@ button.online-practice-option { width: 100%; min-height: 0; background: transpar
   .stage-sandbox-body .stage-sandbox-layout { flex-direction: column; }
   .stage-sandbox-body .stage-sandbox-layout > .stage-sandbox-editor, .stage-sandbox-body .stage-sandbox-layout > .stage-sandbox-preview { flex: none; height: 380px; }
   .stage-sandbox-toggle, .stage-sandbox-body { padding-right: 14px; padding-left: 14px; }
+  /* 좁은 화면은 위아래로 쌓여 좌우 비율·높이 조절이 의미가 없고, 터치 스크롤과 겹치므로 손잡이를 숨긴다. */
+  .stage-sandbox-resize-handle { display: none; }
 }
 .online-practice-option:hover, .online-practice-option:focus-visible { border-color: var(--primary-color); background: var(--primary-soft); }
 .online-practice-option strong { color: var(--primary-color); font-size: 14px; }

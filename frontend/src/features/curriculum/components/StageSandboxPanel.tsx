@@ -12,18 +12,24 @@
  *     테마를 바꾸면 이 컴포넌트가 다시 그려지며 객체를 새로 만들게 되므로, useMemo로 단계(source)가 같으면 같은 객체를 쓴다.
  *     미리보기 색은 files를 바꾸지 않고 PreviewThemeSync가 /styles.css 한 파일만 updateFile로 바꾼다(고친 App.tsx는 그대로).
  *
+ * [크기 조절]
+ *   편집기·미리보기 사이 세로 막대로 좌우 비율, 아래 가로 막대로 높이를 바꾼다(SandboxResizeHandle).
+ *   값은 stageSandboxStore에 저장되고, 아래 frameStyle의 CSS 변수로 화면에 반영된다.
+ *   760px 이하 좁은 화면은 위아래로 쌓이므로 손잡이를 숨긴다(global.css).
+ *
  * [지연 로딩]
  *   Sandpack과 예제 25개 원문은 크다. StageSandboxSection이 lazy()로 불러와,
  *   편집기 영역을 펼쳤을 때만 내려받는다(첫 화면 속도에 영향 없음).
  */
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef, type CSSProperties } from "react";
 import { SandpackCodeEditor, SandpackConsole, SandpackLayout, SandpackPreview, SandpackProvider, useSandpack } from "@codesandbox/sandpack-react";
 import { useApplicationUiStore } from "@/app/state/applicationUiStore";
+import { SandboxResizeHandle } from "@/features/curriculum/components/SandboxResizeHandle";
 import type { LearningGuide } from "@/features/curriculum/data/learningGuides";
 import { selectSandboxDependencies } from "@/features/curriculum/sandbox/sandboxSetup";
 import { createSandboxStyles, isSandboxThemeChoice, resolveSandboxTheme, sandboxEditorThemes, sandboxThemeChoices, sandboxThemeLabels } from "@/features/curriculum/sandbox/sandboxThemes";
 import { stageSandboxSources } from "@/features/curriculum/sandbox/stageSandboxes";
-import { useStageSandboxStore } from "@/features/curriculum/state/stageSandboxStore";
+import { SANDBOX_EDITOR_WIDTH_RANGE, SANDBOX_LAYOUT_HEIGHT_RANGE, useStageSandboxStore } from "@/features/curriculum/state/stageSandboxStore";
 
 interface StageSandboxPanelProperties {
   learningGuide: LearningGuide;
@@ -67,6 +73,40 @@ const StageSandboxPanel = ({ learningGuide }: StageSandboxPanelProperties) => {
   }, [source]);
   const customSetup = useMemo(() => (source ? { dependencies: selectSandboxDependencies(source) } : undefined), [source]);
 
+  // ── 크기 조절 ──────────────────────────────────────────
+  const editorWidthPercent = useStageSandboxStore((state) => state.editorWidthPercent);
+  const layoutHeight = useStageSandboxStore((state) => state.layoutHeight);
+  const setEditorWidthPercent = useStageSandboxStore((state) => state.setEditorWidthPercent);
+  const setLayoutHeight = useStageSandboxStore((state) => state.setLayoutHeight);
+  // 편집기·미리보기를 감싼 상자. 포인터 위치를 "상자 안에서 몇 %·몇 px인지"로 바꿀 때 상자 위치가 필요하다.
+  const frameRef = useRef<HTMLDivElement>(null);
+
+  /** 세로 막대를 끌면: 상자 왼쪽 끝에서 포인터까지 거리 ÷ 상자 너비 = 편집기 너비(%) */
+  const resizeWidthByPointer = (clientX: number): void => {
+    const frameRectangle = frameRef.current?.getBoundingClientRect();
+    if (!frameRectangle || frameRectangle.width === 0) return;
+    setEditorWidthPercent(((clientX - frameRectangle.left) / frameRectangle.width) * 100);
+  };
+
+  /** 가로 막대를 끌면: 상자 위쪽 끝에서 포인터까지 거리 = 새 높이(px) */
+  const resizeHeightByPointer = (clientY: number): void => {
+    const frameRectangle = frameRef.current?.getBoundingClientRect();
+    if (frameRectangle) setLayoutHeight(clientY - frameRectangle.top);
+  };
+
+  // 방향키 한 번에 바꿀 양. 지금 값은 getState()로 "가장 최신 값"을 읽는다.
+  // (렌더링 때 받아 둔 값을 쓰면 키를 빠르게 여러 번 누를 때 옛날 값으로 계산되는 stale closure가 생길 수 있다)
+  const stepEditorWidth = (direction: -1 | 1, large: boolean): void =>
+    setEditorWidthPercent(useStageSandboxStore.getState().editorWidthPercent + direction * (large ? 15 : 5));
+  const stepLayoutHeight = (direction: -1 | 1, large: boolean): void =>
+    setLayoutHeight(useStageSandboxStore.getState().layoutHeight + direction * (large ? 120 : 40));
+
+  // CSS 변수로 크기를 넘긴다. 타입 단언(as) 없이 "--"로 시작하는 이름을 쓸 수 있게 타입을 넓혔다.
+  const frameStyle: CSSProperties & Record<`--${string}`, string> = {
+    "--sandbox-editor-width": `${editorWidthPercent}%`,
+    "--sp-layout-height": `${layoutHeight}px`,
+  };
+
   if (!source || !sandpackFiles) return <p className="state-panel">이 단계에는 아직 편집기 예제가 없습니다.</p>;
 
   return (
@@ -102,10 +142,26 @@ const StageSandboxPanel = ({ learningGuide }: StageSandboxPanelProperties) => {
           <ResetButton />
         </div>
       </div>
-      <SandpackLayout className="stage-sandbox-layout">
-        <SandpackCodeEditor showLineNumbers showTabs={false} wrapContent className="stage-sandbox-editor" />
-        <SandpackPreview showOpenInCodeSandbox={false} className="stage-sandbox-preview" />
-      </SandpackLayout>
+      <div ref={frameRef} className="stage-sandbox-frame" style={frameStyle}>
+        <SandpackLayout className="stage-sandbox-layout">
+          <SandpackCodeEditor showLineNumbers showTabs={false} wrapContent className="stage-sandbox-editor" />
+          <SandboxResizeHandle
+            orientation="vertical"
+            label={`편집기 너비 조절 (지금 ${editorWidthPercent}%)`}
+            onDrag={(clientX) => resizeWidthByPointer(clientX)}
+            onStep={stepEditorWidth}
+            onReset={() => setEditorWidthPercent(SANDBOX_EDITOR_WIDTH_RANGE.initial)}
+          />
+          <SandpackPreview showOpenInCodeSandbox={false} className="stage-sandbox-preview" />
+        </SandpackLayout>
+        <SandboxResizeHandle
+          orientation="horizontal"
+          label={`편집기 높이 조절 (지금 ${layoutHeight}px)`}
+          onDrag={(_clientX, clientY) => resizeHeightByPointer(clientY)}
+          onStep={stepLayoutHeight}
+          onReset={() => setLayoutHeight(SANDBOX_LAYOUT_HEIGHT_RANGE.initial)}
+        />
+      </div>
       {/* console.log 결과(20단계 렌더링 횟수 등)를 여기서 본다. 이름 없는 빈 상자로 보이지 않게 제목을 붙였다. */}
       <p className="stage-sandbox-console-title">
         <strong>콘솔</strong> 코드의 <code>console.log()</code> 출력이 여기에 나옵니다. 비어 있으면 아직 출력한 내용이 없는 것입니다.
