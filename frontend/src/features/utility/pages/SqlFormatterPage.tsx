@@ -2,7 +2,8 @@
  * SqlFormatterPage.tsx — SQL 전용 정리기 (dpriver Instant SQL Formatter의 기본 기능을 따른 화면)
  *
  * [화면 구성] 위에서 아래로
- *   SQL 입력 → 옵션(버튼 묶음) → 버튼(정리·압축·예제·초기화·결과를 입력으로) → 테이블·칼럼 코멘트(선택) → 결과(복사·다운로드)
+ *   SQL 입력 → 옵션 표(이름|버튼|이름|버튼, 입력 폼처럼) → 버튼(정리·압축·예제·초기화·결과를 입력으로·옵션 기본값)
+ *   → 테이블·칼럼 코멘트(선택) → 결과(복사·다운로드)
  *
  * [옵션 버튼 묶음]
  *   여러 값 중 하나를 고르는 옵션은 select 대신 버튼 묶음(segmented-buttons)으로 보여 준다. 고른 버튼만 밝게 칠한다.
@@ -16,7 +17,7 @@
  *
  * 실제 변환: utils/sqlFormatter.ts(정리), sqlCommentDictionary.ts(코멘트 읽기), sqlCodeOutput.ts(Java 코드 출력)
  */
-import { useState, type KeyboardEvent } from "react";
+import { useId, useState, type KeyboardEvent, type ReactNode } from "react";
 import { UtilityHelpDialog, UtilityPageTitle } from "@/features/utility/components/UtilityHelpDialog";
 import { copyText, downloadText } from "@/features/utility/utils/browserFileUtils";
 import { minifySource } from "@/features/utility/utils/sourceFormatter";
@@ -73,19 +74,35 @@ const commentStyleOptions: Array<ChoiceOption<SqlCommentStyle>> = [
 ];
 const outputOptions: Array<ChoiceOption<SqlOutputTarget>> = (["SQL", "JAVA_STRING", "JAVA_STRING_BUILDER"] as const).map((target) => ({ value: target, label: sqlOutputTargetLabels[target] }));
 
+/**
+ * 옵션 한 칸: 왼쪽 이름 칸 + 오른쪽 버튼 칸(입력 폼 표처럼).
+ * 두 칸을 Fragment로 돌려줘서 바깥 CSS grid(이름|버튼|이름|버튼)의 칸이 되게 한다.
+ * aria-labelledby: 버튼 묶음(group)의 이름을 왼쪽 이름 칸 글자로 연결한다.
+ */
+function OptionField({ label, children }: { label: string; children: (labelId: string) => ReactNode }) {
+  const labelId = useId();
+  return (
+    <>
+      <span className="sql-formatter-option-label" id={labelId}>{label}</span>
+      <div className="sql-formatter-option-control">{children(labelId)}</div>
+    </>
+  );
+}
+
 /** 여러 값 중 하나를 고르는 버튼 묶음. 고른 버튼만 밝게(active) 칠한다. */
 function ChoiceButtons<T extends string>({ label, value, options, onChange }: { label: string; value: T; options: Array<ChoiceOption<T>>; onChange: (value: T) => void }) {
   return (
-    <div className="sql-formatter-option">
-      <span aria-hidden="true">{label}</span>
-      <div className="segmented-buttons" role="group" aria-label={label}>
-        {options.map((option) => (
-          <button type="button" key={option.value} className={option.value === value ? "active" : undefined} aria-pressed={option.value === value} onClick={() => onChange(option.value)}>
-            {option.label}
-          </button>
-        ))}
-      </div>
-    </div>
+    <OptionField label={label}>
+      {(labelId) => (
+        <div className="segmented-buttons" role="group" aria-labelledby={labelId}>
+          {options.map((option) => (
+            <button type="button" key={option.value} className={option.value === value ? "active" : undefined} aria-pressed={option.value === value} onClick={() => onChange(option.value)}>
+              {option.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </OptionField>
   );
 }
 
@@ -160,40 +177,42 @@ export const SqlFormatterPage = () => {
           <textarea aria-label="정리할 SQL 입력" value={source} onChange={(event) => changeSource(event.target.value)} onKeyDown={handleSourceKeyDown} spellCheck={false} />
         </label>
 
+        {/* 옵션 표: 넓은 화면은 "이름|버튼|이름|버튼" 두 쌍씩 4줄, 좁은 화면은 한 쌍씩 */}
         <div className="sql-formatter-options" role="group" aria-label="SQL 정리 옵션">
-          <div className="sql-formatter-option-line">
-            <ChoiceButtons label="정렬 방식" value={options.layout} options={layoutOptions} onChange={(value) => changeOption("layout", value)} />
-            {options.layout === "INDENT" ? (
-              // 들여쓰기: −/+ 버튼으로 1~10칸. output은 바뀐 값을 화면 낭독기에 알려 준다(aria-live).
-              <div className="formatter-indent-stepper" role="group" aria-label="SQL 들여쓰기 칸 수">
-                <span>칸 수</span>
-                <button type="button" className="ghost-button" aria-label="들여쓰기 한 칸 줄이기" disabled={options.indentSize <= SQL_INDENT_RANGE.min} onClick={() => changeIndent(-1)}>−</button>
-                <output aria-live="polite">{options.indentSize}칸</output>
-                <button type="button" className="ghost-button" aria-label="들여쓰기 한 칸 늘리기" disabled={options.indentSize >= SQL_INDENT_RANGE.max} onClick={() => changeIndent(1)}>+</button>
-              </div>
-            ) : null}
-          </div>
-          <div className="sql-formatter-option-line">
-            <ChoiceButtons label="키워드" value={options.keywordCase} options={caseOptions} onChange={(value) => changeOption("keywordCase", value)} />
-            <ChoiceButtons label="함수" value={options.functionCase} options={caseOptions} onChange={(value) => changeOption("functionCase", value)} />
-            <ChoiceButtons label="테이블·칼럼 이름" value={options.identifierCase} options={caseOptions} onChange={(value) => changeOption("identifierCase", value)} />
-          </div>
-          <div className="sql-formatter-option-line">
-            <ChoiceButtons label="쉼표 위치" value={options.commaPosition} options={commaOptions} onChange={(value) => changeOption("commaPosition", value)} />
-            <div className="sql-formatter-option">
-              <span aria-hidden="true">목록·조건</span>
-              <div className="segmented-buttons" role="group" aria-label="목록·조건">
+          <OptionField label="정렬 방식">
+            {(labelId) => (
+              <>
+                <div className="segmented-buttons" role="group" aria-labelledby={labelId}>
+                  {layoutOptions.map((option) => (
+                    <button type="button" key={option.value} className={option.value === options.layout ? "active" : undefined} aria-pressed={option.value === options.layout} onClick={() => changeOption("layout", option.value)}>{option.label}</button>
+                  ))}
+                </div>
+                {options.layout === "INDENT" ? (
+                  // 들여쓰기: −/+ 버튼으로 1~10칸. output은 바뀐 값을 화면 낭독기에 알려 준다(aria-live).
+                  <div className="formatter-indent-stepper" role="group" aria-label="SQL 들여쓰기 칸 수">
+                    <button type="button" className="ghost-button" aria-label="들여쓰기 한 칸 줄이기" disabled={options.indentSize <= SQL_INDENT_RANGE.min} onClick={() => changeIndent(-1)}>−</button>
+                    <output aria-live="polite">{options.indentSize}칸</output>
+                    <button type="button" className="ghost-button" aria-label="들여쓰기 한 칸 늘리기" disabled={options.indentSize >= SQL_INDENT_RANGE.max} onClick={() => changeIndent(1)}>+</button>
+                  </div>
+                ) : null}
+              </>
+            )}
+          </OptionField>
+          <ChoiceButtons label="출력 형식" value={outputTarget} options={outputOptions} onChange={setOutputTarget} />
+          <ChoiceButtons label="키워드" value={options.keywordCase} options={caseOptions} onChange={(value) => changeOption("keywordCase", value)} />
+          <ChoiceButtons label="쉼표 위치" value={options.commaPosition} options={commaOptions} onChange={(value) => changeOption("commaPosition", value)} />
+          <ChoiceButtons label="함수" value={options.functionCase} options={caseOptions} onChange={(value) => changeOption("functionCase", value)} />
+          <OptionField label="목록·조건">
+            {(labelId) => (
+              <div className="segmented-buttons" role="group" aria-labelledby={labelId}>
                 <ToggleButton label="한 줄에 하나" pressed={options.stackLists} onChange={(pressed) => changeOption("stackLists", pressed)} />
                 <ToggleButton label="AS 별칭 맞춤" pressed={options.alignAliases} onChange={(pressed) => changeOption("alignAliases", pressed)} />
                 <ToggleButton label="AND/OR를 WHERE 아래에" pressed={options.logicalUnderKeyword} onChange={(pressed) => changeOption("logicalUnderKeyword", pressed)} />
               </div>
-            </div>
-          </div>
-          <div className="sql-formatter-option-line">
-            <ChoiceButtons label="출력 형식" value={outputTarget} options={outputOptions} onChange={setOutputTarget} />
-            <ChoiceButtons label="주석 형식" value={options.commentStyle} options={commentStyleOptions} onChange={(value) => changeOption("commentStyle", value)} />
-            <button type="button" className="ghost-button sql-formatter-reset" onClick={() => setOptions(defaultSqlFormatOptions)}>옵션 기본값으로</button>
-          </div>
+            )}
+          </OptionField>
+          <ChoiceButtons label="테이블·칼럼 이름" value={options.identifierCase} options={caseOptions} onChange={(value) => changeOption("identifierCase", value)} />
+          <ChoiceButtons label="주석 형식" value={options.commentStyle} options={commentStyleOptions} onChange={(value) => changeOption("commentStyle", value)} />
         </div>
 
         <div className="sql-formatter-actions">
@@ -202,6 +221,7 @@ export const SqlFormatterPage = () => {
           <button type="button" className="ghost-button" onClick={() => { changeSource(exampleSql); setCommentSource(exampleComments); }}>예제</button>
           <button type="button" className="ghost-button" onClick={() => changeSource("")}>초기화</button>
           <button type="button" className="ghost-button" disabled={!resultSql} onClick={() => changeSource(resultSql)}>결과를 입력으로</button>
+          <button type="button" className="ghost-button sql-formatter-reset" onClick={() => setOptions(defaultSqlFormatOptions)}>옵션 기본값으로</button>
         </div>
 
         <details className="sql-formatter-comments" open={commentSource.trim() !== "" || undefined}>
