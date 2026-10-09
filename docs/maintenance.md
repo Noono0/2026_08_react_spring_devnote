@@ -2,6 +2,14 @@
 
 [문서 목록으로](../README.md) · [작업 규칙](../AGENTS.md) · [검증 명령](verification.md)
 
+## 2026-10-09 — 학습 화면 온라인 실습(StackBlitz·Codespaces)
+
+- **화면**: 1~25단계 제목 옆에 `▶ 온라인에서 실습` 메뉴(`OnlinePracticeMenu`, `<details>` 기반)를 두어 StackBlitz와 Codespaces 중 고르게 했습니다. 주소는 `onlinePracticeLinks.ts`가 만들고, StackBlitz는 단계 파일과 화면 주소를 바로 엽니다.
+- **StackBlitz**: 백엔드가 없으므로 `dev:online` 스크립트가 `msw init public --no-save`(git 제외 파일인 `mockServiceWorker.js` 생성) 후 `vite --mode online`(`.env.online`, `VITE_DATA_SOURCE=mock`)으로 시작합니다.
+- **Codespaces**: `.devcontainer/devcontainer.json`(JDK 21·Node 22·docker-in-docker, 프론트 의존성 설치)과 `scripts/start-codespace.sh`(compose.dev.yml MySQL → bootRun → pnpm dev)를 추가했습니다. 정적 검사가 모든 `.json`을 엄격한 JSON으로 검사하므로 devcontainer.json에는 주석을 넣지 않았습니다.
+- **검증**: 프론트엔드 `eslint`·`tsc -b` 통과, Vitest 전체 108개 파일·338개 테스트 통과, `vite build` 성공. 로컬에서 `vite --mode online`이 더미 데이터 모드로 시작해 MSW 등록을 시도하는 것과, 메뉴·링크가 데스크톱 1280px·모바일 375px에서 넘침 없이 보이는 것을 확인했습니다. `bash -n`으로 시작 스크립트 문법 확인.
+- **미검증 범위**: 앱 내장 브라우저가 StackBlitz의 웹소켓·리소스와 서비스 워커 등록을 막아, StackBlitz에서 실제 설치·실행(특히 `.npmrc`의 `engine-strict`와 Node 22.12 요구, pnpm 11)과 MSW 동작은 확인하지 못했습니다. Codespaces 생성·실행도 GitHub 로그인이 필요해 확인하지 않았습니다. 일반 Chrome에서 메뉴의 두 링크를 직접 열어 확인해야 합니다.
+
 ## 2026-10-09 — 운영에서 학습용 회원 대체 끄기, CI 정적 검사 수정
 
 - **보안 체크리스트 2번**: `CurrentMemberProvider`에 `auth.allow-development-member`(`AUTH_ALLOW_DEVELOPMENT_MEMBER`, 기본 `true`)를 추가했습니다. `false`면 로그인 세션만 인정하고 `X-Member-Id` 헤더·1번 회원 대체 없이 401을 돌려줍니다. 운영 `compose.app.yml`은 `.env`로 덮어쓸 수 없게 `"false"`로 고정했습니다. 로컬 학습용 회원 전환은 그대로입니다. 학습 문서 조회 API는 회원 정보를 쓰지 않아 운영에서도 공개이고, 쓰기·업로드·개인 다이어그램만 로그인이 필요합니다.

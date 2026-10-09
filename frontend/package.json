@@ -6,6 +6,7 @@
   "packageManager": "pnpm@11.19.0",
   "scripts": {
     "dev": "vite",
+    "dev:online": "msw init public --no-save && vite --mode online",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "lint": "eslint .",

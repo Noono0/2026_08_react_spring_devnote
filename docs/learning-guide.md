@@ -40,6 +40,17 @@ Docker 실행 후 `/react`에서 아래 단계를 확인할 수 있습니다. �
 - **기본 과정(1~14단계)**: 뒤 단계로 갈수록 난이도가 낮아지지 않도록 배치했습니다. 13단계까지는 브라우저 안의 상태와 로컬 비동기 API만 사용하고, 14단계 문서 CRUD에서 처음으로 실제 Spring Boot·MyBatis·MySQL에 연결해 기본 과정을 마칩니다. `learningGuides.test.ts`가 이 순서를 검사합니다.
 - **심화 과정(15~25단계)**: 기본 과정을 마친 뒤 무한 스크롤·동적 폼·Context·React 19·커스텀 훅·성능·전역 상태·URL 상태·포커스·Suspense·테스트를 주제별로 다룹니다. 앞 단계의 개념을 이어 쓰는 순서이므로 난이도 점수는 주제에 따라 오르내립니다.
 
+### 온라인에서 실습 (StackBlitz · Codespaces)
+
+1~25단계 화면 제목 옆의 `▶ 온라인에서 실습`을 누르면 설치 없이 그 단계 소스를 고쳐 보는 방법을 고를 수 있습니다. 둘 다 GitHub의 `main` 브랜치를 열며, 고친 내용은 원래 저장소에 반영되지 않습니다.
+
+| 선택 | 실행 범위 | 특징 |
+|---|---|---|
+| StackBlitz에서 바로 열기 | `frontend/`만 브라우저 안에서 실행 | 로그인 불필요. `pnpm run dev:online`(`.env.online`, 더미 데이터 MSW)으로 시작하고, 해당 단계 파일(`file=`)과 화면(`initialPath=`)을 바로 엽니다. 고친 내용을 남기려면 StackBlitz에 로그인해 Fork합니다. |
+| Codespaces에서 전체 실행 | 저장소 전체(React + Spring Boot + MySQL) | GitHub 로그인 필요. `.devcontainer/devcontainer.json`이 JDK 21·Node 22·Docker를 준비하고 프론트엔드 의존성을 설치합니다. 열린 뒤 터미널에서 `bash scripts/start-codespace.sh`를 실행하면 MySQL → 백엔드 → 프론트엔드 순서로 켜지고 5173 포트 화면이 열립니다. 14단계 실제 API 실습도 됩니다. |
+
+주소는 `frontend/src/features/curriculum/data/onlinePracticeLinks.ts`가 만듭니다. 단계에서 먼저 열 파일은 학습 가이드의 `relatedFiles` 중 첫 `src/…ts(x)` 파일입니다. Codespaces는 개인 계정의 월 무료 사용 시간 안에서 동작하므로 다 쓴 Codespace는 GitHub에서 중지·삭제합니다.
+
 ### 화면별 학습 가이드 아이콘
 
 모든 화면 오른쪽 상단에 `?` 아이콘이 있습니다. 누르면 현재 화면 전용 학습 가이드 모달이 열립니다.

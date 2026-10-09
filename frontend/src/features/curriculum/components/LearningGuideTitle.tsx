@@ -2,7 +2,8 @@ import type { ReactNode } from "react";
 import { LearningGuideButton } from "@/features/curriculum/components/LearningGuideButton";
 import { FeatureHelpButton } from "@/features/help/FeatureHelpButton";
 import type { FeatureHelpTopic } from "@/features/help/featureHelpGuides";
-import { findLearningGuideById } from "@/features/curriculum/data/learningGuides";
+import { findLearningGuideById, ROADMAP_LAST_STAGE_NUMBER } from "@/features/curriculum/data/learningGuides";
+import { OnlinePracticeMenu } from "@/features/curriculum/components/OnlinePracticeMenu";
 
 interface LearningGuideTitleProperties {
   children: ReactNode;
@@ -21,6 +22,10 @@ export const LearningGuideTitle = ({ children, guideId, helpTopic }: LearningGui
     <div className="page-title-with-guide">
       <h1>{children}</h1>
       {learningGuide ? <LearningGuideButton learningGuide={learningGuide} /> : null}
+      {/* 실제 연습 단계(1~25)에서만 온라인 실습 메뉴를 보여 준다. 0단계(로드맵 안내)·실험실은 해당 없음. */}
+      {learningGuide && learningGuide.stageNumber > 0 && learningGuide.stageNumber <= ROADMAP_LAST_STAGE_NUMBER
+        ? <OnlinePracticeMenu learningGuide={learningGuide} />
+        : null}
       {helpTopic ? <FeatureHelpButton topic={helpTopic} /> : null}
     </div>
   );
