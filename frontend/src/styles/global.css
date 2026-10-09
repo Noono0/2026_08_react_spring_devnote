@@ -187,7 +187,11 @@ button.online-practice-option { width: 100%; min-height: 0; background: transpar
 /* 사이트 안 편집기(Sandpack): 넓은 화면은 편집기·미리보기 좌우(높이 560px), 좁은 화면은 위아래 */
 .stage-sandbox-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; color: var(--text-secondary); font-size: 13px; }
 .stage-sandbox-layout { --sp-layout-height: 560px; border-radius: 12px; }
-.stage-sandbox-console { height: 160px; margin-top: 10px; border-radius: 12px; }
+/* Sandpack 스타일이 나중에 붙어 같은 우선순위 규칙을 덮으므로 .stage-sandbox-body를 앞에 붙였다.
+   (높이가 0이 되면 콘솔이 안 보이고, 콘솔 지우기 버튼이 위 미리보기의 새로고침 버튼과 겹친다) */
+.stage-sandbox-body .stage-sandbox-console { height: 160px; margin-top: 10px; border-radius: 12px; }
+/* 사이트 전체 button 규칙의 min-height(40px)가 Sandpack 아이콘 버튼(새로고침 등, 28px 원형)을 세로로 늘려 겹쳐 보이게 하므로 되돌린다. */
+.stage-sandbox-layout button, .stage-sandbox-console button { min-height: 0; }
 @media (max-width: 760px) {
   /* 위아래로 쌓으면 Sandpack 기본 flex(1 1 0)로 높이가 0이 되므로 편집기·미리보기 높이를 직접 정한다.
      Sandpack 스타일이 나중에 붙어 같은 우선순위면 지므로 .stage-sandbox-body를 앞에 붙여 우선순위를 높였다. */
