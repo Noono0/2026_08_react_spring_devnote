@@ -3,7 +3,8 @@
  * onlinePracticeLinks.ts — 학습 단계를 "설치 없이 온라인에서" 여는 주소 만들기
  * ============================================================================
  *
- * 학습 화면의 "온라인에서 실습" 메뉴가 이 함수들로 두 가지 주소를 만든다.
+ * 학습 화면의 "직접 해 보기" 메뉴(OnlinePracticeMenu)가 이 함수들로 새 탭 주소를 만든다.
+ * (사이트 안 편집기 Sandpack은 주소가 필요 없어 components/StageSandboxDialog.tsx가 맡는다)
  *
  *   StackBlitz : 브라우저 안에서 Node를 돌려 frontend 폴더만 실행한다. 빠르고 로그인 없이 열린다.
  *                백엔드가 없으므로 `pnpm run dev:online`(.env.online, 더미 데이터 MSW)으로 시작한다.
@@ -39,9 +40,18 @@ export const createStackBlitzUrl = (learningGuide: LearningGuide): string => {
   return `https://stackblitz.com/github/${ONLINE_PRACTICE_REPOSITORY}/tree/${ONLINE_PRACTICE_BRANCH}/frontend?${searchParameters.toString()}`;
 };
 
+// [CODESPACES] 시작 ─────────────────────────────────────────────────────────
+/**
+ * Codespaces 선택지를 메뉴에 보여 줄지. false로 바꾸면 메뉴에서만 숨겨진다(설정 파일은 그대로).
+ * 완전히 지우려면 [CODESPACES] 표시가 붙은 코드와 .devcontainer/, scripts/start-codespace.sh를 지운다
+ * (순서는 docs/learning-guide.md "Codespaces 선택지 끄기·지우기").
+ */
+export const SHOW_CODESPACES_OPTION = true;
+
 /**
  * Codespaces 주소. quickstart=1이면 이미 만든 Codespace가 있을 때 새로 만들지 않고 다시 연다.
  * (Codespaces는 특정 파일을 여는 주소 옵션이 없어, 화면에서 열어 볼 파일 경로를 따로 안내한다)
  */
 export const createCodespacesUrl = (): string =>
   `https://codespaces.new/${ONLINE_PRACTICE_REPOSITORY}?quickstart=1&ref=${ONLINE_PRACTICE_BRANCH}`;
+// [CODESPACES] 끝 ───────────────────────────────────────────────────────────
