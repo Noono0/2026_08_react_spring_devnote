@@ -50,8 +50,10 @@ const StageSandboxDialog = ({ learningGuide, isOpen, onRequestClose }: StageSand
           files={{ "/App.tsx": source, "/styles.css": sandboxStyles }}
           // 이 예제가 import하는 패키지만 설치한다(필요 없는 패키지 때문에 미리보기가 멈추지 않게).
           customSetup={{ dependencies: selectSandboxDependencies(source) }}
-          // initMode "immediate": 사용자가 버튼을 눌러 연 창이므로 "화면에 보이면 시작"을 기다리지 않고 바로 실행한다.
-          options={{ activeFile: "/App.tsx", visibleFiles: ["/App.tsx"], recompileMode: "delayed", recompileDelay: 500, initMode: "immediate" }}
+          // ★ initMode는 기본값("lazy": 미리보기가 화면에 보이면 시작)을 그대로 쓴다.
+          //   "immediate"로 바꾸면 개발 모드의 StrictMode가 컴포넌트를 두 번 붙였다 떼는 사이에 미리보기 연결이
+          //   만들어졌다 끊겨, 번들러는 실행을 끝냈는데 화면은 "로딩 중"(흰 화면)에 멈췄다(운영 빌드는 정상).
+          options={{ activeFile: "/App.tsx", visibleFiles: ["/App.tsx"], recompileMode: "delayed", recompileDelay: 500 }}
         >
           <div className="stage-sandbox-toolbar">
             <span>{learningGuide.practiceTasks.length > 0 ? "파일 맨 위 주석의 '해 볼 것'부터 시작해 보세요." : ""}</span>
