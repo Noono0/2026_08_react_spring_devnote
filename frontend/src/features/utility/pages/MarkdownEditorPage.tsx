@@ -1,4 +1,5 @@
 import { useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { HighlightedCode, HighlightedTextarea } from "@/shared/ui/HighlightedTextarea";
 import { MarkdownFormattingToolbar } from "@/features/utility/components/MarkdownFormattingToolbar";
 import { UtilityHelpDialog, UtilityPageTitle } from "@/features/utility/components/UtilityHelpDialog";
 import { copyText, downloadText } from "@/features/utility/utils/browserFileUtils";
@@ -167,48 +168,48 @@ export const MarkdownEditorPage = () => {
         <MarkdownFormattingToolbar onCommand={applyCommand} />
       </section> : null}
       <div className={`markdown-workspace markdown-${viewMode.toLowerCase()}`}>
-        {viewMode !== "PREVIEW" ? <label className="markdown-editor"><span>Markdown 입력 · Ctrl+Z 실행 취소 · Ctrl+Y 다시 실행 · Ctrl+B 굵게 · Ctrl+I 기울임</span><textarea ref={editorReference} aria-label="Markdown 입력" value={source} spellCheck={false} onKeyDown={handleEditorKeyDown} onSelect={updateSelection} onChange={(event) => { updateSourceWithHistory(event.target.value); setSelectionRange({ start: event.target.selectionStart, end: event.target.selectionEnd }); }} /></label> : null}
+        {viewMode !== "PREVIEW" ? <label className="markdown-editor"><span>Markdown 입력 · Ctrl+Z 실행 취소 · Ctrl+Y 다시 실행 · Ctrl+B 굵게 · Ctrl+I 기울임</span><HighlightedTextarea language="markdown" wrapLines ref={editorReference} aria-label="Markdown 입력" value={source} onKeyDown={handleEditorKeyDown} onSelect={updateSelection} onChange={(event) => { updateSourceWithHistory(event.target.value); setSelectionRange({ start: event.target.selectionStart, end: event.target.selectionEnd }); }} /></label> : null}
         {viewMode !== "EDITOR" ? <section className="markdown-preview-panel" aria-label="Markdown 미리보기"><header>미리보기</header><article className="markdown-preview" dangerouslySetInnerHTML={{ __html: renderedHtml }} /></section> : null}
       </div>
       <UtilityHelpDialog isOpen={helpOpen} title="Markdown Editor" description="가벼운 문서 문법을 HTML로 바꾸고 안전하게 미리봅니다." onClose={() => setHelpOpen(false)}>
         <article><h3>버튼으로 서식 적용</h3><p>글자나 여러 줄을 선택하고 툴바 버튼을 누르면 Markdown 문법을 적용합니다. <kbd>Ctrl+Z</kbd>로 실행 취소하고 <kbd>Ctrl+Y</kbd> 또는 <kbd>Ctrl+Shift+Z</kbd>로 다시 실행할 수 있습니다. 본문을 직접 꾸미는 완전한 WYSIWYG 대신 원문과 결과를 함께 배우는 시각적 편집 방식입니다.</p></article>
-        <article><h3>1. 제목 (Headers)</h3><p><code>#</code> 뒤를 한 칸 띄우며, 개수가 많아질수록 제목이 작아집니다.</p><pre><code>{`# 가장 큰 제목 (H1)
+        <article><h3>1. 제목 (Headers)</h3><p><code>#</code> 뒤를 한 칸 띄우며, 개수가 많아질수록 제목이 작아집니다.</p><HighlightedCode language="markdown" code={`# 가장 큰 제목 (H1)
 ## 두 번째로 큰 제목 (H2)
 ### 세 번째로 큰 제목 (H3)
 #### 네 번째 크기 제목 (H4)
 ##### 다섯 번째 크기 제목 (H5)
-###### 가장 작은 제목 (H6)`}</code></pre></article>
-        <article><h3>2. 글자 스타일 (Text Styles)</h3><pre><code>{`*기울임꼴* 또는 _기울임꼴_
+###### 가장 작은 제목 (H6)`} /></article>
+        <article><h3>2. 글자 스타일 (Text Styles)</h3><HighlightedCode language="markdown" code={`*기울임꼴* 또는 _기울임꼴_
 **굵은 글씨** 또는 __굵은 글씨__
 ***굵은 기울임꼴***
 ~~취소선~~
-<u>밑줄</u>`}</code></pre></article>
-        <article><h3>3. 목록 (Lists)</h3><p>순서 없는 목록은 <code>*</code>, <code>+</code>, <code>-</code>를 사용할 수 있습니다. 번호 목록은 모두 <code>1.</code>로 써도 화면에서 순서대로 표시됩니다.</p><pre><code>{`* 사과
+<u>밑줄</u>`} /></article>
+        <article><h3>3. 목록 (Lists)</h3><p>순서 없는 목록은 <code>*</code>, <code>+</code>, <code>-</code>를 사용할 수 있습니다. 번호 목록은 모두 <code>1.</code>로 써도 화면에서 순서대로 표시됩니다.</p><HighlightedCode language="markdown" code={`* 사과
 - 바나나
 + 포도
 
 1. 첫 번째
 1. 두 번째
-1. 세 번째`}</code></pre></article>
-        <article><h3>4. 할 일 목록 (Task Lists)</h3><p>대괄호 안의 공백은 미완료, <code>x</code>는 완료 상태입니다.</p><pre><code>{`- [ ] 아직 안 한 일
-- [x] 이미 끝낸 일`}</code></pre></article>
-        <article><h3>5. 인용구 (Blockquotes)</h3><pre><code>{`> 여기에 중요한 내용을 적거나,
-> 다른 사람의 글을 인용할 때 사용합니다.`}</code></pre></article>
-        <article><h3>6. 코드 넣기 (Code)</h3><p>짧은 코드는 백틱 한 개, 여러 줄은 백틱 세 개와 언어 이름을 사용합니다. 툴바의 언어 선택으로 JavaScript, TypeScript, Python, Java, SQL, JSON, HTML, CSS, Bash 강조를 적용할 수 있습니다.</p><pre><code>{`이곳은 \`짧은 코드\`를 넣는 자리입니다.
+1. 세 번째`} /></article>
+        <article><h3>4. 할 일 목록 (Task Lists)</h3><p>대괄호 안의 공백은 미완료, <code>x</code>는 완료 상태입니다.</p><HighlightedCode language="markdown" code={`- [ ] 아직 안 한 일
+- [x] 이미 끝낸 일`} /></article>
+        <article><h3>5. 인용구 (Blockquotes)</h3><HighlightedCode language="markdown" code={`> 여기에 중요한 내용을 적거나,
+> 다른 사람의 글을 인용할 때 사용합니다.`} /></article>
+        <article><h3>6. 코드 넣기 (Code)</h3><p>짧은 코드는 백틱 한 개, 여러 줄은 백틱 세 개와 언어 이름을 사용합니다. 툴바의 언어 선택으로 JavaScript, TypeScript, Python, Java, SQL, JSON, HTML, CSS, Bash 강조를 적용할 수 있습니다.</p><HighlightedCode language="markdown" code={`이곳은 \`짧은 코드\`를 넣는 자리입니다.
 
 \`\`\`javascript
 const message = "안녕하세요";
 console.log(message);
-\`\`\``}</code></pre></article>
-        <article><h3>7. 링크와 이미지 (Links &amp; Images)</h3><p>안전을 위해 미리보기는 <code>http://</code> 또는 <code>https://</code> 주소만 링크와 이미지로 변환합니다.</p><pre><code>{`[네이버 홈페이지](https://naver.com)
-![이미지 설명글](https://example.com/image.png)`}</code></pre></article>
-        <article><h3>8. 가로선 (Horizontal Rules)</h3><p>아래 세 문법을 모두 구역을 나누는 선으로 표시합니다.</p><pre><code>{`---
+\`\`\``} /></article>
+        <article><h3>7. 링크와 이미지 (Links &amp; Images)</h3><p>안전을 위해 미리보기는 <code>http://</code> 또는 <code>https://</code> 주소만 링크와 이미지로 변환합니다.</p><HighlightedCode language="markdown" code={`[네이버 홈페이지](https://naver.com)
+![이미지 설명글](https://example.com/image.png)`} /></article>
+        <article><h3>8. 가로선 (Horizontal Rules)</h3><p>아래 세 문법을 모두 구역을 나누는 선으로 표시합니다.</p><HighlightedCode language="markdown" code={`---
 ***
-___`}</code></pre></article>
-        <article><h3>9. 표 만들기 (Tables)</h3><p>제목 아래 구분 행의 콜론 위치에 따라 왼쪽·가운데·오른쪽으로 정렬됩니다.</p><pre><code>{`| 이름 | 나이 | 직업 |
+___`} /></article>
+        <article><h3>9. 표 만들기 (Tables)</h3><p>제목 아래 구분 행의 콜론 위치에 따라 왼쪽·가운데·오른쪽으로 정렬됩니다.</p><HighlightedCode language="markdown" code={`| 이름 | 나이 | 직업 |
 | :--- | :---: | ---: |
 | 민수 | 20 | 학생 |
-| 영희 | 25 | 개발자 |`}</code></pre><ul><li><code>:---</code> 왼쪽 정렬</li><li><code>:---:</code> 가운데 정렬</li><li><code>---:</code> 오른쪽 정렬</li></ul></article>
+| 영희 | 25 | 개발자 |`} /><ul><li><code>:---</code> 왼쪽 정렬</li><li><code>:---:</code> 가운데 정렬</li><li><code>---:</code> 오른쪽 정렬</li></ul></article>
         <article><h3>안전한 미리보기</h3><p>Markdown 문자열을 HTML로 바꾼 뒤 DOMPurify로 위험한 태그와 속성을 제거합니다. HTML 다운로드에도 같은 정화 결과를 사용합니다.</p></article>
       </UtilityHelpDialog>
     </section>

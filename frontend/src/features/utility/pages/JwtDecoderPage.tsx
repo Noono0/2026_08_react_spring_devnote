@@ -2,6 +2,7 @@
 // ★ 서명이 진짜인지는 검증하지 않는다(비밀키가 필요하고, 비밀키를 브라우저에 넣으면 안 된다). 진위 확인은 서버의 몫이다.
 
 import { useMemo, useState } from "react";
+import { HighlightedCode } from "@/shared/ui/HighlightedTextarea";
 import { UtilityHelpDialog, UtilityPageTitle } from "@/features/utility/components/UtilityHelpDialog";
 import { copyText } from "@/features/utility/utils/browserFileUtils";
 import { decodeJwt } from "@/features/utility/utils/jwtDecoder";
@@ -30,8 +31,8 @@ export const JwtDecoderPage = () => {
       {decoded ? <>
         <div className="jwt-state-row"><span className={`jwt-state ${decoded.state.toLowerCase()}`}>{stateLabels[decoded.state]}</span><span>서명 데이터 {decoded.signature.length.toLocaleString("ko-KR")}자</span><button type="button" className="ghost-button" onClick={() => setSource("")}>초기화</button></div>
         <div className="jwt-parts-grid">
-          <section className="tool-result-card"><header><h2>Header</h2><button type="button" className="ghost-button" onClick={() => void copyText(JSON.stringify(decoded.header, null, 2)).then(() => applicationNotification.success("Header를 복사했습니다."))}>복사</button></header><pre>{JSON.stringify(decoded.header, null, 2)}</pre></section>
-          <section className="tool-result-card"><header><h2>Payload</h2><button type="button" className="ghost-button" onClick={() => void copyText(JSON.stringify(decoded.payload, null, 2)).then(() => applicationNotification.success("Payload를 복사했습니다."))}>복사</button></header><pre>{JSON.stringify(decoded.payload, null, 2)}</pre></section>
+          <section className="tool-result-card"><header><h2>Header</h2><button type="button" className="ghost-button" onClick={() => void copyText(JSON.stringify(decoded.header, null, 2)).then(() => applicationNotification.success("Header를 복사했습니다."))}>복사</button></header><HighlightedCode language="json" code={JSON.stringify(decoded.header, null, 2)} /></section>
+          <section className="tool-result-card"><header><h2>Payload</h2><button type="button" className="ghost-button" onClick={() => void copyText(JSON.stringify(decoded.payload, null, 2)).then(() => applicationNotification.success("Payload를 복사했습니다."))}>복사</button></header><HighlightedCode language="json" code={JSON.stringify(decoded.payload, null, 2)} /></section>
         </div>
         <section className="jwt-claims-panel"><h2>시간 Claim</h2>{decoded.timeClaims.length === 0 ? <div className="portfolio-state-panel">iat, exp, nbf Claim이 없습니다.</div> : <div>{decoded.timeClaims.map((claim) => <article key={claim.name}><code>{claim.name}</code><strong>{claim.rawValue}</strong><span>{claim.date}</span></article>)}</div>}</section>
       </> : null}

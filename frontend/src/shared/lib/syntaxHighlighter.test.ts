@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { highlightSegments, type SyntaxSegment } from "@/features/utility/utils/syntaxHighlighter";
+import { guessCodeLanguage, highlightSegments, type SyntaxSegment } from "@/shared/lib/syntaxHighlighter";
 
 /** 색이 있는 조각만 "종류:글자"로 모은다 */
 const colored = (segments: SyntaxSegment[]): string[] => segments.filter((segment) => segment.type).map((segment) => `${segment.type}:${segment.text}`);
@@ -38,6 +38,21 @@ describe("문법 색칠 조각", () => {
     expect(colored(highlightSegments("# 제목\n- `code` **굵게** [링크](https://a.b)", "markdown"))).toEqual([
       "heading:# 제목", "tag:-", "string:`code`", "keyword:**굵게**", "property:[링크](https://a.b)",
     ]);
+  });
+
+  it("YAML: 주석·키·문자열·목록 기호·불리언·숫자", () => {
+    expect(colored(highlightSegments("# 설정\nname: 'dev'\nitems:\n  - true\nport: 8080", "yaml"))).toEqual([
+      "comment:# 설정", "property:name", "string:'dev'", "property:items", "tag:  -", "keyword:true", "property:port", "number:8080",
+    ]);
+  });
+
+  it("다른 이름(yml·ts·xml)도 같은 색칠을 쓰고, 형식을 모르는 글은 첫 글자로 짐작한다", () => {
+    expect(highlightSegments("a: 1", "yml")).toEqual(highlightSegments("a: 1", "yaml"));
+    expect(highlightSegments("const a = 1", "ts")).toEqual(highlightSegments("const a = 1", "typescript"));
+    expect(colored(highlightSegments("<a/>", "xml"))).toEqual(["tag:<a", "tag:/>"]);
+    expect(guessCodeLanguage('  {"a": 1}')).toBe("json");
+    expect(guessCodeLanguage("<html>")).toBe("html");
+    expect(guessCodeLanguage("hello")).toBe("text");
   });
 
   it("모르는 언어나 빈 글은 색 없이 그대로 돌려준다", () => {

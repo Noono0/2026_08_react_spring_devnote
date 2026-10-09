@@ -4,6 +4,7 @@
 import { useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthSessionQuery } from "@/features/auth/hooks/useAuthSession";
+import { HighlightedCode, HighlightedTextarea } from "@/shared/ui/HighlightedTextarea";
 import { UtilityHelpDialog, UtilityPageTitle } from "@/features/utility/components/UtilityHelpDialog";
 import { ApiToolGuide } from "@/features/utility/components/ApiToolGuide";
 import { ApiWorkspaceModuleNav } from "@/features/utility/components/ApiWorkspaceModuleNav";
@@ -121,7 +122,7 @@ export const OpenApiStudioPage = () => {
         <button type="button" onClick={() => analyze()}>문서 분석</button>
         <Link className="secondary-link compact-link" to="/utilities/api-workspace">API Workspace</Link>
       </div>
-      <label className="advanced-source-editor"><span>OpenAPI JSON 또는 YAML</span><textarea aria-label="OpenAPI 문서 입력" value={source} spellCheck={false} onChange={(event) => setSource(event.target.value)} /></label>
+      <label className="advanced-source-editor"><span>OpenAPI JSON 또는 YAML</span><HighlightedTextarea language={source.trimStart().startsWith("{") ? "json" : "yaml"} aria-label="OpenAPI 문서 입력" value={source} onChange={(event) => setSource(event.target.value)} /></label>
       {errorMessage ? <p className="field-error advanced-error" role="alert">{errorMessage}</p> : null}
 
       {documentSummary ? (
@@ -148,7 +149,7 @@ export const OpenApiStudioPage = () => {
               {activeOperation ? <><header><div><span className={`http-method method-${activeOperation.method.toLowerCase()}`}>{activeOperation.method}</span><h2>{activeOperation.path}</h2></div><small>{activeOperation.tags.join(" · ")}</small></header><p>{activeOperation.description || activeOperation.summary}</p>
                 <div className="advanced-detail-section"><h3>API Workspace 요청</h3><dl><div><dt>URL</dt><dd><code>{activeOperation.request.url}</code></dd></div><div><dt>인증</dt><dd>{activeOperation.request.authorization.type}</dd></div><div><dt>응답 상태</dt><dd>{activeOperation.responseStatuses.join(", ") || "정의 없음"}</dd></div></dl></div>
                 <div className="advanced-detail-section"><h3>Parameters</h3>{activeOperation.parameters.length > 0 ? <div className="compact-data-table"><div><strong>위치</strong><strong>이름</strong><strong>필수</strong><strong>예제</strong></div>{activeOperation.parameters.map((parameter) => <div key={`${parameter.location}:${parameter.name}`}><span>{parameter.location}</span><code>{parameter.name}</code><span>{parameter.required ? "필수" : "선택"}</span><code>{formatOpenApiExample(parameter.example, "-")}</code></div>)}</div> : <p>정의된 Parameter가 없습니다.</p>}</div>
-                <div className="advanced-detail-section"><h3>Request Body</h3><pre>{activeOperation.requestExample === undefined ? "Request Body 없음" : JSON.stringify(activeOperation.requestExample, null, 2)}</pre></div>
+                <div className="advanced-detail-section"><h3>Request Body</h3><HighlightedCode language="json" code={activeOperation.requestExample === undefined ? "Request Body 없음" : JSON.stringify(activeOperation.requestExample, null, 2)} /></div>
               </> : <div className="portfolio-state-panel">Endpoint를 선택해 주세요.</div>}
             </section>
           </div>

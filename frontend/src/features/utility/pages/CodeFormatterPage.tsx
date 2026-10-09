@@ -10,7 +10,7 @@
 
 import { useDeferredValue, useState } from "react";
 import { Link } from "react-router-dom";
-import { HighlightedTextarea } from "@/features/utility/components/HighlightedTextarea";
+import { HighlightedTextarea } from "@/shared/ui/HighlightedTextarea";
 import { UtilityHelpDialog, UtilityPageTitle } from "@/features/utility/components/UtilityHelpDialog";
 import { copyText, downloadText } from "@/features/utility/utils/browserFileUtils";
 import { defaultFormatterOptions, formatSource, minifySource, type FormatterLanguage, type FormatterOptions } from "@/features/utility/utils/sourceFormatter";

@@ -1,3 +1,5 @@
+import { HighlightedCode, HighlightedTextarea } from "@/shared/ui/HighlightedTextarea";
+import { guessCodeLanguage } from "@/shared/lib/syntaxHighlighter";
 import type { ApiWorkspaceActualRequest, ApiWorkspaceResponse, ResponseBodyView, ResponseViewerSection } from "@/features/utility/types/apiWorkspaceTypes";
 import { formatByteSize, getStatusMeaning, prettyPrintResponseBody } from "@/features/utility/utils/apiWorkspaceUtils";
 
@@ -43,8 +45,8 @@ export const ApiWorkspaceResponseViewer = ({ response, actualRequest, errorMessa
           <div><button type="button" className="ghost-button" onClick={onCopy}>복사</button><button type="button" className="ghost-button" onClick={onDownload}>다운로드</button></div>
         </div>
         {response.truncated ? <div className="api-truncated-notice">응답이 1MB를 넘어 화면에는 앞부분만 표시합니다. 전체 크기: {formatByteSize(response.sizeBytes)}</div> : null}
-        {bodyView === "PRETTY" ? <pre className="api-response-code"><code>{prettyPrintResponseBody(response) || "응답 Body가 없습니다."}</code></pre> : null}
-        {bodyView === "RAW" ? <textarea className="api-code-editor" value={response.body} readOnly spellCheck={false} aria-label="Raw Response Body" /> : null}
+        {bodyView === "PRETTY" ? <HighlightedCode className="api-response-code" language={guessCodeLanguage(response.body)} code={prettyPrintResponseBody(response) || "응답 Body가 없습니다."} /> : null}
+        {bodyView === "RAW" ? <HighlightedTextarea language={guessCodeLanguage(response.body)} className="api-code-editor" value={response.body} readOnly aria-label="Raw Response Body" /> : null}
         {bodyView === "PREVIEW" ? (/html/i.test(response.contentType) ? <iframe className="api-response-preview" title="HTML 응답 미리보기" sandbox="" srcDoc={response.body} /> : <div className="api-inline-notice"><strong>Preview를 지원하지 않는 응답입니다.</strong><p>HTML 응답만 격리된 iframe에서 미리 볼 수 있습니다.</p></div>) : null}
       </div>
     ) : null}
@@ -53,7 +55,7 @@ export const ApiWorkspaceResponseViewer = ({ response, actualRequest, errorMessa
       <div className="api-actual-request">
         <div className="api-actual-request-line"><span className={`method-${actualRequest.method.toLowerCase()}`}>{actualRequest.method}</span><code>{actualRequest.url}</code></div>
         <section><header><h3>Request Headers</h3><span>{actualRequest.headers.length}</span></header><div className="api-actual-header-list">{actualRequest.headers.map((header) => <div key={header.id}><strong>{header.key}</strong><code>{header.value}</code></div>)}{actualRequest.headers.length === 0 ? <p>전송할 Header가 없습니다.</p> : null}</div></section>
-        <section><header><h3>Request Body</h3><span>{actualRequest.bodyType}</span></header><pre><code>{actualRequest.body || "전송할 Body가 없습니다."}</code></pre></section>
+        <section><header><h3>Request Body</h3><span>{actualRequest.bodyType}</span></header><HighlightedCode language={guessCodeLanguage(actualRequest.body)} code={actualRequest.body || "전송할 Body가 없습니다."} /></section>
         <small>{new Date(actualRequest.preparedAt).toLocaleString("ko-KR")}에 구성한 요청입니다. Secret 값은 마스킹했습니다.</small>
       </div>
     ) : null}

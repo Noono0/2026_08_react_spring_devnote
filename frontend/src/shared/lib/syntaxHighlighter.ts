@@ -96,12 +96,39 @@ const highlightCss = (source: string): SyntaxSegment[] => {
   });
 };
 
+/** YAML: 주석, 키(뒤에 :), 따옴표 문자열, 목록 기호(-), true/false/null, 숫자 */
+const highlightYaml = (source: string): SyntaxSegment[] =>
+  segmentByPattern(source, /(#[^\n]*|"(?:\\.|[^"\\])*"|'(?:''|[^'])*'|^[ \t]*-(?=\s)|[\w.-]+(?=[ \t]*:(?:\s|$))|\b(?:true|false|null|yes|no|on|off)\b|-?\b\d+(?:\.\d+)?\b)/gim, (token, followingText) => {
+    if (token.startsWith("#")) return "comment";
+    if (/^["']/.test(token)) return "string";
+    if (token.trim() === "-") return "tag";
+    if (/^-?\d/.test(token)) return "number";
+    if (/^[ \t]*:/.test(followingText)) return "property";
+    return "keyword";
+  });
+
+/** 형식을 모르는 글(API 응답 Body 등)의 언어를 첫 글자로 짐작한다: { [ → JSON, < → HTML/XML, 그 밖은 색 없음 */
+export const guessCodeLanguage = (text: string): string => {
+  const trimmed = text.trimStart();
+  if (trimmed.startsWith("{") || trimmed.startsWith("[")) return "json";
+  if (trimmed.startsWith("<")) return "html";
+  return "text";
+};
+
+/** 같은 언어의 다른 이름(ts → typescript 등). 화면마다 쓰는 이름이 달라도 같은 색칠을 쓰게 한다. */
+const languageAliases: Record<string, string> = {
+  ts: "typescript", tsx: "typescript", js: "javascript", jsx: "javascript", yml: "yaml", xml: "html",
+  shell: "bash", sh: "bash", curl: "bash", gradle: "java", kotlin: "java", groovy: "java", mysql: "sql",
+};
+
 /** 언어 이름(대소문자 무관)에 맞춰 색칠 조각을 만든다. 모르는 언어는 색 없이 한 조각으로 돌려준다. */
 export const highlightSegments = (source: string, requestedLanguage: string): SyntaxSegment[] => {
   if (!source) return [];
-  const language = requestedLanguage.toLowerCase();
+  const lowerLanguage = requestedLanguage.toLowerCase();
+  const language = languageAliases[lowerLanguage] ?? lowerLanguage;
   if (language === "html") return highlightHtml(source);
   if (language === "css") return highlightCss(source);
+  if (language === "yaml") return highlightYaml(source);
   const pattern = tokenPatterns[language];
   if (!pattern) return [{ text: source }];
   return segmentByPattern(source, pattern, (token, followingText) => tokenType(token, language, followingText));

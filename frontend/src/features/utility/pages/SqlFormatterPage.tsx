@@ -19,7 +19,7 @@
  * 실제 변환: utils/sqlFormatter.ts(정리), sqlCommentDictionary.ts(코멘트 읽기), sqlCodeOutput.ts(Java 코드 출력)
  */
 import { useDeferredValue, useId, useState, type ReactNode } from "react";
-import { HighlightedTextarea } from "@/features/utility/components/HighlightedTextarea";
+import { HighlightedTextarea } from "@/shared/ui/HighlightedTextarea";
 import { UtilityHelpDialog, UtilityPageTitle } from "@/features/utility/components/UtilityHelpDialog";
 import { copyText, downloadText } from "@/features/utility/utils/browserFileUtils";
 import { minifySource } from "@/features/utility/utils/sourceFormatter";

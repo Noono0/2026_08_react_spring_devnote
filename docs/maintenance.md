@@ -2,6 +2,12 @@
 
 [문서 목록으로](../README.md) · [작업 규칙](../AGENTS.md) · [검증 명령](verification.md)
 
+## 2026-10-10 — 코드·데이터 입력·결과 문법 색 전체 적용
+
+- **적용 화면**: 코드·데이터 형식을 입력하거나 보여 주는 곳에 공통 문법 색을 넣었습니다. Markdown Editor(입력·문법 도움말 예시), Data Converter(입력·결과·JSON Schema·JSON Tree), JSON ↔ CSV(JSON 쪽), JSONPath Explorer(입력·결과), JWT Decoder(Header·Payload), API Workspace(요청 Body·응답 Pretty/Raw·Actual Request·생성 코드·cURL), OpenAPI Studio(문서 JSON/YAML·Request 예시), Mock API(응답 Body·테스트 응답), WebSocket·SSE(보낼 메시지·로그 데이터), SQL Schema·ERD(DDL), Dependency Analyzer(package.json·Gradle), Developer Snippet(편집·카드, 고른 언어), 25단계 학습 테스트 코드. 일반 글(게시판·댓글), 로그, 정규식, Cron, CSV, Code Diff(이미 diff 색)는 문법 색이 일반적이지 않아 그대로 둡니다.
+- **공통화**: 화면마다 따로 만든 색칠은 없고, 여러 기능이 쓰게 되어 `HighlightedTextarea`(+ 읽기 전용 `HighlightedCode`)를 `shared/ui`로, `syntaxHighlighter`를 `shared/lib`로 옮겼습니다. YAML 색칠, 언어 별칭(yml·ts·xml·gradle·curl 등), 형식을 모르는 글의 첫 글자 짐작(`guessCodeLanguage`), 줄바꿈 모드(`wrapLines`, 두 겹 모두 `scrollbar-gutter: stable`로 같은 폭에서 줄바꿈), `ref` 전달(Markdown 도구 모음)을 추가했습니다. `className`은 textarea에 붙고 글꼴·여백·테두리는 공통 규칙이 덮어써 두 겹이 어긋나지 않습니다.
+- **검증**: `eslint`·`tsc -b` 통과, 전체 테스트 통과(YAML·별칭·짐작 테스트 추가, API 응답 테스트는 글자가 색 조각으로 나뉘어 `<code>` 전체 글자로 찾도록 수정), `vite build` 성공. 내장 브라우저에서 Markdown 입력의 두 겹 글꼴·줄 높이·폭(450px) 일치와 긴 줄 줄바꿈 일치, Data Converter 다크 모드 JSON·YAML 색을 확인했습니다.
+
 ## 2026-10-10 — 사이드바 너비 조절·잘림 수정
 
 - **화면**: PC에서 사이드바 오른쪽 가장자리를 끌어 너비를 240~520px로 바꿉니다(기본 300px, 기존 286px에서 3단계 메뉴를 위해 넓힘). 손잡이에 포커스를 두고 ←/→(Shift는 크게)로도 조절하고, 더블클릭하면 기본 너비로 돌아갑니다. 사이드바를 접었거나 모바일에서는 손잡이를 숨깁니다.

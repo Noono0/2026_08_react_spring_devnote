@@ -1,5 +1,5 @@
 import DOMPurify from "dompurify";
-import { highlightSegments } from "@/features/utility/utils/syntaxHighlighter";
+import { highlightSegments } from "@/shared/lib/syntaxHighlighter";
 
 // markdownRenderer.ts — 마크다운 글을 HTML로 바꾸는 작은 변환기(제목·목록·체크리스트·표·인용·코드 블록 색칠)
 // ★ 먼저 모든 글자의 HTML 특수문자를 이스케이프하고, 허용한 문법만 태그로 바꾼 뒤, 마지막에 DOMPurify로 한 번 더 정화한다(XSS 방지).
