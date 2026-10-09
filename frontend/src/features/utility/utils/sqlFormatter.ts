@@ -61,13 +61,19 @@ export interface SqlFormatResult {
 
 export const SQL_INDENT_RANGE = { min: 1, max: 10, initial: 4 } as const;
 
-/** dpriver 기본값과 같게: 키워드 대문자, 함수 첫 글자 대문자(Count), 이름은 그대로, 쉼표 뒤, 한 줄에 하나 */
+/**
+ * 기본값: 키워드·함수·테이블/칼럼 이름 모두 대문자, 쉼표 뒤, 한 줄에 하나.
+ * (dpriver 기본은 함수 첫 글자 대문자(Count)·이름 그대로 — DPRIVER_CASE_OPTIONS로 같은 모양을 만들 수 있다)
+ */
+/** dpriver Instant SQL Formatter 기본 대소문자(함수 Count, 이름은 쓴 그대로). Code Formatter의 SQL이 이 모양을 쓴다. */
+export const DPRIVER_CASE_OPTIONS = { functionCase: "CAPITAL", identifierCase: "UNCHANGED" } as const satisfies Partial<SqlFormatOptions>;
+
 export const defaultSqlFormatOptions: SqlFormatOptions = {
   layout: "RIVER",
   indentSize: SQL_INDENT_RANGE.initial,
   keywordCase: "UPPER",
-  functionCase: "CAPITAL",
-  identifierCase: "UNCHANGED",
+  functionCase: "UPPER",
+  identifierCase: "UPPER",
   commaPosition: "AFTER",
   stackLists: true,
   alignAliases: true,
@@ -759,10 +765,18 @@ const renderClause = (clause: SqlClause, base: number, context: FormatContext): 
 
 /** 문장(여러 문장도 가능)을 정리한다. 서브쿼리는 이 함수를 다시 부른다(재귀). */
 const formatQuery = (tokens: FormatToken[], base: number, context: FormatContext): OutputLine[] => {
-  const clauses = splitClauses(tokens);
-  // 서브쿼리 안에서는 바깥 쿼리 별칭 + 자기 별칭을 함께 본다.
-  const localContext: FormatContext = { ...context, aliases: new Map([...context.aliases, ...collectTableAliases(clauses)]) };
-  return clauses.flatMap((clause) => renderClause(clause, base, localContext));
+  // 문장(;)마다 따로 나눠, 별칭 지도가 다른 문장과 섞이지 않게 한다.
+  // (앞 SELECT의 테이블 때문에 뒤 UPDATE의 칼럼이 "두 테이블에 다 있는 칼럼"으로 보이는 일을 막는다)
+  const statements: SqlClause[][] = [[]];
+  for (const clause of splitClauses(tokens)) {
+    statements[statements.length - 1]?.push(clause);
+    if (clause.keyword === ";") statements.push([]);
+  }
+  return statements.flatMap((clauses) => {
+    // 서브쿼리 안에서는 바깥 쿼리 별칭 + 자기 별칭을 함께 본다.
+    const localContext: FormatContext = { ...context, aliases: new Map([...context.aliases, ...collectTableAliases(clauses)]) };
+    return clauses.flatMap((clause) => renderClause(clause, base, localContext));
+  });
 };
 
 /** 한글 같은 넓은 글자는 고정폭 글꼴에서 두 칸을 차지하므로 주석 열을 맞출 때 2로 센다. */

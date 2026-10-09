@@ -25,6 +25,7 @@ import { copyText, downloadText } from "@/features/utility/utils/browserFileUtil
 import { minifySource } from "@/features/utility/utils/sourceFormatter";
 import { convertSqlOutput, sqlOutputTargetLabels, type SqlOutputTarget } from "@/features/utility/utils/sqlCodeOutput";
 import { countDictionaryEntries, parseSqlCommentDictionary } from "@/features/utility/utils/sqlCommentDictionary";
+import { complexExampleComments, complexExampleSql } from "@/features/utility/utils/sqlFormatterExamples";
 import {
   defaultSqlFormatOptions,
   formatSqlWithComments,
@@ -204,6 +205,8 @@ export const SqlFormatterPage = () => {
             <button type="button" className={resultMode === "MINIFY" ? "active" : undefined} aria-pressed={resultMode === "MINIFY"} onClick={() => setResultMode("MINIFY")}>한 줄로 압축</button>
           </div>
           <button type="button" className="ghost-button" onClick={() => { setSource(exampleSql); setCommentSource(exampleComments); }}>예제</button>
+          {/* CTE·서브쿼리·CASE·JOIN·EXISTS·UPDATE + CREATE TABLE 코멘트를 한 번에 시험(sqlFormatterExamples.ts) */}
+          <button type="button" className="ghost-button" onClick={() => { setSource(complexExampleSql); setCommentSource(complexExampleComments); }}>복잡한 예제</button>
           <button type="button" className="ghost-button" onClick={() => setSource("")}>초기화</button>
           <button type="button" className="ghost-button" disabled={!resultSql} onClick={() => setSource(resultSql)}>결과를 입력으로</button>
           {/* 결과 칸 아래까지 내려가지 않고 바로 복사(출력 형식이 Java면 Java 코드를 복사) */}

@@ -20,7 +20,7 @@
  *   실제 소스 파일을 정리하는 용도로 쓰지 말고, 조각을 확인하는 용도로 쓰자.
  */
 
-import { formatSqlWithComments } from "@/features/utility/utils/sqlFormatter";
+import { DPRIVER_CASE_OPTIONS, formatSqlWithComments } from "@/features/utility/utils/sqlFormatter";
 
 export type FormatterLanguage = "JSON" | "HTML" | "CSS" | "JAVASCRIPT" | "TYPESCRIPT" | "MARKDOWN" | "SQL";
 
@@ -108,7 +108,8 @@ export const formatSource = (language: FormatterLanguage, source: string, option
   if (language === "MARKDOWN") return source.replace(/\r\n/g, "\n").replace(/\n{3,}/g, "\n\n").split("\n").map((line) => line.replace(/[ \t]+$/g, "")).join("\n").trim();
 
   // SQL: dpriver식 키워드 정렬(sqlFormatter.ts 기본값). 여기서는 키워드 대·소문자만 고른다.
-  return formatSqlWithComments(source, { keywordCase: options.sqlUppercase ? "UPPER" : "LOWER" }).text;
+  // 이름(테이블·칼럼)은 쓴 그대로 둔다. 이름까지 대문자로 바꾸는 옵션은 SQL Formatter에 있다.
+  return formatSqlWithComments(source, { ...DPRIVER_CASE_OPTIONS, keywordCase: options.sqlUppercase ? "UPPER" : "LOWER" }).text;
 };
 
 /**

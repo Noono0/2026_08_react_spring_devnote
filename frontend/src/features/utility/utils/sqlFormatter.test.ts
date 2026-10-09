@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { convertSqlOutput } from "@/features/utility/utils/sqlCodeOutput";
 import { countDictionaryEntries, parseSqlCommentDictionary } from "@/features/utility/utils/sqlCommentDictionary";
-import { formatSqlWithComments } from "@/features/utility/utils/sqlFormatter";
+import { DPRIVER_CASE_OPTIONS, formatSqlWithComments as formatWithDefaults, type SqlFormatOptions } from "@/features/utility/utils/sqlFormatter";
+
+/** 아래 기대값은 dpriver 대소문자(함수 Count·이름 그대로)로 썼다. 기본값(모두 대문자)은 따로 확인한다. */
+const formatSqlWithComments = (source: string, options: Partial<SqlFormatOptions> = {}) => formatWithDefaults(source, { ...DPRIVER_CASE_OPTIONS, ...options });
 
 /** dpriver Instant SQL Formatter(기본 옵션)에 넣어 얻은 결과와 같은지 비교하는 예제 */
 const dpriverSource = "Select u.id, u.name, Count(o.id) As orders_count, Sum(o.total) As revenue, case when u.age > 10 and u.vip = 1 then 'A' else 'B' end grade From users u Left Join orders o On o.user_id = u.id and o.del_yn='N' Where u.created_at > '2024-01-01' And u.status In ('active','trial') or exists (select 1 from bans b where b.uid = u.id) Group By u.id, u.name Having Count(o.id) > 5 Order By revenue Desc Limit 50; insert into t (a,b,c) values (1,2,3); update members set name='x', age=3 where id=1";
@@ -78,6 +81,18 @@ describe("SQL 정리 — 키워드 정렬(dpriver 기본)", () => {
   });
 });
 
+describe("SQL 정리 — 기본 대소문자", () => {
+  it("기본값은 키워드·함수·테이블/칼럼 이름 모두 대문자(문자열·따옴표 이름·MyBatis 파라미터는 그대로)", () => {
+    expect(formatWithDefaults("select count(u.id) cnt, 'abc' from users u where u.name = #{name} and \"Mixed\" = 1").text).toBe([
+      "SELECT COUNT(U.ID) CNT,",
+      "       'abc'",
+      "FROM   USERS U",
+      "WHERE  U.NAME = #{name}",
+      "       AND \"Mixed\" = 1",
+    ].join("\n"));
+  });
+});
+
 describe("SQL 정리 — 들여쓰기 칸 수", () => {
   it("목록은 키워드 아래로 N칸, JOIN은 N칸, ON은 2N칸 들이고 1~10칸 안으로 맞춘다", () => {
     const source = "select u.id, u.name from users u join orders o on o.user_id = u.id where u.a = 1 and u.b = 2";
@@ -140,6 +155,12 @@ describe("SQL 코멘트 주석", () => {
     const lines = formatSqlWithComments("select id, title from a join b on a.id = b.a_id", { dictionary: twoTables }).text.split("\n");
     expect(lines[0]).toBe("SELECT id,");
     expect(lines[1]).toBe("       title -- 제목");
+  });
+
+  it("여러 문장이면 별칭·테이블을 문장마다 따로 본다(앞 SELECT의 테이블이 뒤 UPDATE 칼럼 찾기를 방해하지 않는다)", () => {
+    const gradeDictionary = parseSqlCommentDictionary("members.grade_id 등급아이디\nmember_grades.grade_id 등급번호");
+    const { text } = formatSqlWithComments("select m.grade_id from members m join member_grades g on g.grade_id = m.grade_id; update members set grade_id = 1", { dictionary: gradeDictionary });
+    expect(text).toMatch(/SET {4}grade_id = 1\s+-- 등급아이디$/);
   });
 
   it("UPDATE SET의 왼쪽 칼럼에도 코멘트를 붙인다", () => {

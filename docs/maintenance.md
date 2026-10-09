@@ -2,6 +2,13 @@
 
 [문서 목록으로](../README.md) · [작업 규칙](../AGENTS.md) · [검증 명령](verification.md)
 
+## 2026-10-10 — SQL Formatter 대문자 기본값·복잡한 예제·문장별 별칭
+
+- **기본값**: 함수·테이블/칼럼 이름 대소문자 기본값을 `대문자`로 바꿨습니다(문자열·따옴표 이름·MyBatis `#{}`는 그대로). dpriver 모양(함수 Count·이름 그대로)은 `DPRIVER_CASE_OPTIONS`로 남겨 Code Formatter의 SQL과 dpriver 비교 테스트가 씁니다.
+- **복잡한 예제**: `복잡한 예제` 버튼이 `sqlFormatterExamples.ts`의 쿼리(WITH, 스칼라 서브쿼리, CASE, 서브쿼리 JOIN, EXISTS, NOT IN, LIMIT/OFFSET, MyBatis 파라미터, UPDATE)와 MySQL `CREATE TABLE ... COMMENT` 6개 테이블(코멘트 31개)을 넣습니다. 주석 20개가 붙습니다.
+- **수정**: 여러 문장이면 별칭 지도를 문장(;)마다 따로 만듭니다. 앞 SELECT의 `member_grades` 때문에 뒤 UPDATE의 `GRADE_ID`가 두 테이블 칼럼으로 보여 주석이 빠지던 문제를 고쳤습니다(회귀 테스트 추가).
+- **검증**: `eslint`·`tsc -b` 통과, Vitest 111개 파일·364개 테스트 통과, `vite build` 성공.
+
 ## 2026-10-10 — Code Formatter·SQL Formatter 입력하면 바로 정리
 
 - **화면**: 두 화면 모두 정리 버튼 없이 입력칸에 쓰면 결과가 바로 나옵니다. `정리하기`·`Minify`(`한 줄로 압축`) 버튼은 결과 방식 버튼 묶음(`정리 | 압축`)으로 바꿨고, SQL Formatter의 Ctrl+Enter는 필요 없어져 뺐습니다. SQL Formatter는 `결과를 입력으로` 옆에 `결과 복사`(출력 형식이 Java면 Java 코드 복사, 결과가 없으면 비활성)를 두어 결과 칸 아래까지 내려가지 않고 복사합니다. 입력할 때마다 알림이 뜨지 않도록 정리 완료 알림을 없애고, 붙인 코멘트 수는 결과 아래 글자로 보여 줍니다. JSON 문법 오류는 입력 중 잠깐씩 생기므로 `role="alert"` 대신 `aria-live="polite"`로 알립니다.
