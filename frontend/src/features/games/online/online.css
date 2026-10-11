@@ -340,6 +340,27 @@ button.battleship-cell:hover { background: #3a8fd0; filter: none; }
 .hwatu-card.kind-y { background: linear-gradient(160deg, #1971c2, #3b5bdb); }
 .hwatu-card.back { background: repeating-linear-gradient(45deg, #c92a2a 0 6px, #a61e1e 6px 12px); }
 
+/* 포커: 초록 펠트 테이블 */
+.poker { display: grid; gap: 12px; justify-items: center; width: 100%; }
+.poker-players { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; width: 100%; }
+.poker-player { display: grid; justify-items: center; gap: 4px; padding: 10px; border: 2px solid var(--border-color); border-radius: 14px; background: var(--background-muted); }
+.poker-player h3 { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 15px; }
+.poker-dealer { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; color: #1d2433; background: #fff; box-shadow: 0 0 0 2px #868e96; font-size: 11px; font-weight: 900; }
+.poker-player.turn { border-color: var(--primary-color); box-shadow: 0 0 0 2px var(--primary-soft); }
+.poker-player.folded, .poker-player.out { opacity: 0.5; }
+.poker-chips { color: var(--warning-color); font-weight: 800; }
+.poker-hole { display: inline-flex; gap: 3px; }
+.poker-table { display: grid; justify-items: center; gap: 8px; width: min(100%, 520px); padding: 16px; border: 6px solid #6b4423; border-radius: 999px; color: #fff; background: radial-gradient(ellipse, #2f9e44, #1b5e3a); }
+.poker-street { font-size: 13px; font-weight: 800; }
+.poker-board { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.poker-slot { width: 56px; height: 80px; border: 2px dashed rgba(255, 255, 255, 0.35); border-radius: 8px; }
+.poker-pot { font-size: 18px; font-weight: 900; }
+.poker-mine, .poker-last { display: grid; justify-items: center; gap: 6px; width: 100%; }
+.poker-mine h3, .poker-last h3 { margin: 0; font-size: 15px; }
+.poker-last-hands { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+.poker-last-hands > div { display: grid; justify-items: center; gap: 4px; padding: 8px; border-radius: 12px; background: var(--background-muted); }
+.poker-last-hands > div.winner { box-shadow: 0 0 0 2px var(--success-color); }
+
 /* 테트리스 대전은 판을 넓게 쓰도록 자리·채팅 패널을 판 아래로 내린다 */
 .online-room-layout.wide { grid-template-columns: minmax(0, 1fr); }
 .online-room-layout.wide .online-side { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }

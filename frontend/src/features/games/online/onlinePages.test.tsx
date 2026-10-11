@@ -612,6 +612,51 @@ describe("온라인 섯다", () => {
   });
 });
 
+describe("온라인 포커", () => {
+  const pokerRoom = (game: Record<string, unknown>): OnlineRoom => ({
+    ...baseRoom,
+    gameType: "POKER", gameTypeLabel: "포커", status: "PLAYING", seats: ["p1", "p2"],
+    participants: [
+      { participantId: "p1", nickname: "철수", member: false, seatIndex: 0 },
+      { participantId: "p2", nickname: "영희", member: false, seatIndex: 1 },
+    ],
+    game: {
+      phase: "BETTING", handNumber: 1, maxHands: 6, street: "플랍", mySeat: 0, myCards: [{ id: 0, code: "S1" }, { id: 13, code: "H1" }],
+      board: [{ id: 26, code: "D1" }, { id: 1, code: "S2" }, { id: 8, code: "S9" }], chips: [980, 980], inHand: [true, true], active: [true, true],
+      pot: 40, currentBet: 0, contributed: [0, 0], toCall: 0, minRaise: 20, maxRaise: 980, turnSeat: 0, dealerSeat: 1, lastHand: null, winners: [], ...game,
+    },
+  });
+
+  it("공용 카드 3장과 빈 자리 2칸, 내 카드를 보여 주고 체크·레이즈·폴드를 보낸다", () => {
+    renderRoom();
+    const socket = latestSocket();
+    socket.serverOpen();
+    socket.serverSend({ type: "ROOM_STATE", room: pokerRoom({}) });
+    const table = screen.getByLabelText("공용 카드");
+    expect(within(table).getAllByRole("img")).toHaveLength(3);
+    expect(within(screen.getByRole("region", { name: "내 카드" })).getByRole("img", { name: "하트 A" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "체크" }));
+    expect(socket.sent.at(-1)).toEqual({ type: "GAME_ACTION", action: "CHECK" });
+    fireEvent.click(screen.getByRole("button", { name: "레이즈 +20" }));
+    expect(socket.sent.at(-1)).toEqual({ type: "GAME_ACTION", action: "RAISE", number: 20 });
+    fireEvent.click(screen.getByRole("button", { name: "폴드" }));
+    expect(socket.sent.at(-1)).toEqual({ type: "GAME_ACTION", action: "FOLD" });
+  });
+
+  it("지난 판에서 공개된 카드와 족보를 보여 준다", () => {
+    renderRoom();
+    const socket = latestSocket();
+    socket.serverOpen();
+    socket.serverSend({ type: "ROOM_STATE", room: pokerRoom({
+      turnSeat: 1,
+      lastHand: { cards: [[{ id: 0, code: "S1" }, { id: 13, code: "H1" }], [{ id: 12, code: "S13" }, { id: 32, code: "D7" }]], handNames: ["트리플", "원페어"], board: [], winners: [0], pot: 40 },
+    }) });
+    const last = screen.getByRole("region", { name: "지난 판" });
+    expect(within(last).getByText("트리플")).toBeInTheDocument();
+    expect(within(last).getByText(/철수 승리/)).toBeInTheDocument();
+  });
+});
+
 describe("온라인 대전 대기실", () => {
   const renderLobby = () => render(withProviders(
     <MemoryRouter initialEntries={["/games/online"]}>

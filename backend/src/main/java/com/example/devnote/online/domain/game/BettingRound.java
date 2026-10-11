@@ -43,7 +43,23 @@ public class BettingRound {
         for (int seat = 0; seat < chips.length; seat++) if (inHand[seat]) smallest = Math.min(smallest, chips[seat]);
         this.cap = smallest == Integer.MAX_VALUE ? 0 : smallest;
         this.turnSeat = -1;
-        this.turnSeat = findNext(startSeat - 1);
+        // 아무도 더 걸 수 없으면(누군가 칩이 0) 이번 바퀴는 바로 끝난다
+        this.turnSeat = cap == 0 ? -1 : findNext(startSeat - 1);
+    }
+
+    /**
+     * 포커처럼 강제 베팅(블라인드)으로 시작하는 바퀴. blinds: 자리 → 미리 낼 칩(가진 칩과 cap을 넘지 않게 줄인다)
+     * 블라인드를 낸 사람도 아직 "결정"한 것은 아니므로, 모두 콜하면 빅 블라인드에게 한 번 더 기회가 간다.
+     */
+    public static BettingRound withBlinds(int[] chips, boolean[] inHand, int startSeat, int minRaise, java.util.Map<Integer, Integer> blinds) {
+        BettingRound round = new BettingRound(chips, inHand, startSeat, minRaise);
+        blinds.forEach((seat, amount) -> {
+            int paid = Math.min(amount, round.cap);
+            round.pay(seat, paid);
+            round.currentBet = Math.max(round.currentBet, paid);
+        });
+        round.turnSeat = round.cap == 0 ? -1 : round.findNext(startSeat - 1);
+        return round;
     }
 
     public int turnSeat() {
