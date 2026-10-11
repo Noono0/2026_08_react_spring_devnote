@@ -398,6 +398,45 @@ button.battleship-cell:hover { background: #3a8fd0; filter: none; }
 .mafia-secret ul { margin: 4px 0 0; padding-left: 20px; }
 .mafia-log { display: grid; gap: 2px; max-height: 160px; margin: 0; padding-left: 24px; overflow-y: auto; font-size: 13px; }
 
+/* 스도쿠 대전: 위에 자리별 진행 막대, 가운데 9×9 판, 아래 숫자 버튼 */
+.sudoku-battle { display: grid; gap: 12px; justify-items: center; width: 100%; }
+.sudoku-play { display: grid; gap: 14px; justify-items: center; width: 100%; }
+/* 3×3 상자 경계는 굵은 선(box-right·box-bottom). 강조는 아래로 갈수록 우선: 같은 줄 → 같은 숫자 → 고른 칸 → 겹침 */
+.sudoku-board {
+  display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); width: min(100%, 468px);
+  border: 2px solid var(--text-primary); border-radius: 8px; overflow: hidden; background: var(--background-elevated);
+  user-select: none;
+}
+.sudoku-cell {
+  display: grid; place-items: center; aspect-ratio: 1; min-height: 0; padding: 0;
+  border: 0; border-right: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); border-radius: 0;
+  color: var(--primary-color); background: transparent; font-size: clamp(16px, 5cqi, 26px); font-weight: 600; line-height: 1;
+}
+.sudoku-cell.box-right { border-right: 2px solid var(--text-primary); }
+.sudoku-cell.box-bottom { border-bottom: 2px solid var(--text-primary); }
+.sudoku-cell.given { color: var(--text-primary); font-weight: 900; }
+.sudoku-cell.peer { background: color-mix(in srgb, var(--primary-color) 7%, transparent); }
+.sudoku-cell.same-digit { background: color-mix(in srgb, var(--primary-color) 22%, transparent); }
+.sudoku-cell.selected { background: color-mix(in srgb, var(--primary-color) 32%, transparent); }
+.sudoku-cell.conflict, .sudoku-cell.wrong { color: var(--danger-color); }
+.sudoku-cell.conflict:not(.selected) { background: color-mix(in srgb, var(--danger-color) 12%, transparent); }
+.sudoku-cell.wrong { text-decoration: line-through; }
+.sudoku-cell.revealed { color: var(--text-muted); font-weight: 500; }
+.sudoku-cell:focus-visible { z-index: 1; outline: 3px solid var(--primary-color); outline-offset: -3px; }
+.sudoku-board.read-only .sudoku-cell { cursor: default; }
+.sudoku-number-pad { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 6px; width: min(100%, 468px); }
+.sudoku-number-pad button { min-height: 44px; padding: 0; font-size: 20px; font-weight: 800; }
+.sudoku-number-pad .sudoku-erase-button { font-size: 13px; }
+@container (max-width: 480px) {
+  .sudoku-number-pad { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+}
+.sudoku-battle-players { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.sudoku-battle-player { display: grid; gap: 4px; min-width: 130px; padding: 8px 12px; border: 2px solid var(--seat-color, var(--border-color)); border-radius: 12px; background: var(--background-muted); }
+.sudoku-battle-player span { color: var(--text-muted); font-size: 13px; }
+.sudoku-battle-player progress { width: 100%; height: 8px; accent-color: var(--seat-color, var(--primary-color)); }
+.sudoku-battle-player.out { opacity: 0.5; }
+.sudoku-battle-player.winner { box-shadow: 0 0 0 3px var(--success-color); }
+
 /* 테트리스 대전은 판을 넓게 쓰도록 자리·채팅 패널을 판 아래로 내린다 */
 .online-room-layout.wide { grid-template-columns: minmax(0, 1fr); }
 .online-room-layout.wide .online-side { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }

@@ -121,12 +121,30 @@ class GameRankingServiceTest {
     }
 
     @Test
+    void 스도쿠는_난이도마다_다_푼_시간으로_기록한다() {
+        service.recordSoloGame(new SoloGameRecordRequest(SoloGameCode.SUDOKU, "HARD", "철수", 500, 312, 9), new MockHttpServletRequest());
+
+        ArgumentCaptor<SoloGameRecordCreateParameter> captor = ArgumentCaptor.forClass(SoloGameRecordCreateParameter.class);
+        verify(gameRankingDao).insertSoloGameRecord(captor.capture());
+        assertThat(captor.getValue().getGameCode()).isEqualTo("SUDOKU");
+        assertThat(captor.getValue().getDifficulty()).isEqualTo("HARD");
+        assertThat(captor.getValue().getElapsedSeconds()).isEqualTo(312);
+        assertThat(captor.getValue().getScore()).isNull();
+        assertThat(captor.getValue().getMoves()).isNull();
+        assertThat(SoloGameCode.SUDOKU.getRankingOrder()).isEqualTo(SoloGameCode.RankingOrder.TIME_ASC);
+    }
+
+    @Test
     void 난이도_필요한_값_비회원_닉네임이_규칙에_맞지_않으면_거절한다() {
         MockHttpServletRequest request = new MockHttpServletRequest();
         assertError(() -> service.recordSoloGame(new SoloGameRecordRequest(SoloGameCode.MINESWEEPER, "EASY", "철수", null, 10, null), request),
             ErrorCode.GAME_DIFFICULTY_INVALID); // 지뢰 찾기에는 EASY가 없다
         assertError(() -> service.recordSoloGame(new SoloGameRecordRequest(SoloGameCode.TETRIS, "HARD", "철수", 100, null, null), request),
             ErrorCode.GAME_DIFFICULTY_INVALID); // 테트리스는 난이도가 없다
+        assertError(() -> service.recordSoloGame(new SoloGameRecordRequest(SoloGameCode.SUDOKU, "EXPERT", "철수", null, 10, null), request),
+            ErrorCode.GAME_DIFFICULTY_INVALID); // 스도쿠는 EASY·NORMAL·HARD만
+        assertError(() -> service.recordSoloGame(new SoloGameRecordRequest(SoloGameCode.SUDOKU, "EASY", "철수", null, null, null), request),
+            ErrorCode.GAME_RECORD_INVALID); // 스도쿠는 시간이 필요
         assertError(() -> service.recordSoloGame(new SoloGameRecordRequest(SoloGameCode.MEMORY, "NORMAL", "철수", null, 30, null), request),
             ErrorCode.GAME_RECORD_INVALID); // 카드 짝 맞추기는 시도 횟수도 필요
         assertError(() -> service.recordSoloGame(new SoloGameRecordRequest(SoloGameCode.TETRIS, null, "철", 100, null, null), request),

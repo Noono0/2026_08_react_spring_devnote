@@ -69,6 +69,14 @@ describe("GameRankingPage", () => {
     expect(screen.getByRole("link", { name: "지뢰 찾기 하러 가기" })).toHaveAttribute("href", "/games/minesweeper");
   });
 
+  it("스도쿠 랭킹은 난이도마다 조회하고, 하러 가기는 온라인 대전으로 안내한다", async () => {
+    renderPage("/games/rankings?game=solo:SUDOKU&difficulty=HARD");
+    expect(await screen.findByText(/이 기간에는 기록이 없습니다/)).toBeInTheDocument();
+    expect(mockedGetSoloRanking).toHaveBeenCalledWith("SUDOKU", "HARD", periodForPreset("MONTH"));
+    expect(screen.getByRole("button", { name: /어려움/ })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("link", { name: "스도쿠 하러 가기" })).toHaveAttribute("href", "/games/online");
+  });
+
   it("목록에 없는 종목·난이도가 주소에 오면 기본값을 쓴다", async () => {
     renderPage("/games/rankings?game=solo:MINESWEEPER&difficulty=HACK");
     await screen.findByText(/이 기간에는 기록이 없습니다/);

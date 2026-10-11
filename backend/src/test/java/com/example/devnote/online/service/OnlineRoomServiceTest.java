@@ -8,6 +8,7 @@ import com.example.devnote.online.domain.OnlineGameType;
 import com.example.devnote.online.domain.OnlineMatchResult;
 import com.example.devnote.online.domain.game.GameAction;
 import com.example.devnote.online.domain.game.NumberBaseballGame;
+import com.example.devnote.online.domain.game.SudokuGame;
 import com.example.devnote.online.dto.OnlineClientMessage;
 import com.example.devnote.online.dto.OnlineRoomCreateRequest;
 import com.example.devnote.online.dto.OnlineRoomCreatedResponse;
@@ -232,6 +233,38 @@ class OnlineRoomServiceTest {
         assertThat(match.players()).containsExactly(
             new OnlineMatchResult.Player(null, "하나", true),
             new OnlineMatchResult.Player(null, "둘둘", false));
+    }
+
+    @Test
+    void 스도쿠_대전은_모두_같은_문제를_받고_남에게는_채운_칸_수만_보인다() {
+        OnlineRoomCreatedResponse created = service.createRoom(new OnlineRoomCreateRequest("스도쿠", OnlineGameType.SUDOKU, 2, null, false), new MockHttpServletRequest());
+        OnlineConnection first = new OnlineConnection("s1", null, null);
+        OnlineConnection second = new OnlineConnection("s2", null, null);
+        OnlineConnection watcher = new OnlineConnection("s3", null, null);
+        service.join(first, joinMessage(created.roomId(), "하나", null, created.hostToken()));
+        service.join(second, joinMessage(created.roomId(), "둘둘", null, null));
+        service.join(watcher, joinMessage(created.roomId(), "구경", null, null));
+        service.sit(first, 0);
+        service.sit(second, 1);
+        service.start(first);
+
+        var mine = (SudokuGame.View) sender.lastRoomStateFor("s1").room().game();
+        var theirs = (SudokuGame.View) sender.lastRoomStateFor("s2").room().game();
+        var watching = (SudokuGame.View) sender.lastRoomStateFor("s3").room().game();
+        assertThat(theirs.givens()).isEqualTo(mine.givens());
+        assertThat(watching.givens()).isEqualTo(mine.givens());
+        assertThat(watching.myBoard()).isNull();
+        assertThat(mine.solution()).isNull();
+
+        int emptyIndex = String.join("", mine.givens()).indexOf('.');
+        service.gameAction(first, new GameAction("PLACE", null, 5, List.of(emptyIndex / 9, emptyIndex % 9)));
+
+        var afterMine = (SudokuGame.View) sender.lastRoomStateFor("s1").room().game();
+        var afterTheirs = (SudokuGame.View) sender.lastRoomStateFor("s2").room().game();
+        assertThat(String.join("", afterMine.myBoard()).charAt(emptyIndex)).isEqualTo('5');
+        assertThat(afterTheirs.players().get(0).filled()).isEqualTo(1);
+        assertThat(afterTheirs.myBoard()).isEqualTo(mine.givens()); // 둘둘의 판에는 하나의 숫자가 없다
+        assertError(() -> service.gameAction(watcher, new GameAction("PLACE", null, 5, List.of(emptyIndex / 9, emptyIndex % 9))), ErrorCode.ONLINE_NOT_YOUR_TURN);
     }
 
     @Test

@@ -765,6 +765,80 @@ describe("온라인 마피아", () => {
   });
 });
 
+describe("온라인 스도쿠", () => {
+  // 정답 판에서 (1행 3열)=4, (1행 4열)=6, (9행 9열)=9 세 칸만 비운 문제
+  const givens = ["53..78912", "672195348", "198342567", "859761423", "426853791", "713924856", "961537284", "287419635", "34528617."];
+  const solution = ["534678912", "672195348", "198342567", "859761423", "426853791", "713924856", "961537284", "287419635", "345286179"];
+  const sudokuRoom = (game: Record<string, unknown>, room: Partial<OnlineRoom> = {}): OnlineRoom => ({
+    ...baseRoom,
+    gameType: "SUDOKU", gameTypeLabel: "스도쿠", status: "PLAYING", seats: ["p1", "p2"],
+    participants: [
+      { participantId: "p1", nickname: "철수", member: false, seatIndex: 0 },
+      { participantId: "p2", nickname: "영희", member: false, seatIndex: 1 },
+    ],
+    game: {
+      mySeat: 0, emptyCells: 3, givens, myBoard: givens, players: [{ filled: 0, active: true }, { filled: 2, active: true }],
+      winners: [], finished: false, solution: null,
+      ...game,
+    },
+    ...room,
+  });
+  const openSudoku = (game: Record<string, unknown>, room: Partial<OnlineRoom> = {}) => {
+    renderRoom();
+    const socket = latestSocket();
+    socket.serverOpen();
+    socket.serverSend({ type: "ROOM_STATE", room: sudokuRoom(game, room) });
+    return socket;
+  };
+
+  it("빈 칸을 고르고 숫자 버튼이나 키보드로 넣으면 PLACE를 보낸다", () => {
+    const socket = openSudoku({});
+    expect(screen.getByText("2/3칸")).toBeInTheDocument(); // 영희는 채운 칸 수만 보인다
+    fireEvent.click(screen.getByRole("button", { name: "1행 3열, 빈 칸" }));
+    fireEvent.click(screen.getByRole("button", { name: "숫자 4" }));
+    expect(socket.sent.at(-1)).toEqual({ type: "GAME_ACTION", action: "PLACE", numbers: [0, 2], number: 4 });
+
+    const nextCell = screen.getByRole("button", { name: "1행 4열, 빈 칸" });
+    fireEvent.click(nextCell);
+    fireEvent.keyDown(nextCell, { key: "6" });
+    expect(socket.sent.at(-1)).toEqual({ type: "GAME_ACTION", action: "PLACE", numbers: [0, 3], number: 6 });
+  });
+
+  it("고정 숫자 칸은 바꾸지 않고, 넣은 숫자는 지우기로 CLEAR를 보낸다", () => {
+    const socket = openSudoku({ myBoard: ["534.78912", ...givens.slice(1)], players: [{ filled: 1, active: true }, { filled: 0, active: true }] });
+    const sentBefore = socket.sent.length;
+    fireEvent.click(screen.getByRole("button", { name: "1행 1열, 고정 숫자 5" }));
+    fireEvent.click(screen.getByRole("button", { name: "숫자 4" }));
+    expect(socket.sent).toHaveLength(sentBefore);
+
+    fireEvent.click(screen.getByRole("button", { name: "1행 3열, 4" }));
+    fireEvent.click(screen.getByRole("button", { name: "지우기" }));
+    expect(socket.sent.at(-1)).toEqual({ type: "GAME_ACTION", action: "CLEAR", numbers: [0, 2] });
+  });
+
+  it("관전자에게는 숫자 버튼이 없고 문제만 보인다", () => {
+    openSudoku({ mySeat: null, myBoard: null }, {
+      myParticipantId: "p3",
+      participants: [
+        { participantId: "p1", nickname: "철수", member: false, seatIndex: 0 },
+        { participantId: "p2", nickname: "영희", member: false, seatIndex: 1 },
+        { participantId: "p3", nickname: "구경", member: false, seatIndex: null },
+      ],
+    });
+    expect(screen.getByRole("group", { name: "스도쿠 문제" })).toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "숫자 넣기" })).not.toBeInTheDocument();
+    expect(screen.getByText(/플레이어의 판은 끝날 때까지 비공개/)).toBeInTheDocument();
+  });
+
+  it("끝나면 정답이 공개되어 틀린 숫자와 못 채운 칸의 정답을 보여 준다", () => {
+    openSudoku({ myBoard: ["536.78912", ...givens.slice(1)], winners: [1], finished: true, solution }, { status: "WAITING", lastResult: "스도쿠 영희 승리 — 가장 먼저 완성" });
+    expect(screen.getByRole("button", { name: "1행 3열, 6 (틀림, 정답 4)" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "1행 4열, 빈 칸 (정답 6)" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "숫자 4" })).toBeDisabled();
+    expect(screen.getByText(/· 승리/)).toBeInTheDocument();
+  });
+});
+
 describe("온라인 대전 대기실", () => {
   const renderLobby = () => render(withProviders(
     <MemoryRouter initialEntries={["/games/online"]}>

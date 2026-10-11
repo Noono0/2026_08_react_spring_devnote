@@ -6,6 +6,7 @@
  */
 import { memoryDifficulties, type MemoryDifficulty } from "@/features/games/memory/memoryLogic";
 import { minesweeperDifficulties, type MinesweeperDifficulty } from "@/features/games/minesweeper/minesweeperLogic";
+import { sudokuDifficulties, type SudokuDifficulty } from "@/features/games/sudoku/sudokuLogic";
 import type { SoloGameCode } from "./rankingTypes";
 
 export interface RankingDifficulty {
@@ -39,6 +40,7 @@ export type RankingGame = SoloRankingGame | OnlineRankingGame;
 
 const minesweeperOrder: MinesweeperDifficulty[] = ["BEGINNER", "INTERMEDIATE", "EXPERT"];
 const memoryOrder: MemoryDifficulty[] = ["EASY", "NORMAL", "HARD"];
+const sudokuOrder: SudokuDifficulty[] = ["EASY", "NORMAL", "HARD"];
 
 export const soloRankingGames: SoloRankingGame[] = [
   { kind: "SOLO", id: "solo:GAME_2048", code: "GAME_2048", label: "2048", playRoute: "/games/2048", metric: "SCORE", difficulties: [] },
@@ -50,6 +52,11 @@ export const soloRankingGames: SoloRankingGame[] = [
   {
     kind: "SOLO", id: "solo:MEMORY", code: "MEMORY", label: "카드 짝 맞추기", playRoute: "/games/memory", metric: "MOVES_THEN_TIME",
     difficulties: memoryOrder.map((value) => ({ value, label: memoryDifficulties[value].label })),
+  },
+  // 스도쿠는 혼자 하는 화면이 따로 없다. 기록은 온라인 대전 방에서 기다리며 하는 연습에서 들어오므로 그쪽으로 안내한다
+  {
+    kind: "SOLO", id: "solo:SUDOKU", code: "SUDOKU", label: "스도쿠", playRoute: "/games/online", metric: "TIME",
+    difficulties: sudokuOrder.map((value) => ({ value, label: sudokuDifficulties[value].label })),
   },
 ];
 
@@ -70,6 +77,7 @@ export const onlineRankingGames: OnlineRankingGame[] = [
   onlineGame("BLACKJACK", "블랙잭"),
   onlineGame("SUTDA", "섯다"),
   onlineGame("POKER", "포커"),
+  onlineGame("SUDOKU", "스도쿠"),
 ];
 
 export const defaultRankingGame: RankingGame = omokRankingGame;

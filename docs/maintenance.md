@@ -2,6 +2,15 @@
 
 [문서 목록으로](../README.md) · [작업 규칙](../AGENTS.md) · [검증 명령](verification.md)
 
+## 2026-10-12 — 온라인 대전 스도쿠
+
+- **스도쿠(2~4인)**: `SudokuGenerator`가 시작할 때 답이 하나뿐인 문제(고정 숫자 32개 = `SudokuGame.GIVEN_COUNT`)를 만들고, `SudokuGame`이 모두에게 같은 문제를 줍니다. 차례 없이 각자 자기 판에 `PLACE {numbers:[행,열], number:1~9}`·`CLEAR {numbers:[행,열]}`을 보내며, 고정 숫자는 못 바꾸고 틀린 숫자는 벌점 없이 넣을 수 있습니다. 내 판이 정답과 같아지는 순간 그 사람이 이기고 바로 끝납니다(방 잠금 안에서 하나씩 처리하므로 먼저 도착한 행동이 이김). 나가면 빠지고 혼자 남으면 승리, 모두 나가면 승자 없음.
+- **정보 공개**: 내 판은 본인에게만, 다른 사람에게는 자리마다 채운 칸 수만 보냅니다. 맞은 칸 수는 보내지 않습니다(숫자를 넣어 보며 정답을 알아낼 수 있기 때문). 정답은 끝난 뒤에만 보내고, 화면은 틀린 숫자(빨간 줄)·못 채운 칸(흐린 정답)을 표시합니다. 겹침 표시는 화면이 내 판만으로 계산합니다(`online/games/sudokuRules.ts`).
+- **연습용 스도쿠 로직**: 나중에 만들 "온라인 대전 방에서 기다리며 혼자 연습" 모드를 위해 `games/sudoku/sudokuLogic.ts`(시드 문제 만들기·답 하나 확인·난이도 EASY 40/NORMAL 32/HARD 26개·겹침·완성 검사·불변 `setCell`)를 두었습니다. 온라인 대전 화면도 겹침 표시에 이 함수를 씁니다. 혼자 하는 페이지·라우트·메뉴·홈 카드·기록 등록 화면과 직접 만들어 보기 예제는 만들지 않았습니다.
+- **랭킹**: `onlineRankingGames`에 `SUDOKU`(온라인 대전 12종), 서버 `SoloGameCode.SUDOKU`(TIME_ASC, EASY·NORMAL·HARD)와 화면 `soloRankingGames`에 스도쿠(혼자 하는 게임 5종)를 추가했습니다. 기록을 올리는 화면이 아직 없어 혼자 하기 스도쿠 순위는 비어 있고, `하러 가기`는 `/games/online`으로 안내합니다. 테이블 구조는 그대로이고 `schema.sql`의 `game_code` 설명만 고쳤습니다.
+- **검증**: `SudokuGameTest`(문제 숫자 수·답 하나·같은 시드 같은 문제·공개 범위·입력 검사·틀린 완성·처음 완성 승리·퇴장), `OnlineRoomServiceTest`에 스도쿠 방 1개, 화면 테스트 4개, `sudokuLogic.test.ts`(11개), `GameRankingServiceTest`·`GameRankingPage.test.tsx`에 스도쿠 기록·조회 확인. 프론트 lint·typecheck·test·build, 백엔드 `gradlew.bat test` 통과. `scripts/verify-static.py`는 Python이 없어 실행하지 못했습니다(DAO·Mapper 변경 없음). 실제 서버에서 여러 브라우저로 끝까지 풀어 보는 수동 확인은 하지 않았습니다.
+- **알려진 한계**: 난이도는 고정(보통)이고 시간제한·메모(후보 숫자)는 없습니다. 문제를 다 풀 때까지 오래 걸리면 방이 그만큼 게임 중으로 남습니다.
+
 ## 2026-10-11 — 게임 랭킹(종목별·기간 선택)
 
 - **화면**: `게임 → 게임 랭킹`(`/games/rankings?game=…&difficulty=…`). 종목(온라인 대전 11종 + 혼자 하는 게임 4종)·난이도·기간(이번 주·이번 달·전체 버튼, 시작일·종료일 직접 선택, 기본 이번 달)을 고르고 상위 50명을 봅니다. 혼자 하는 게임 4종은 끝난 화면에 `랭킹에 올리기` 폼(`GameRankingSubmitPanel`)이 나옵니다. 비회원 닉네임은 온라인 대전과 같은 저장값(`online.nickname`, `games/shared/playerNickname.ts`)을 씁니다.

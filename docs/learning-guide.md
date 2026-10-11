@@ -394,6 +394,7 @@ API Workspace는 요청 실행·응답·History·Collection 기능을 모두 사
 | 지뢰 찾기 | 첫 클릭 안전 지뢰 배치, BFS 연쇄 열기, chord | 오른쪽 클릭(`onContextMenu`), 로빙 탭인덱스 | `revealArea` |
 | 테트리스 | 행렬 회전·월 킥·충돌, 7-bag, 줄 지우기·점수·레벨 | 레벨별 중력 `setInterval`, 포커스를 잃으면 자동 일시정지 | `clearLines` |
 
+- **스도쿠 규칙(`sudoku/sudokuLogic.ts`)**: 혼자 하는 화면은 아직 없고 온라인 대전 스도쿠 화면이 겹침 표시에 씁니다. 백트래킹으로 정답 판을 만들고, 칸을 지울 때마다 "답이 하나뿐인가"를 `countSolutions(판, 2)`로 확인합니다. 난이도(쉬움 40·보통 32·어려움 26개)마다 시드가 같으면 같은 문제가 나오는 것을 `sudokuLogic.test.ts`가 확인합니다. 숫자 넣기는 `setCell`이 새 판을 만들어 불변성을 지킵니다.
 - **무작위 값과 순수 리듀서**: 리듀서 안에서 `Math.random`을 부르지 않습니다. 2048은 무작위 값을, 지뢰 찾기는 시드를 action에 담고, 테트리스는 난수 상태(`randomState`)를 게임 상태에 두고 `stepSeededRandom`으로 한 걸음씩 나아갑니다. 그래서 테스트가 매번 같은 결과를 확인합니다(`shared/random.ts`).
 - **최고 기록**: 저장된 기록은 State로 두고, "새 기록인가?"는 그릴 때 계산하며, localStorage 저장은 `useEffect`가 합니다. 이벤트 처리 함수에서 옛 state로 다음 상태를 미리 계산하면 빠른 연속 입력 때 오래된 클로저로 틀릴 수 있기 때문입니다. 읽을 때는 zod 스키마로 모양을 확인합니다(`shared/gameRecordStorage.ts`).
 - **직접 만들어 보기**: 게임 화면 맨 아래 상자는 학습 단계와 같은 Sandpack 상자(`curriculum/components/PracticeSandboxSection.tsx`)를 씁니다. 예제는 `games/sandbox/examples/*.tsx`이고 핵심 함수 하나가 `TODO`로 비어 있으며, 미리보기의 채점표가 ✅/❌로 바로 알려 줍니다. `gameSandboxes.test.ts`가 예제 형식과 react 외 import가 없는지 확인합니다.
@@ -411,6 +412,8 @@ API Workspace는 요청 실행·응답·History·Collection 기능을 모두 사
 | `frontend/.../games/online/useOnlineRoom.ts` | 연결의 일생 = useEffect의 일생(연결·JOIN·PING·cleanup). `send`는 Effect 의존성에 쓰여 useCallback으로 고정 |
 | `onlineRoomReducer.ts`, `onlineTypes.ts` | 받은 메시지를 zod로 검사한 뒤 리듀서로 화면 상태에. 화면은 서버가 보낸 상태를 그대로 그림(서버가 정답) |
 | `components/OnlineTetrisGame.tsx` | 혼자 하기와 같은 `tetrisReducer`를 쓰고, "블록이 굳으면 판 보내기·방해 줄 넣기"를 Effect로 서버와 맞춤 |
+| `online/domain/game/SudokuGenerator.java`, `SudokuGame.java` | 서버가 백트래킹으로 답이 하나뿐인 문제를 만들어 모두에게 같은 문제를 줌. 판은 사람마다 따로, 남에게는 채운 칸 수만(맞은 칸 수를 보내면 정답을 알아낼 수 있음), 채점은 서버가 하고 처음 완성한 사람에서 바로 끝 |
+| `online/games/SudokuGame.tsx`, `SudokuBoard.tsx` | 숫자를 넣어도 화면이 판을 바꾸지 않고 PLACE·CLEAR만 보냄(서버가 보낸 내 판으로 다시 그림). 겹침은 내 판만으로 화면이 계산, 로빙 탭인덱스 키보드 조작 |
 
 - **서버 부담**: 방은 DB 대신 메모리(`OnlineRoomStore`)에 두고, 방 50개·방당 10명·메시지 1초 20개·채팅 1초 2개로 제한합니다. 오목은 수마다 판(1KB)을 보내고, 테트리스는 블록이 굳을 때만 200글자 요약을 보냅니다.
 - **학습용 한계**: 테트리스 판·점수는 서버가 다시 계산해 검증하지 않습니다(조작을 막으려면 서버가 같은 규칙으로 다시 계산해야 합니다).

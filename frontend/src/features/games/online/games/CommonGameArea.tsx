@@ -12,6 +12,7 @@ import { MemoryMatchGame } from "@/features/games/online/games/MemoryMatchGame";
 import { NumberBaseballGame } from "@/features/games/online/games/NumberBaseballGame";
 import { OneCardGame } from "@/features/games/online/games/OneCardGame";
 import { PokerGame } from "@/features/games/online/games/PokerGame";
+import { SudokuGame } from "@/features/games/online/games/SudokuGame";
 import { SutdaGame } from "@/features/games/online/games/SutdaGame";
 import type { OnlineClientMessage, OnlineRoom } from "@/features/games/online/onlineTypes";
 
@@ -42,6 +43,8 @@ export const CommonGameArea = (properties: CommonGameProperties) => {
       return <ChessGame {...properties} />;
     case "MAFIA":
       return <MafiaGame {...properties} />;
+    case "SUDOKU":
+      return <SudokuGame {...properties} />;
     default:
       return <p className="online-hint">아직 준비 중인 게임입니다.</p>;
   }

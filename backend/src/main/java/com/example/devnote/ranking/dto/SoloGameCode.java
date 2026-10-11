@@ -11,8 +11,9 @@ import java.util.List;
  *   2048·테트리스  : 점수가 높을수록 좋다(SCORE_DESC). 난이도 없음
  *   지뢰 찾기      : 이긴 시간이 짧을수록 좋다(TIME_ASC). 난이도마다 따로 매긴다
  *   카드 짝 맞추기 : 시도가 적을수록, 같으면 시간이 짧을수록 좋다(MOVES_THEN_TIME_ASC). 난이도마다 따로
+ *   스도쿠         : 다 푼 시간이 짧을수록 좋다(TIME_ASC). 난이도마다 따로
  *
- * 난이도 이름은 화면(minesweeperLogic.ts·memoryLogic.ts)의 값과 같아야 한다.
+ * 난이도 이름은 화면(minesweeperLogic.ts·memoryLogic.ts·sudokuLogic.ts)의 값과 같아야 한다.
  */
 @Getter
 @RequiredArgsConstructor
@@ -20,7 +21,8 @@ public enum SoloGameCode {
     GAME_2048(RankingOrder.SCORE_DESC, List.of()),
     TETRIS(RankingOrder.SCORE_DESC, List.of()),
     MINESWEEPER(RankingOrder.TIME_ASC, List.of("BEGINNER", "INTERMEDIATE", "EXPERT")),
-    MEMORY(RankingOrder.MOVES_THEN_TIME_ASC, List.of("EASY", "NORMAL", "HARD"));
+    MEMORY(RankingOrder.MOVES_THEN_TIME_ASC, List.of("EASY", "NORMAL", "HARD")),
+    SUDOKU(RankingOrder.TIME_ASC, List.of("EASY", "NORMAL", "HARD"));
 
     /** 기록을 줄 세우는 기준. Mapper XML의 soloRecordOrder가 이 이름으로 ORDER BY를 고른다 */
     public enum RankingOrder { SCORE_DESC, TIME_ASC, MOVES_THEN_TIME_ASC }

@@ -27,7 +27,8 @@ public enum OnlineGameType {
     MEMORY_MATCH("카드 짝 맞추기 대전", 2, 4, true),
     BLACKJACK("블랙잭", 1, 4, true),
     SUTDA("섯다", 2, 4, true),
-    POKER("포커", 2, 4, true);
+    POKER("포커", 2, 4, true),
+    SUDOKU("스도쿠", 2, 4, true);
 
     private final String label;
     private final int minSeats;
