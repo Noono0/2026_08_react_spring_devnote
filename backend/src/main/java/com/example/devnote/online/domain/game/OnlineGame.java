@@ -40,6 +40,14 @@ public interface OnlineGame {
         return true;
     }
 
+    /**
+     * 이 자리의 결과가 이미 정해졌는지. 2048·지뢰 찾기 대전처럼 각자 자기 판을 끝내는 게임에서
+     * 먼저 끝낸 사람이 나가거나 기권해도 결과(성공·실패)를 그대로 지키려고 쓴다. 차례대로 겨루는 게임은 늘 false
+     */
+    default boolean hasSettledResult(int seat) {
+        return false;
+    }
+
     /** 지난번 이후 새로 생긴 안내 문구(채팅에 시스템 메시지로 남긴다). 꺼내면 비워진다 */
     default List<String> drainAnnouncements() {
         return List.of();

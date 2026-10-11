@@ -13,6 +13,7 @@ import java.util.Random;
  *
  * [규칙]
  *   1. 시작하면 서버가 답이 하나뿐인 문제를 하나 만들어 모두에게 똑같이 준다(SudokuGenerator).
+ *      처음 숫자 수는 방장이 고른 난이도를 따른다(쉬움 40 · 보통 32 · 어려움 26개).
  *   2. 판은 사람마다 따로다. 차례 없이 동시에 자기 판에 숫자를 넣고(PLACE) 지운다(CLEAR).
  *      처음부터 놓인 숫자는 못 바꾼다. 틀린 숫자도 넣을 수 있고 벌점은 없다.
  *   3. 내 판이 정답 판과 같아지는 순간 그 사람이 이기고 게임이 바로 끝난다.
@@ -27,7 +28,7 @@ import java.util.Random;
  * 행동 모양: { action: "PLACE", numbers: [row, col], number: 1~9 } / { action: "CLEAR", numbers: [row, col] }
  */
 public class SudokuGame implements OnlineGame {
-    /** 처음부터 놓인 숫자 수. 적을수록 어렵다(32 = 보통) */
+    /** 처음부터 놓인 숫자 수. 적을수록 어렵다(32 = 보통). 방장이 고른 난이도로 바뀐다(givenCountFor) */
     public static final int GIVEN_COUNT = 32;
     private static final int SIZE = SudokuGenerator.SIZE;
 
@@ -53,8 +54,17 @@ public class SudokuGame implements OnlineGame {
     private boolean finished;
     private boolean completedByPlayer;
 
-    public SudokuGame(List<String> nicknames, Random random) {
-        this(nicknames, SudokuGenerator.generate(GIVEN_COUNT, random));
+    public SudokuGame(List<String> nicknames, Random random, int givenCount) {
+        this(nicknames, SudokuGenerator.generate(givenCount, random));
+    }
+
+    /** 방장이 고른 난이도(OnlineGameType.SUDOKU 옵션) → 처음 숫자 수. 연습용 스도쿠(sudokuLogic.ts sudokuDifficulties)와 같다 */
+    public static int givenCountFor(String difficulty) {
+        return switch (difficulty == null ? "" : difficulty) {
+            case "EASY" -> 40;
+            case "HARD" -> 26;
+            default -> GIVEN_COUNT;
+        };
     }
 
     /** 테스트용: 정해 둔 문제로 시작한다 */

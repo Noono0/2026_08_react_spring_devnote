@@ -2,6 +2,16 @@
 
 [문서 목록으로](../README.md) · [작업 규칙](../AGENTS.md) · [검증 명령](verification.md)
 
+## 2026-10-12 — 온라인 2048 대전·지뢰 찾기 대전 + 방장 게임 옵션
+
+- **게임 옵션**: 방마다 `gameOption` 코드 하나를 둡니다. 고를 수 있는 값·이름·처음 값은 `OnlineGameType.getOptions()`/`getDefaultOption()`에만 적습니다(스도쿠 EASY·NORMAL·HARD = 고정 숫자 40·32·26, 2048 목표 256·512·1024·2048(처음 512), 지뢰 찾기 BEGINNER·INTERMEDIATE·EXPERT(처음 BEGINNER)). 만들기 요청·`UPDATE_ROOM` 설정에 넣고, 비우면 같은 게임은 그대로·다른 게임은 처음 값, 고를 수 없는 값은 `ONLINE_GAME_OPTION_INVALID`, 게임 중 변경은 `ONLINE_GAME_IN_PROGRESS`입니다. 방 화면 상태(`gameOption`·`gameOptionLabel`)와 방 목록(`gameOptionLabel`), 게임 종류 목록(`options`·`defaultOption`)에 실립니다. 화면: 방 만들기·수정 폼의 `게임 옵션` 칸, 대기 중 방장의 판 아래 바로 바꾸기, 모두에게 보이는 `게임 옵션: …` 표시.
+- **2048 대전(2~4인)**: `Game2048Game`이 처음 판 하나와 타일 시드 하나를 만들고 자리마다 `new Random(같은 시드)`를 줘 같은 순서로 밀면 같은 새 타일이 나옵니다. `MOVE {text: UP·DOWN·LEFT·RIGHT}`, 판이 그대로인 이동은 세지 않습니다(화면도 `moveBoard`로 걸러 보내지 않음). 목표 타일 = 성공, 더 못 밀면 실패. 판은 모두에게 공개.
+- **지뢰 찾기 대전(2~4인)**: `MinesweeperGame`이 시작 칸의 3×3을 피해 지뢰를 놓고 모든 판에 같은 빈 영역을 미리 엽니다. `REVEAL`(BFS 연쇄)·`FLAG`(토글)·`CHORD {numbers:[행,열]}`, 클릭 수는 판을 바꾼 REVEAL·CHORD만. 지뢰 = 실패, 안전한 칸 모두 = 성공. 게임이 끝나기 전에는 누구의 화면 상태에도 지뢰(`*`)·밟은 칸(`X`)·틀린 깃발(`W`)을 쓰지 않습니다.
+- **순위(`RaceStandings`)**: 성공은 비용(이동·클릭)이 적은 순 → 먼저 끝낸 순, 실패는 점수(2048 점수·연 칸 수)가 높은 순, 빠진 사람은 맨 아래이고 이길 수 없습니다. 1위 동점은 공동 승리. 모두 끝나면 게임 끝, 다른 사람이 성공·실패로 끝냈으면 혼자 남아도 계속하고, 나머지가 모두 빠졌으면 남은 사람이 바로 이깁니다. `OnlineGame.hasSettledResult`로 결과가 정해진 뒤 나간 사람은 기권 기록(`forfeitedSeats`)에서 빼 그 결과로 저장합니다. 화면은 내 판이 끝나면 `기권` 버튼을 숨깁니다.
+- **화면**: `online/games/Game2048Battle.tsx`·`MinesweeperBattle.tsx`(+ `*BattleRules.ts` zod 스키마, `raceBattleRules.ts`, `RaceNameplate.tsx`), `online.css`의 `.race-*`(왼쪽 내 판·오른쪽 작은 판, 좁으면 위아래). 혼자 하기 `games.css`·`game2048Logic.ts`는 고치지 않고 가져다 씁니다. `onlineRankingGames`에 두 게임 추가(온라인 대전 14종).
+- **검증**: 백엔드 `Game2048GameTest`(10)·`MinesweeperGameTest`(7)·`RaceStandingsTest`(4), `OnlineRoomTest`에 옵션·결과 보호 3개, `OnlineRoomServiceTest`에 옵션 목록·2048 방 1개. 화면 `onlinePages.test.tsx`에 옵션 UI 3개·2048 대전 3개·지뢰 찾기 대전 3개. 프론트 lint·typecheck·test(584)·build, 백엔드 `gradlew.bat test` 통과. `scripts/verify-static.py`는 Python이 없어 실행하지 못했습니다(DAO·Mapper·스키마 변경 없음). 실제 서버에서 여러 브라우저로 끝까지 해 보는 수동 확인과 좁은 화면 배치의 눈 확인은 하지 않았습니다.
+- **알려진 한계**: 시간제한이 없어 한 사람이 오래 끌면 방이 게임 중으로 남습니다(나머지는 기권으로 끝낼 수 있음). 2048 대전 화면은 서버 응답 전의 판으로 "그대로인 방향"을 거르므로 아주 빠른 연속 입력 중 한 번이 빠지거나 서버가 무시할 수 있습니다. 위 스도쿠 항목의 "난이도는 고정(보통)"은 이번 게임 옵션으로 고를 수 있게 바뀌었습니다.
+
 ## 2026-10-12 — 온라인 대전 스도쿠
 
 - **스도쿠(2~4인)**: `SudokuGenerator`가 시작할 때 답이 하나뿐인 문제(고정 숫자 32개 = `SudokuGame.GIVEN_COUNT`)를 만들고, `SudokuGame`이 모두에게 같은 문제를 줍니다. 차례 없이 각자 자기 판에 `PLACE {numbers:[행,열], number:1~9}`·`CLEAR {numbers:[행,열]}`을 보내며, 고정 숫자는 못 바꾸고 틀린 숫자는 벌점 없이 넣을 수 있습니다. 내 판이 정답과 같아지는 순간 그 사람이 이기고 바로 끝납니다(방 잠금 안에서 하나씩 처리하므로 먼저 도착한 행동이 이김). 나가면 빠지고 혼자 남으면 승리, 모두 나가면 승자 없음.

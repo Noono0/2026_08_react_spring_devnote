@@ -12,6 +12,7 @@ import jakarta.validation.constraints.Size;
  * 형식 검사는 여기(@Valid), "이 게임에서 고를 수 있는 인원인가" 같은 규칙 검사는 OnlineRoom이 한다.
  *
  * password: 비워 두면 비밀번호 없는 방. 넣으면 4~20자.
+ * gameOption: 비워 두면 그 게임의 처음 옵션(OnlineGameType.getDefaultOption()). 옵션이 없는 게임은 비워 둔다.
  */
 public record OnlineRoomCreateRequest(
     @NotBlank(message = "방 제목을 입력해 주세요.")
@@ -24,5 +25,7 @@ public record OnlineRoomCreateRequest(
     int seatCount,
     @Size(max = 20, message = "방 비밀번호는 20자 이하로 입력해 주세요.")
     String password,
-    boolean membersOnly
+    boolean membersOnly,
+    @Size(max = 20, message = "게임 옵션을 확인해 주세요.")
+    String gameOption
 ) {}

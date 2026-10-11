@@ -84,7 +84,8 @@ public class OnlineRoomService {
 
     public List<OnlineGameTypeResponse> getGameTypes() {
         return Arrays.stream(OnlineGameType.values())
-            .map(type -> new OnlineGameTypeResponse(type.name(), type.getLabel(), type.getMinSeats(), type.getMaxSeats(), type.isAvailable()))
+            .map(type -> new OnlineGameTypeResponse(type.name(), type.getLabel(), type.getMinSeats(), type.getMaxSeats(), type.isAvailable(),
+                type.getOptions(), type.getDefaultOption()))
             .toList();
     }
 
@@ -107,7 +108,8 @@ public class OnlineRoomService {
         long now = now();
         roomStore.removeExpiredEmptyRooms(now);
         String hostToken = randomText(24);
-        OnlineRoomSettings settings = new OnlineRoomSettings(request.title(), request.gameType(), request.seatCount(), request.password(), false, request.membersOnly());
+        OnlineRoomSettings settings = new OnlineRoomSettings(
+            request.title(), request.gameType(), request.seatCount(), request.password(), false, request.membersOnly(), request.gameOption());
         OnlineRoom room = new OnlineRoom(newRoomId(), settings, hostToken, now);
         roomStore.save(room);
         return new OnlineRoomCreatedResponse(room.getRoomId(), hostToken);
@@ -175,7 +177,8 @@ public class OnlineRoomService {
             settings.seatCount() == null ? room.getSeatCount() : settings.seatCount(),
             settings.newPassword(),
             settings.removePassword(),
-            settings.membersOnly()
+            settings.membersOnly(),
+            settings.gameOption()
         ), now()));
     }
 

@@ -78,6 +78,8 @@ export const onlineRankingGames: OnlineRankingGame[] = [
   onlineGame("SUTDA", "섯다"),
   onlineGame("POKER", "포커"),
   onlineGame("SUDOKU", "스도쿠"),
+  onlineGame("GAME_2048", "2048 대전"),
+  onlineGame("MINESWEEPER", "지뢰 찾기 대전"),
 ];
 
 export const defaultRankingGame: RankingGame = omokRankingGame;

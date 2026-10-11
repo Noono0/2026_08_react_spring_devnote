@@ -18,6 +18,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
 
@@ -31,7 +32,7 @@ import java.util.Set;
  *
  * [함께 정한 규칙]
  *   1. 인원 수를 줄이면 앞 번호 자리에 앉은 사람이 남고, 뒷자리 사람은 빈 앞자리로 옮긴다. 자리가 모자라면 관전자가 된다.
- *   2. 게임 종류·인원 수는 방장만, 게임 중이 아닐 때만 바꾼다. 제목·비밀번호·로그인 유저만은 게임 중에도 바꿀 수 있다.
+ *   2. 게임 종류·인원 수·게임 옵션은 방장만, 게임 중이 아닐 때만 바꾼다. 게임 종류를 바꾸면 옵션은 새 게임의 처음 값이 된다. 제목·비밀번호·로그인 유저만은 게임 중에도 바꿀 수 있다.
  *   3. 방 최대 인원은 관전자 포함 10명.
  *   4. 게임 중에는 자리에 앉거나 일어날 수 없다(다음 판부터).
  *   5. 방장이 나가면 남은 사람 중 먼저 들어온 사람이 방장이 된다.
@@ -52,6 +53,8 @@ public class OnlineRoom {
     private final long createdAt;
     private String title;
     private OnlineGameType gameType;
+    /** 방장이 고른 게임 옵션 code(OnlineGameType.getOptions() 중 하나). 옵션이 없는 게임은 null */
+    private String gameOption;
     @Getter(AccessLevel.NONE) // 해시도 밖으로 내보내지 않는다. 확인은 passwordMatches로만
     private RoomPassword password;
     private boolean membersOnly;
@@ -99,6 +102,7 @@ public class OnlineRoom {
         this.title = normalizeTitle(settings.title());
         requireAvailable(settings.gameType(), settings.seatCount());
         this.gameType = settings.gameType();
+        this.gameOption = resolveGameOption(settings.gameType(), settings.gameOption(), settings.gameType().getDefaultOption());
         this.seats = new ArrayList<>(Collections.nCopies(settings.seatCount(), null));
         this.password = settings.newPassword() == null || settings.newPassword().isBlank() ? null : createPassword(settings.newPassword());
         this.membersOnly = settings.membersOnly();
@@ -230,6 +234,11 @@ public class OnlineRoom {
             requireNotPlaying(); // 규칙 2
             requireAvailable(settings.gameType(), settings.seatCount());
         }
+        // 옵션을 비워 보내면: 같은 게임이면 지금 옵션 그대로, 다른 게임이면 그 게임의 처음 옵션
+        String keptOption = settings.gameType() == gameType ? gameOption : settings.gameType().getDefaultOption();
+        String nextOption = resolveGameOption(settings.gameType(), settings.gameOption(), keptOption);
+        boolean optionChanged = !Objects.equals(nextOption, gameOption);
+        if (optionChanged) requireNotPlaying();
         if (settings.membersOnly() && !participants.get(requesterId).isMember()) {
             throw new BusinessException(ErrorCode.ONLINE_ROOM_SETTINGS_INVALID, "로그인한 방장만 '로그인 유저만 참가'를 켤 수 있습니다.");
         }
@@ -251,7 +260,16 @@ public class OnlineRoom {
             gameType = settings.gameType();
             resizeSeats(settings.seatCount());
         }
-        addSystemMessage("방 정보가 바뀌었습니다: " + gameType.getLabel() + " · " + seats.size() + "인", now);
+        gameOption = nextOption;
+        String optionText = gameOption == null ? "" : " · " + gameType.optionLabel(gameOption);
+        addSystemMessage("방 정보가 바뀌었습니다: " + gameType.getLabel() + " · " + seats.size() + "인" + optionText, now);
+    }
+
+    /** 방장이 보낸 옵션을 검사한다. 비어 있으면 keptOption, 이 게임에서 고를 수 없는 값이면 오류 */
+    private static String resolveGameOption(OnlineGameType type, String requested, String keptOption) {
+        if (requested == null || requested.isBlank()) return keptOption;
+        if (!type.allowsOption(requested)) throw new BusinessException(ErrorCode.ONLINE_GAME_OPTION_INVALID);
+        return requested;
     }
 
     // ── 게임 진행 ────────────────────────────────────────────────────
@@ -272,8 +290,9 @@ public class OnlineRoom {
         List<String> nicknames = new ArrayList<>();
         for (int seat = 0; seat < seats.size(); seat++) nicknames.add(nicknameAt(seat));
         if (OnlineGames.usesCommonGame(gameType)) {
-            game = OnlineGames.create(gameType, nicknames, new Random(seed));
-            addSystemMessage(gameType.getLabel() + " 시작! " + String.join(" · ", nicknames), now);
+            game = OnlineGames.create(gameType, nicknames, new Random(seed), gameOption);
+            String optionText = gameOption == null ? "" : "(" + gameType.optionLabel(gameOption) + ")";
+            addSystemMessage(gameType.getLabel() + optionText + " 시작! " + String.join(" · ", nicknames), now);
             afterGameChange(now);
             return;
         }
@@ -317,7 +336,7 @@ public class OnlineRoom {
     public void resign(String participantId, long now) {
         requireParticipant(participantId);
         int seat = seatOf(participantId);
-        if (status == Status.PLAYING && seat >= 0) forfeitedSeats.add(seat);
+        if (status == Status.PLAYING && seat >= 0) forfeit(seat);
         if (status == Status.PLAYING && game != null && seat >= 0) {
             addSystemMessage(nicknameAt(seat) + " 기권", now);
             game.leave(seat);
@@ -334,8 +353,17 @@ public class OnlineRoom {
         finishGame(nicknameAt(seat) + " 기권 · " + stoneName(winnerSeat) + " " + nicknameAt(winnerSeat) + " 승리", now);
     }
 
+    /**
+     * 기권·나감을 기록한다(이긴 쪽이어도 승리로 저장하지 않는다).
+     * 단, 2048·지뢰 찾기 대전처럼 이미 자기 결과(성공·실패)가 정해진 자리는 그 결과를 지킨다 — 먼저 끝내고 나가도 손해가 없게.
+     */
+    private void forfeit(int seat) {
+        if (game != null && game.hasSettledResult(seat)) return;
+        forfeitedSeats.add(seat);
+    }
+
     private void finishByLeaving(int leftSeat, String leftNickname, long now) {
-        forfeitedSeats.add(leftSeat);
+        forfeit(leftSeat);
         if (game != null) {
             game.leave(leftSeat);
             afterGameChange(now);

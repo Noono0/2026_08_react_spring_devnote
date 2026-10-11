@@ -414,10 +414,15 @@ API Workspace는 요청 실행·응답·History·Collection 기능을 모두 사
 | `components/OnlineTetrisGame.tsx` | 혼자 하기와 같은 `tetrisReducer`를 쓰고, "블록이 굳으면 판 보내기·방해 줄 넣기"를 Effect로 서버와 맞춤 |
 | `online/domain/game/SudokuGenerator.java`, `SudokuGame.java` | 서버가 백트래킹으로 답이 하나뿐인 문제를 만들어 모두에게 같은 문제를 줌. 판은 사람마다 따로, 남에게는 채운 칸 수만(맞은 칸 수를 보내면 정답을 알아낼 수 있음), 채점은 서버가 하고 처음 완성한 사람에서 바로 끝 |
 | `online/games/SudokuGame.tsx`, `SudokuBoard.tsx` | 숫자를 넣어도 화면이 판을 바꾸지 않고 PLACE·CLEAR만 보냄(서버가 보낸 내 판으로 다시 그림). 겹침은 내 판만으로 화면이 계산, 로빙 탭인덱스 키보드 조작 |
+| `online/domain/OnlineGameType.java`(`getOptions`·`getDefaultOption`), `OnlineRoom.resolveGameOption` | 방장이 고르는 게임 옵션. 고를 수 있는 값은 게임 종류 옆에 한 곳에만 적고, 서버가 검사(틀리면 `ONLINE_GAME_OPTION_INVALID`)·게임을 바꾸면 처음 값으로·게임 중에는 못 바꿈. 시작할 때 `OnlineGames.create`에 넘김 |
+| `online/domain/game/RaceStandings.java` | "각자 자기 판" 대전의 공통 진행표. 성공(적은 비용 → 먼저 끝낸 순)·실패(높은 점수 순)·빠짐(맨 아래)으로 순위를 정하고, 다른 사람이 끝냈으면 한 명이 남아도 계속 |
+| `online/domain/game/Game2048Game.java` | 같은 처음 판 + 자리마다 같은 시드의 `Random` → 같은 순서로 이동하면 같은 새 타일. 실력(이동 수)만 겨루는 공정한 무작위 |
+| `online/domain/game/MinesweeperGame.java` | 지뢰 배치는 서버만 알고 `viewFor`는 게임이 끝나기 전엔 지뢰 글자를 아예 쓰지 않음(숨긴 정보는 보내지 않는 것이 가장 안전). BFS 연쇄 열기·CHORD·클릭 수 |
+| `online/games/Game2048Battle.tsx`, `MinesweeperBattle.tsx` | 테트리스 대전 같은 배치(내 큰 판 + 남의 작은 판), 혼자 하기 CSS·`moveBoard` 재사용, 바뀌지 않을 행동은 보내지 않기, 로빙 탭인덱스·오른쪽 클릭·깃발 모드 |
 
 - **서버 부담**: 방은 DB 대신 메모리(`OnlineRoomStore`)에 두고, 방 50개·방당 10명·메시지 1초 20개·채팅 1초 2개로 제한합니다. 오목은 수마다 판(1KB)을 보내고, 테트리스는 블록이 굳을 때만 200글자 요약을 보냅니다.
 - **학습용 한계**: 테트리스 판·점수는 서버가 다시 계산해 검증하지 않습니다(조작을 막으려면 서버가 같은 규칙으로 다시 계산해야 합니다).
-- **테스트**: `OnlineRoomTest`·`OmokGameTest`·`TetrisBattleTest`·`OnlineRoomServiceTest`(가짜 전송기), `OnlineGameWebSocketIntegrationTest`(실제 서버 + WebSocket 3개, Docker 필요), 화면은 `onlinePages.test.tsx`(가짜 WebSocket)입니다.
+- **테스트**: `OnlineRoomTest`·`OmokGameTest`·`TetrisBattleTest`·`Game2048GameTest`·`MinesweeperGameTest`·`RaceStandingsTest`·`OnlineRoomServiceTest`(가짜 전송기), `OnlineGameWebSocketIntegrationTest`(실제 서버 + WebSocket 3개, Docker 필요), 화면은 `onlinePages.test.tsx`(가짜 WebSocket)입니다.
 
 ### 게임 랭킹(서버 집계)
 

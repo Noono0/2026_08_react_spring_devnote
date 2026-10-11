@@ -3,6 +3,8 @@ package com.example.devnote.online.domain;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
+import java.util.List;
+
 /**
  * 온라인 대전에서 고를 수 있는 게임 목록입니다.
  *
@@ -13,6 +15,11 @@ import lombok.RequiredArgsConstructor;
  * [available]
  *   true인 게임만 방을 만들거나 바꿀 수 있다. 나머지는 화면에 "준비 중"으로 보인다.
  *   새 게임을 완성하면 여기서 true로 바꾸고 OnlineRoom에 그 게임의 진행 규칙을 연결한다.
+ *
+ * [게임 옵션]
+ *   목표 타일·난이도처럼 "판을 시작하기 전에 방장이 하나 고르는 값"이 있는 게임은 getOptions()에 고를 수 있는 값을,
+ *   getDefaultOption()에 처음 값을 적는다. 옵션이 없는 게임은 빈 목록과 null이다.
+ *   방(OnlineRoom)은 이 목록으로 방장이 보낸 값을 검사하고, 시작할 때 게임(OnlineGames.create)에 넘긴다.
  */
 @Getter
 @RequiredArgsConstructor
@@ -28,7 +35,9 @@ public enum OnlineGameType {
     BLACKJACK("블랙잭", 1, 4, true),
     SUTDA("섯다", 2, 4, true),
     POKER("포커", 2, 4, true),
-    SUDOKU("스도쿠", 2, 4, true);
+    SUDOKU("스도쿠", 2, 4, true),
+    GAME_2048("2048 대전", 2, 4, true),
+    MINESWEEPER("지뢰 찾기 대전", 2, 4, true);
 
     private final String label;
     private final int minSeats;
@@ -42,5 +51,39 @@ public enum OnlineGameType {
     /** 게임을 바꿀 때: 지금 인원 수가 새 게임 범위 밖이면 가장 가까운 값으로 맞춘다(4인 → 오목이면 2). */
     public int clampSeatCount(int seatCount) {
         return Math.max(minSeats, Math.min(maxSeats, seatCount));
+    }
+
+    /** 방장이 고를 수 있는 옵션(화면에 보일 순서대로). 옵션이 없는 게임은 빈 목록 */
+    public List<OnlineGameOption> getOptions() {
+        return switch (this) {
+            case SUDOKU -> List.of(
+                new OnlineGameOption("EASY", "쉬움"), new OnlineGameOption("NORMAL", "보통"), new OnlineGameOption("HARD", "어려움"));
+            case GAME_2048 -> List.of(
+                new OnlineGameOption("256", "목표 256"), new OnlineGameOption("512", "목표 512"),
+                new OnlineGameOption("1024", "목표 1024"), new OnlineGameOption("2048", "목표 2048"));
+            case MINESWEEPER -> List.of(
+                new OnlineGameOption("BEGINNER", "초급 · 9×9 · 지뢰 10"), new OnlineGameOption("INTERMEDIATE", "중급 · 16×16 · 지뢰 40"),
+                new OnlineGameOption("EXPERT", "고급 · 16×30 · 지뢰 99"));
+            default -> List.of();
+        };
+    }
+
+    /** 방을 만들거나 게임을 바꿨을 때의 처음 옵션. 옵션이 없는 게임은 null */
+    public String getDefaultOption() {
+        return switch (this) {
+            case SUDOKU -> "NORMAL";
+            case GAME_2048 -> "512";
+            case MINESWEEPER -> "BEGINNER";
+            default -> null;
+        };
+    }
+
+    public boolean allowsOption(String code) {
+        return getOptions().stream().anyMatch(option -> option.code().equals(code));
+    }
+
+    /** 옵션 code → 화면 이름. 옵션이 없거나 모르는 값이면 null */
+    public String optionLabel(String code) {
+        return getOptions().stream().filter(option -> option.code().equals(code)).map(OnlineGameOption::label).findFirst().orElse(null);
     }
 }

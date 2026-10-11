@@ -7,8 +7,10 @@
 import { BattleshipGame } from "@/features/games/online/games/BattleshipGame";
 import { BlackjackGame } from "@/features/games/online/games/BlackjackGame";
 import { ChessGame } from "@/features/games/online/games/ChessGame";
+import { Game2048Battle } from "@/features/games/online/games/Game2048Battle";
 import { MafiaGame } from "@/features/games/online/games/MafiaGame";
 import { MemoryMatchGame } from "@/features/games/online/games/MemoryMatchGame";
+import { MinesweeperBattle } from "@/features/games/online/games/MinesweeperBattle";
 import { NumberBaseballGame } from "@/features/games/online/games/NumberBaseballGame";
 import { OneCardGame } from "@/features/games/online/games/OneCardGame";
 import { PokerGame } from "@/features/games/online/games/PokerGame";
@@ -45,6 +47,10 @@ export const CommonGameArea = (properties: CommonGameProperties) => {
       return <MafiaGame {...properties} />;
     case "SUDOKU":
       return <SudokuGame {...properties} />;
+    case "GAME_2048":
+      return <Game2048Battle {...properties} />;
+    case "MINESWEEPER":
+      return <MinesweeperBattle {...properties} />;
     default:
       return <p className="online-hint">아직 준비 중인 게임입니다.</p>;
   }

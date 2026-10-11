@@ -6,6 +6,7 @@ import com.example.devnote.member.dao.row.MemberRow;
 import com.example.devnote.member.service.AuthenticationService;
 import com.example.devnote.online.domain.OnlineGameType;
 import com.example.devnote.online.domain.OnlineMatchResult;
+import com.example.devnote.online.domain.game.Game2048Game;
 import com.example.devnote.online.domain.game.GameAction;
 import com.example.devnote.online.domain.game.NumberBaseballGame;
 import com.example.devnote.online.domain.game.SudokuGame;
@@ -76,7 +77,7 @@ class OnlineRoomServiceTest {
     }
 
     private OnlineRoomCreatedResponse createRoom(String password, boolean membersOnly) {
-        return service.createRoom(new OnlineRoomCreateRequest("한 판 해요", OnlineGameType.OMOK, 2, password, membersOnly), new MockHttpServletRequest());
+        return service.createRoom(new OnlineRoomCreateRequest("한 판 해요", OnlineGameType.OMOK, 2, password, membersOnly, null), new MockHttpServletRequest());
     }
 
     private static OnlineClientMessage joinMessage(String roomId, String nickname, String password, String hostToken) {
@@ -158,7 +159,7 @@ class OnlineRoomServiceTest {
         OnlineRoomCreatedResponse created = createRoom(null, false);
         OnlineConnection host = new OnlineConnection("s1", null, null);
         service.join(host, joinMessage(created.roomId(), "방장", null, created.hostToken()));
-        service.updateSettings(host, new OnlineRoomSettingsMessage("비밀 방", null, null, "abcd", false, false));
+        service.updateSettings(host, new OnlineRoomSettingsMessage("비밀 방", null, null, "abcd", false, false, null));
 
         assertThat(sender.lastRoomStateFor("s1").room().hasPassword()).isTrue();
         assertError(() -> service.join(new OnlineConnection("s2", null, null), joinMessage(created.roomId(), "손님", null, null)),
@@ -168,7 +169,7 @@ class OnlineRoomServiceTest {
 
     @Test
     void 테트리스_대전은_같은_시드로_시작하고_방해_줄은_받는_사람에게만_간다() {
-        OnlineRoomCreatedResponse created = service.createRoom(new OnlineRoomCreateRequest("테트리스", OnlineGameType.TETRIS, 2, null, false), new MockHttpServletRequest());
+        OnlineRoomCreatedResponse created = service.createRoom(new OnlineRoomCreateRequest("테트리스", OnlineGameType.TETRIS, 2, null, false, null), new MockHttpServletRequest());
         OnlineConnection first = new OnlineConnection("s1", null, null);
         OnlineConnection second = new OnlineConnection("s2", null, null);
         OnlineConnection watcher = new OnlineConnection("s3", null, null);
@@ -200,7 +201,7 @@ class OnlineRoomServiceTest {
 
     @Test
     void 공통_틀_게임은_GAME_ACTION으로_진행하고_사람마다_다른_화면을_받는다() {
-        OnlineRoomCreatedResponse created = service.createRoom(new OnlineRoomCreateRequest("야구", OnlineGameType.NUMBER_BASEBALL, 2, null, false), new MockHttpServletRequest());
+        OnlineRoomCreatedResponse created = service.createRoom(new OnlineRoomCreateRequest("야구", OnlineGameType.NUMBER_BASEBALL, 2, null, false, null), new MockHttpServletRequest());
         OnlineConnection first = new OnlineConnection("s1", null, null);
         OnlineConnection second = new OnlineConnection("s2", null, null);
         OnlineConnection watcher = new OnlineConnection("s3", null, null);
@@ -237,7 +238,7 @@ class OnlineRoomServiceTest {
 
     @Test
     void 스도쿠_대전은_모두_같은_문제를_받고_남에게는_채운_칸_수만_보인다() {
-        OnlineRoomCreatedResponse created = service.createRoom(new OnlineRoomCreateRequest("스도쿠", OnlineGameType.SUDOKU, 2, null, false), new MockHttpServletRequest());
+        OnlineRoomCreatedResponse created = service.createRoom(new OnlineRoomCreateRequest("스도쿠", OnlineGameType.SUDOKU, 2, null, false, null), new MockHttpServletRequest());
         OnlineConnection first = new OnlineConnection("s1", null, null);
         OnlineConnection second = new OnlineConnection("s2", null, null);
         OnlineConnection watcher = new OnlineConnection("s3", null, null);
@@ -265,6 +266,36 @@ class OnlineRoomServiceTest {
         assertThat(afterTheirs.players().get(0).filled()).isEqualTo(1);
         assertThat(afterTheirs.myBoard()).isEqualTo(mine.givens()); // 둘둘의 판에는 하나의 숫자가 없다
         assertError(() -> service.gameAction(watcher, new GameAction("PLACE", null, 5, List.of(emptyIndex / 9, emptyIndex % 9))), ErrorCode.ONLINE_NOT_YOUR_TURN);
+    }
+
+    @Test
+    void 게임_종류_목록에_옵션이_있고_2048_대전은_고른_목표로_모두_같은_판에서_시작한다() {
+        var game2048 = service.getGameTypes().stream().filter(type -> type.code().equals("GAME_2048")).findFirst().orElseThrow();
+        assertThat(game2048.options()).extracting("code").containsExactly("256", "512", "1024", "2048");
+        assertThat(game2048.defaultOption()).isEqualTo("512");
+        var omok = service.getGameTypes().stream().filter(type -> type.code().equals("OMOK")).findFirst().orElseThrow();
+        assertThat(omok.options()).isEmpty();
+        assertThat(omok.defaultOption()).isNull();
+
+        OnlineRoomCreatedResponse created = service.createRoom(new OnlineRoomCreateRequest("2048", OnlineGameType.GAME_2048, 2, null, false, "256"), new MockHttpServletRequest());
+        assertThat(service.getRooms().get(0).gameOptionLabel()).isEqualTo("목표 256");
+        OnlineConnection first = new OnlineConnection("s1", null, null);
+        OnlineConnection second = new OnlineConnection("s2", null, null);
+        service.join(first, joinMessage(created.roomId(), "하나", null, created.hostToken()));
+        service.join(second, joinMessage(created.roomId(), "둘둘", null, null));
+        service.sit(first, 0);
+        service.sit(second, 1);
+        service.start(first);
+
+        var room = sender.lastRoomStateFor("s2").room();
+        assertThat(room.gameOption()).isEqualTo("256");
+        assertThat(room.gameOptionLabel()).isEqualTo("목표 256");
+        var view = (Game2048Game.View) room.game();
+        assertThat(view.target()).isEqualTo(256);
+        assertThat(view.mySeat()).isEqualTo(1);
+        assertThat(view.players().get(0).board()).isEqualTo(view.players().get(1).board());
+        assertError(() -> service.updateSettings(first, new OnlineRoomSettingsMessage("2048", OnlineGameType.GAME_2048, 2, null, false, false, "2048")),
+            ErrorCode.ONLINE_GAME_IN_PROGRESS);
     }
 
     @Test

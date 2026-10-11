@@ -5,7 +5,7 @@
  * 그래서 이 화면에는 게임 규칙이 없다(규칙은 서버 OnlineRoom·OmokGame에 있다).
  */
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useId, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { OmokBoard } from "@/features/games/online/components/OmokBoard";
 import { OnlineRoomForm } from "@/features/games/online/components/OnlineRoomForm";
@@ -14,7 +14,7 @@ import { CommonGameArea } from "@/features/games/online/games/CommonGameArea";
 import { RoomChat } from "@/features/games/online/components/RoomChat";
 import { RoomSeats } from "@/features/games/online/components/RoomSeats";
 import { getOnlineGameTypes, onlineQueryKeys } from "@/features/games/online/onlineApi";
-import { seatLabel, toRoomSettings } from "@/features/games/online/onlineRoomHelpers";
+import { isStillRacing, RACE_GAME_TYPES, seatLabel, toRoomSettings, withGameOption } from "@/features/games/online/onlineRoomHelpers";
 import { findMe } from "@/features/games/online/onlineRoomReducer";
 import type { OnlineRoom } from "@/features/games/online/onlineTypes";
 import { useOnlineRoom } from "@/features/games/online/useOnlineRoom";
@@ -59,6 +59,7 @@ export const OnlineRoomScreen = ({ roomId, nickname, hostToken, canUseMembersOnl
   const [password, setPassword] = useState("");
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isResignOpen, setIsResignOpen] = useState(false);
+  const optionPickerId = useId();
   const { room, connection, lastError } = state;
   const isOpen = connection === "OPEN";
   // 마지막으로 숨긴 오류 번호. 새 오류(sequence 증가)가 오면 다시 보이고, 4초 뒤 타이머가 숨긴다
@@ -120,8 +121,11 @@ export const OnlineRoomScreen = ({ roomId, nickname, hostToken, canUseMembersOnl
   const isTetris = room.gameType === "TETRIS";
   const isCommonGame = room.gameType !== "TETRIS" && room.gameType !== "OMOK";
   const statusText = describeStatus(room, mySeat);
-  // 기권: 오목은 진행 중인 플레이어, 테트리스는 아직 살아 있는 플레이어만
-  const canResign = playing && mySeat !== null && (!isTetris || room.tetris?.players[mySeat]?.alive === true);
+  // 기권: 오목은 진행 중인 플레이어, 테트리스는 아직 살아 있는 플레이어, 2048·지뢰 찾기 대전은 아직 자기 판을 하는 중인 플레이어만
+  const canResign = playing && mySeat !== null
+    && (!isTetris || room.tetris?.players[mySeat]?.alive === true)
+    && (!RACE_GAME_TYPES.has(room.gameType) || isStillRacing(room.game, mySeat));
+  const gameOptions = gameTypesQuery.data?.find((type) => type.code === room.gameType)?.options ?? [];
 
   return (
     <section className="site-page online-page">
@@ -131,6 +135,7 @@ export const OnlineRoomScreen = ({ roomId, nickname, hostToken, canUseMembersOnl
           <h1>{room.title}</h1>
           <span className="online-room-badges">
             <span className={`online-badge ${playing ? "playing" : "waiting"}`}>{playing ? "게임 중" : "대기 중"}</span>
+            {room.gameOptionLabel ? <span className="online-badge">게임 옵션: {room.gameOptionLabel}</span> : null}
             {room.hasPassword ? <span className="online-badge">🔒 비밀번호</span> : null}
             {room.membersOnly ? <span className="online-badge member">로그인 유저만</span> : null}
             <span className={`online-badge connection-${connection.toLowerCase()}`}>{isOpen ? "연결됨" : connection === "CONNECTING" ? "연결 중" : "연결 끊김"}</span>
@@ -160,6 +165,14 @@ export const OnlineRoomScreen = ({ roomId, nickname, hostToken, canUseMembersOnl
             <OmokBoard omok={room.omok} canPlace={canPlace} onPlace={(row, col) => send({ type: "OMOK_PLACE", row, col })} />
           )}
           {statusText ? <p className={`game-status${room.lastResult && !playing ? " success" : ""}`} aria-live="polite">{statusText}</p> : null}
+          {isHost && !playing && gameOptions.length > 0 ? (
+            <div className="online-game-option">
+              <label htmlFor={optionPickerId}>게임 옵션</label>
+              <select id={optionPickerId} value={room.gameOption ?? ""} disabled={!isOpen} onChange={(event) => send({ type: "UPDATE_ROOM", settings: withGameOption(room, event.target.value) })}>
+                {gameOptions.map((option) => <option key={option.code} value={option.code}>{option.label}</option>)}
+              </select>
+            </div>
+          ) : null}
           <div className="button-row">
             {isHost && !playing ? (
               <button type="button" disabled={!isOpen || !seatsFull} onClick={() => send({ type: "START" })}>
@@ -183,7 +196,7 @@ export const OnlineRoomScreen = ({ roomId, nickname, hostToken, canUseMembersOnl
             <OnlineRoomForm
               mode="edit"
               gameTypes={gameTypesQuery.data}
-              defaultValues={{ title: room.title, gameType: room.gameType, seatCount: room.seatCount, password: "", passwordMode: room.hasPassword ? "KEEP" : "CHANGE", membersOnly: room.membersOnly }}
+              defaultValues={{ title: room.title, gameType: room.gameType, seatCount: room.seatCount, password: "", passwordMode: room.hasPassword ? "KEEP" : "CHANGE", membersOnly: room.membersOnly, gameOption: room.gameOption ?? "" }}
               hasPassword={room.hasPassword}
               canUseMembersOnly={canUseMembersOnly}
               gameLocked={playing}

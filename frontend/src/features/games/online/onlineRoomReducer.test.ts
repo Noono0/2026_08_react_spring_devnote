@@ -112,8 +112,9 @@ describe("도우미", () => {
   });
 
   it("방 정보 수정 값: 비밀번호 그대로·바꾸기·해제·새로 걸기", () => {
-    const base = { title: " 새 제목 ", gameType: "OMOK", seatCount: 2, password: "abcd", membersOnly: false };
-    expect(toRoomSettings({ ...base, passwordMode: "KEEP" }, true)).toMatchObject({ title: "새 제목", newPassword: "", removePassword: false });
+    const base = { title: " 새 제목 ", gameType: "OMOK", seatCount: 2, password: "abcd", membersOnly: false, gameOption: "" };
+    expect(toRoomSettings({ ...base, passwordMode: "KEEP" }, true)).toMatchObject({ title: "새 제목", newPassword: "", removePassword: false, gameOption: null });
+    expect(toRoomSettings({ ...base, gameType: "GAME_2048", gameOption: "256", passwordMode: "KEEP" }, true)).toMatchObject({ gameOption: "256" });
     expect(toRoomSettings({ ...base, passwordMode: "CHANGE" }, true)).toMatchObject({ newPassword: "abcd", removePassword: false });
     expect(toRoomSettings({ ...base, passwordMode: "REMOVE" }, true)).toMatchObject({ newPassword: "", removePassword: true });
     expect(toRoomSettings({ ...base, passwordMode: "CHANGE" }, false)).toMatchObject({ newPassword: "abcd", removePassword: false });

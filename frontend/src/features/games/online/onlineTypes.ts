@@ -11,12 +11,21 @@ import { z } from "zod";
 
 // ── 대기실(REST) ────────────────────────────────────────────
 
+/** 방장이 고르는 게임 옵션 하나(스도쿠 난이도, 2048 목표 타일, 지뢰 찾기 난이도 등) */
+export interface OnlineGameOption {
+  code: string;
+  label: string;
+}
+
 export interface OnlineGameTypeInfo {
   code: string;
   label: string;
   minSeats: number;
   maxSeats: number;
   available: boolean;
+  /** 고를 수 있는 옵션. 옵션이 없는 게임은 빈 목록 */
+  options: OnlineGameOption[];
+  defaultOption: string | null;
 }
 
 export interface OnlineRoomSummary {
@@ -24,6 +33,7 @@ export interface OnlineRoomSummary {
   title: string;
   gameType: string;
   gameTypeLabel: string;
+  gameOptionLabel: string | null;
   seatCount: number;
   playerCount: number;
   participantCount: number;
@@ -40,6 +50,8 @@ export interface OnlineRoomCreateRequest {
   seatCount: number;
   password: string;
   membersOnly: boolean;
+  /** 비우면(null) 서버가 그 게임의 처음 옵션을 쓴다 */
+  gameOption: string | null;
 }
 
 export interface OnlineRoomCreated {
@@ -90,6 +102,9 @@ export const onlineRoomSchema = z.object({
   title: z.string(),
   gameType: z.string(),
   gameTypeLabel: z.string(),
+  /** 방장이 고른 옵션 코드와 이름. 옵션이 없는 게임이면 비어 있다 */
+  gameOption: z.string().nullish(),
+  gameOptionLabel: z.string().nullish(),
   seatCount: z.number().int(),
   maxParticipants: z.number().int(),
   hasPassword: z.boolean(),
@@ -141,6 +156,8 @@ export interface OnlineRoomSettingsInput {
   newPassword: string;
   removePassword: boolean;
   membersOnly: boolean;
+  /** 비우면(null) 같은 게임이면 지금 옵션 그대로, 다른 게임이면 그 게임의 처음 옵션 */
+  gameOption: string | null;
 }
 
 /** 화면이 보낼 수 있는 메시지. 서버 OnlineClientMessage의 type과 같다 */

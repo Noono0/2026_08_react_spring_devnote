@@ -181,6 +181,42 @@
   .tetris-arena-slot.large { width: 48px; height: 48px; }
 }
 
+/*
+ * 2048 대전·지뢰 찾기 대전: 테트리스 대전처럼 왼쪽 내 큰 판, 오른쪽 다른 사람의 작은 판.
+ * 판 칸(.online-game-area)이 좁으면 내 판 위, 다른 판 아래로 내린다. 판 그림은 혼자 하기 CSS(games.css)를 그대로 쓴다.
+ */
+.race-battle { display: grid; gap: 12px; justify-items: center; width: 100%; }
+.race-arena { display: grid; grid-template-columns: minmax(0, 1fr) minmax(150px, 280px); align-items: start; gap: 18px; width: 100%; }
+.race-arena.spectator { grid-template-columns: minmax(0, 1fr); }
+.race-arena-me { display: grid; justify-items: center; gap: 10px; min-width: 0; padding: 12px; border: 1px solid var(--border-color); border-radius: 18px; background: var(--background-muted); }
+.race-arena-me .game-2048-stage { width: min(100%, 400px); }
+.race-arena-me .minesweeper-scroll { max-width: 100%; }
+.race-arena .minesweeper-board { --mine-cell-size: 28px; }
+.race-arena-others { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); align-content: start; gap: 12px; min-width: 0; }
+.race-opponent { display: grid; gap: 4px; min-width: 0; margin: 0; padding: 6px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--background-muted); }
+.race-opponent .tetris-nameplate { padding: 3px 8px; font-size: 11px; }
+.race-nameplate.status-failed, .race-nameplate.status-left { color: var(--text-secondary); background: var(--border-color); }
+.race-nameplate.status-success { color: #fff; background: linear-gradient(180deg, #51cf66, #2b8a3e); }
+.race-nameplate.winner { box-shadow: 0 0 0 2px var(--primary-color); }
+.race-opponent.done .race-mini-2048, .race-opponent.done .race-mini-mines { opacity: 0.75; }
+.race-mini-2048 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3px; padding: 3px; border-radius: 8px; background: var(--border-strong); }
+.race-mini-2048 > .race-mini-tile { display: grid; aspect-ratio: 1; place-items: center; overflow: hidden; border-radius: 3px; color: var(--tile-dark-text); font-size: 10px; font-weight: 800; }
+.race-mini-mines { display: grid; gap: 1px; padding: 3px; border-radius: 6px; background: var(--border-strong); }
+.race-mini-mines > span { aspect-ratio: 1; border-radius: 1px; }
+.race-mini-mines .mini-hidden { background: var(--mine-hidden); }
+.race-mini-mines .mini-revealed { background: var(--mine-revealed); }
+.race-mini-mines .mini-flag { background: var(--warning-color); }
+.race-mini-mines .mini-mine { background: var(--text-primary); }
+.race-mini-mines .mini-exploded { background: var(--danger-color); }
+.online-game-option { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-weight: 700; }
+@container (max-width: 720px) {
+  .race-arena { grid-template-columns: minmax(0, 1fr); }
+}
+@container (max-width: 420px) {
+  .race-arena-others { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .race-arena .minesweeper-board { --mine-cell-size: 26px; }
+}
+
 /* 숫자 야구 */
 .baseball { display: grid; gap: 12px; width: 100%; }
 .baseball-players { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }

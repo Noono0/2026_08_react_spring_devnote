@@ -95,6 +95,7 @@ public enum ErrorCode {
     ONLINE_NICKNAME_TAKEN(HttpStatus.CONFLICT, "ONLINE_NICKNAME_TAKEN", "방에 같은 닉네임이 있습니다. 다른 닉네임을 써 주세요."),
     ONLINE_GAME_NOT_AVAILABLE(HttpStatus.BAD_REQUEST, "ONLINE_GAME_NOT_AVAILABLE", "아직 준비 중인 게임입니다."),
     ONLINE_SEAT_COUNT_INVALID(HttpStatus.BAD_REQUEST, "ONLINE_SEAT_COUNT_INVALID", "이 게임에서 고를 수 없는 인원 수입니다."),
+    ONLINE_GAME_OPTION_INVALID(HttpStatus.BAD_REQUEST, "ONLINE_GAME_OPTION_INVALID", "이 게임에서 고를 수 없는 옵션입니다."),
     ONLINE_SEAT_UNAVAILABLE(HttpStatus.CONFLICT, "ONLINE_SEAT_UNAVAILABLE", "앉을 수 없는 자리입니다."),
     ONLINE_GAME_IN_PROGRESS(HttpStatus.CONFLICT, "ONLINE_GAME_IN_PROGRESS", "게임 중에는 할 수 없습니다. 게임이 끝난 뒤 다시 시도해 주세요."),
     ONLINE_GAME_NOT_READY(HttpStatus.CONFLICT, "ONLINE_GAME_NOT_READY", "플레이어 자리가 모두 차야 시작할 수 있습니다."),

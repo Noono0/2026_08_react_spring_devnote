@@ -8,6 +8,10 @@ package com.example.devnote.online.domain;
  *   newPassword에 값이 있음        → 새 비밀번호로 바꾸기(또는 새로 걸기)
  *   둘 다 아님(null·빈 값, false) → 지금 비밀번호 그대로
  * 기존 비밀번호 원문은 서버도 모르므로 화면에 다시 보내 주지 않는다. 그래서 "그대로"가 따로 필요하다.
+ *
+ * gameOption(목표 타일·난이도 등, OnlineGameType.getOptions())
+ *   null·빈 값 → 같은 게임이면 지금 옵션 그대로, 게임을 바꾸면 새 게임의 처음 옵션
+ *   값이 있음   → 그 게임에서 고를 수 있는 값이어야 한다(아니면 ONLINE_GAME_OPTION_INVALID)
  */
 public record OnlineRoomSettings(
     String title,
@@ -15,5 +19,6 @@ public record OnlineRoomSettings(
     int seatCount,
     String newPassword,
     boolean removePassword,
-    boolean membersOnly
+    boolean membersOnly,
+    String gameOption
 ) {}
