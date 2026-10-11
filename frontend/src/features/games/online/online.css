@@ -226,6 +226,21 @@ button.battleship-cell:hover { background: #3a8fd0; filter: none; }
   .battleship-grid { --sea-cell: min(30px, calc((100cqi - 40px) / 10)); }
 }
 
+/* 카드 짝 맞추기 대전: 카드 모양은 혼자 하기(games.css .memory-card)와 같고, 맞춘 사람 색만 더한다 */
+.memory-match { display: grid; gap: 12px; justify-items: center; width: 100%; }
+.memory-match-players { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.memory-match-player { display: grid; min-width: 110px; padding: 8px 12px; border: 2px solid var(--seat-color, var(--border-color)); border-radius: 12px; background: var(--background-muted); }
+.memory-match-player span { color: var(--text-muted); font-size: 13px; }
+.memory-match-player.turn { box-shadow: 0 0 0 3px var(--seat-color, var(--primary-color)); }
+.memory-match-player.out { opacity: 0.5; }
+.memory-match .memory-board { width: 100%; }
+.memory-match .memory-card:disabled { cursor: default; opacity: 1; }
+.memory-match .memory-card.matched .memory-card-front { border: 3px solid var(--seat-color, var(--success-color)); }
+.seat-0, .by-seat-0 { --seat-color: #3461ff; }
+.seat-1, .by-seat-1 { --seat-color: #e8590c; }
+.seat-2, .by-seat-2 { --seat-color: #2f9e44; }
+.seat-3, .by-seat-3 { --seat-color: #ae3ec9; }
+
 /* 테트리스 대전은 판을 넓게 쓰도록 자리·채팅 패널을 판 아래로 내린다 */
 .online-room-layout.wide { grid-template-columns: minmax(0, 1fr); }
 .online-room-layout.wide .online-side { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }

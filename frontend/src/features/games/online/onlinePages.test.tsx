@@ -439,6 +439,44 @@ describe("온라인 배틀십", () => {
   });
 });
 
+describe("온라인 카드 짝 맞추기 대전", () => {
+  const hidden = { symbol: null, matchedBy: null, faceUp: false };
+  const memoryRoom = (game: Record<string, unknown>): OnlineRoom => ({
+    ...baseRoom,
+    gameType: "MEMORY_MATCH", gameTypeLabel: "카드 짝 맞추기 대전", status: "PLAYING", seats: ["p1", "p2"],
+    participants: [
+      { participantId: "p1", nickname: "철수", member: false, seatIndex: 0 },
+      { participantId: "p2", nickname: "영희", member: false, seatIndex: 1 },
+    ],
+    game: {
+      mySeat: 0, columns: 4, turnSeat: 0, scores: [1, 0], active: [true, true], winners: [], finished: false,
+      cards: [{ symbol: "🍎", matchedBy: 0, faceUp: false }, { symbol: "🍎", matchedBy: 0, faceUp: false }, { symbol: "🍌", matchedBy: null, faceUp: true }, ...Array.from({ length: 13 }, () => hidden)],
+      ...game,
+    },
+  });
+
+  it("내 차례에는 뒷면 카드만 누를 수 있고 FLIP을 보낸다", () => {
+    renderRoom();
+    const socket = latestSocket();
+    socket.serverOpen();
+    socket.serverSend({ type: "ROOM_STATE", room: memoryRoom({}) });
+    expect(screen.getByRole("button", { name: "1번 카드 🍎 (철수 짝)" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "3번 카드 🍌" })).toBeDisabled(); // 방금 뒤집은 카드
+    fireEvent.click(screen.getByRole("button", { name: "4번 카드 (뒷면)" }));
+    expect(socket.sent.at(-1)).toEqual({ type: "GAME_ACTION", action: "FLIP", number: 3 });
+    expect(screen.getByText(/남은 짝 7/)).toBeInTheDocument();
+  });
+
+  it("상대 차례에는 카드를 누를 수 없다", () => {
+    renderRoom();
+    const socket = latestSocket();
+    socket.serverOpen();
+    socket.serverSend({ type: "ROOM_STATE", room: memoryRoom({ turnSeat: 1 }) });
+    expect(screen.getByRole("button", { name: "4번 카드 (뒷면)" })).toBeDisabled();
+    expect(screen.getByText(/영희 차례/)).toBeInTheDocument();
+  });
+});
+
 describe("온라인 대전 대기실", () => {
   const renderLobby = () => render(withProviders(
     <MemoryRouter initialEntries={["/games/online"]}>
