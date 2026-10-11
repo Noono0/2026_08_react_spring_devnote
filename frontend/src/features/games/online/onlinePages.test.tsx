@@ -260,6 +260,23 @@ describe("온라인 테트리스 대전", () => {
     expect(screen.getByText(/살아남은 사람 2명/)).toBeInTheDocument();
   });
 
+  it("판이 끝난 뒤 다시 시작하면 새 판을 진행하고, 지난 판 상태로 탈락·판 요약을 보내지 않는다", () => {
+    renderRoom();
+    const socket = latestSocket();
+    socket.serverOpen();
+    socket.serverSend({ type: "ROOM_STATE", room: tetrisRoom() }); // 1판(seed 42)
+    socket.serverSend({ type: "ROOM_STATE", room: tetrisRoom({ status: "WAITING", lastResult: "1위 철수 · 2위 영희" }) }); // 끝
+    const sentBeforeRestart = socket.sent.length;
+
+    const restarted = tetrisRoom();
+    socket.serverSend({ type: "ROOM_STATE", room: { ...restarted, tetris: restarted.tetris ? { ...restarted.tetris, seed: 43 } : null } }); // 다시 시작(seed 43)
+    const afterRestart = socket.sent.slice(sentBeforeRestart).map((message) => JSON.stringify(message));
+    expect(afterRestart.some((message) => message.includes("TETRIS_TOPPED_OUT"))).toBe(false);
+    expect(afterRestart.some((message) => message.includes("TETRIS_BOARD"))).toBe(false);
+    expect(screen.queryByText("게임 끝", { selector: ".game-overlay strong" })).not.toBeInTheDocument(); // 내 판이 다시 움직인다
+    expect(screen.getByText(/살아남은 사람 2명/)).toBeInTheDocument();
+  });
+
   it("방해 줄을 받으면 알림을 보여 주고 내 판 아래에 회색 줄이 생긴다", () => {
     renderRoom();
     const socket = latestSocket();

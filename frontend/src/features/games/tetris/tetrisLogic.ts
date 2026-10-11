@@ -75,6 +75,8 @@ export interface TetrisState {
   lines: number;
   level: number;
   status: TetrisStatus;
+  /** 이 게임을 시작한 시드. 온라인 대전에서 "지금 판의 게임인지"를 구분하는 데 쓴다 */
+  seed: number;
   /** 다음 7-bag을 섞을 난수 상태 */
   randomState: number;
   /** 방금 굳을 때 지운 줄 수(화면 알림용) */
@@ -179,6 +181,7 @@ export const createTetrisState = (seed = 0): TetrisState => ({
   lines: 0,
   level: 1,
   status: "READY",
+  seed: seed >>> 0,
   randomState: seed >>> 0,
   lastClearedLines: 0,
   pieceCount: 0,

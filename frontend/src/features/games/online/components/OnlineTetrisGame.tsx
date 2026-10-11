@@ -108,22 +108,30 @@ export const OnlineTetrisGame = ({ room, mySeat, connected, incomingGarbage, sen
     return () => window.clearInterval(timerId);
   }, [status, level]);
 
+  /**
+   * 내 게임이 "지금 판"의 게임인가? (내 게임의 seed === 서버가 알려 준 이번 판 seed)
+   * ★ 다시 시작하면 서버의 새 seed는 바로 오지만, 내 게임은 1번 Effect가 START를 보낸 "다음" 그리기에서야 새 판이 된다.
+   *   그 사이 한 번의 그리기에서는 내 게임이 아직 지난 판(게임 끝) 상태라, 이걸 확인하지 않으면
+   *   새 판에서 탈락했다고 잘못 알리거나 지난 판 요약을 보내 버린다(다시 시작하자마자 끝나던 버그).
+   */
+  const isCurrentRound = roundSeed !== null && game.seed === roundSeed && game.status !== "READY";
+
   // 3. 블록이 굳으면 내 판을 보내고, 2줄 이상 지웠으면 공격한다
   const { pieceCount, board, score, lines, lastClearedLines } = game;
   useEffect(() => {
-    if (!iAmAlive || pieceCount === 0 || sentPieceCountRef.current === pieceCount) return;
+    if (!iAmAlive || !isCurrentRound || pieceCount === 0 || sentPieceCountRef.current === pieceCount) return;
     sentPieceCountRef.current = pieceCount;
     send({ type: "TETRIS_BOARD", board: toBoardText(board), score, lines });
     if (lastClearedLines >= 2) send({ type: "TETRIS_ATTACK", cleared: lastClearedLines });
-  }, [iAmAlive, pieceCount, board, score, lines, lastClearedLines, send]);
+  }, [iAmAlive, isCurrentRound, pieceCount, board, score, lines, lastClearedLines, send]);
 
   // 4. 쌓을 곳이 없어 끝나면 탈락을 알린다(한 판에 한 번)
   useEffect(() => {
-    if (status !== "GAME_OVER" || !iAmAlive || roundSeed === null || toppedOutSeedRef.current === roundSeed) return;
+    if (status !== "GAME_OVER" || !iAmAlive || !isCurrentRound || roundSeed === null || toppedOutSeedRef.current === roundSeed) return;
     toppedOutSeedRef.current = roundSeed;
     send({ type: "TETRIS_BOARD", board: toBoardText(board), score, lines });
     send({ type: "TETRIS_TOPPED_OUT" });
-  }, [status, iAmAlive, roundSeed, board, score, lines, send]);
+  }, [status, iAmAlive, isCurrentRound, roundSeed, board, score, lines, send]);
 
   // 5. 방해 줄을 받으면 내 판에 넣고, 게이지(판 오른쪽 빨간 막대)에 다음 블록이 굳을 때까지 표시한다
   const garbageSequence = incomingGarbage?.sequence ?? 0;
