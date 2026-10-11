@@ -20,6 +20,7 @@
  */
 import { useEffect, useReducer, useRef, useState, type FocusEvent, type KeyboardEvent } from "react";
 import { z } from "zod";
+import { GameRankingSubmitPanel } from "@/features/games/ranking/components/GameRankingSubmitPanel";
 import { GamePageShell, GameStats } from "@/features/games/shared/GamePageShell";
 import { readGameRecord, writeGameRecord } from "@/features/games/shared/gameRecordStorage";
 import tetrisSandboxSource from "@/features/games/sandbox/examples/tetris-clear-lines.tsx?raw";
@@ -182,6 +183,11 @@ export const TetrisPage = () => {
         </div>
 
         <p className={`game-status${status === "GAME_OVER" ? " danger" : ""}`} aria-live="polite">{statusMessage}</p>
+
+        {/* 게임 영역(키 입력을 받는 곳) 밖에 두어, 닉네임을 칠 때 글자가 게임 조작으로 들어가지 않게 한다 */}
+        {status === "GAME_OVER" ? (
+          <GameRankingSubmitPanel gameCode="TETRIS" record={{ score }} summary={`${score.toLocaleString("ko-KR")}점`} />
+        ) : null}
 
       </div>
     </GamePageShell>

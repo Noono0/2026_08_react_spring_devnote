@@ -142,6 +142,7 @@ const MinesweeperPage = lazy(async () => ({ default: (await import("@/features/g
 const OnlineLobbyPage = lazy(async () => ({ default: (await import("@/features/games/online/pages/OnlineLobbyPage")).OnlineLobbyPage }));
 const OnlineRoomPage = lazy(async () => ({ default: (await import("@/features/games/online/pages/OnlineRoomPage")).OnlineRoomPage }));
 const TetrisPage = lazy(async () => ({ default: (await import("@/features/games/tetris/TetrisPage")).TetrisPage }));
+const GameRankingPage = lazy(async () => ({ default: (await import("@/features/games/ranking/GameRankingPage")).GameRankingPage }));
 const WebCrawlerPage = lazy(async () => ({ default: (await import("@/features/crawler/pages/WebCrawlerPage")).WebCrawlerPage }));
 
 // ----------------------------------------------------------------------------
@@ -249,13 +250,15 @@ export const App = () => (
               </RoleProtectedRoute>
             } />
           </Route>
-          {/* 게임: 서버 없이 브라우저에서만 돌아간다. 게임마다 코드가 커서 각각 따로 내려받는다(lazy). */}
+          {/* 게임: 혼자 하는 게임은 브라우저에서 계산하고, 온라인 대전·랭킹만 서버를 쓴다. 게임마다 코드가 커서 각각 따로 내려받는다(lazy). */}
           <Route path="games" element={<UtilityLayout />}>
             <Route index element={<Suspense fallback={<UtilityLazyFallback name="게임 홈" />}><GameHomePage /></Suspense>} />
             <Route path="memory" element={<Suspense fallback={<UtilityLazyFallback name="카드 짝 맞추기" />}><MemoryGamePage /></Suspense>} />
             <Route path="2048" element={<Suspense fallback={<UtilityLazyFallback name="2048" />}><Game2048Page /></Suspense>} />
             <Route path="minesweeper" element={<Suspense fallback={<UtilityLazyFallback name="지뢰 찾기" />}><MinesweeperPage /></Suspense>} />
             <Route path="tetris" element={<Suspense fallback={<UtilityLazyFallback name="테트리스" />}><TetrisPage /></Suspense>} />
+            {/* 랭킹: 종목·난이도는 주소의 ?game=·?difficulty=로 받는다(화면에서 목록에 있는 값인지 검사한다) */}
+            <Route path="rankings" element={<Suspense fallback={<UtilityLazyFallback name="게임 랭킹" />}><GameRankingPage /></Suspense>} />
             {/* 온라인 대전: 대기실(방 목록·만들기)과 방(:roomId는 화면에서 모양을 검사한다) */}
             <Route path="online" element={<Suspense fallback={<UtilityLazyFallback name="온라인 대전" />}><OnlineLobbyPage /></Suspense>} />
             <Route path="online/:roomId" element={<Suspense fallback={<UtilityLazyFallback name="온라인 대전 방" />}><OnlineRoomPage /></Suspense>} />

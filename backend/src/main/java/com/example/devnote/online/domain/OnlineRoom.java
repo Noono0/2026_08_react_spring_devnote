@@ -14,10 +14,12 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 
 /**
  * 온라인 대전 방 하나의 상태와 규칙입니다. (서버 메모리에만 있고 DB에는 저장하지 않는다)
@@ -70,6 +72,15 @@ public class OnlineRoom {
     private OnlineGame game;
     /** 지난 판 결과 문구(예: "흑 철수 승리") */
     private String lastResult;
+    /** 이번 판을 시작할 때 자리에 앉아 있던 사람(자리 순서). 중간에 나가도 남겨 두어 패배로 기록한다 */
+    @Getter(AccessLevel.NONE)
+    private List<OnlineParticipant> matchPlayers = List.of();
+    /** 이번 판에서 기권하거나 나간 자리. 이긴 팀(마피아 등)이어도 승리로 기록하지 않는다 */
+    @Getter(AccessLevel.NONE)
+    private final Set<Integer> forfeitedSeats = new HashSet<>();
+    /** 끝났지만 아직 저장하지 않은 판. Service가 꺼내(drain) 랭킹에 저장한다 */
+    @Getter(AccessLevel.NONE)
+    private OnlineMatchResult finishedMatch;
 
     @Getter(AccessLevel.NONE)
     private final Map<String, OnlineParticipant> participants = new LinkedHashMap<>();
@@ -256,6 +267,8 @@ public class OnlineRoom {
         requireAvailable(gameType, seats.size());
         lastResult = null;
         status = Status.PLAYING;
+        matchPlayers = seats.stream().map(participants::get).toList();
+        forfeitedSeats.clear();
         List<String> nicknames = new ArrayList<>();
         for (int seat = 0; seat < seats.size(); seat++) nicknames.add(nicknameAt(seat));
         if (OnlineGames.usesCommonGame(gameType)) {
@@ -304,6 +317,7 @@ public class OnlineRoom {
     public void resign(String participantId, long now) {
         requireParticipant(participantId);
         int seat = seatOf(participantId);
+        if (status == Status.PLAYING && seat >= 0) forfeitedSeats.add(seat);
         if (status == Status.PLAYING && game != null && seat >= 0) {
             addSystemMessage(nicknameAt(seat) + " 기권", now);
             game.leave(seat);
@@ -321,6 +335,7 @@ public class OnlineRoom {
     }
 
     private void finishByLeaving(int leftSeat, String leftNickname, long now) {
+        forfeitedSeats.add(leftSeat);
         if (game != null) {
             game.leave(leftSeat);
             afterGameChange(now);
@@ -390,7 +405,35 @@ public class OnlineRoom {
     private void finishGame(String result, long now) {
         status = Status.WAITING;
         lastResult = result;
+        finishedMatch = buildMatchResult(now);
         addSystemMessage("게임 끝: " + result, now);
+    }
+
+    /** 끝났지만 아직 저장하지 않은 판을 꺼내고 비운다(없으면 null) */
+    public OnlineMatchResult drainFinishedMatch() {
+        OnlineMatchResult drained = finishedMatch;
+        finishedMatch = null;
+        return drained;
+    }
+
+    private OnlineMatchResult buildMatchResult(long now) {
+        List<Integer> winners = winnerSeats();
+        List<OnlineMatchResult.Player> players = new ArrayList<>();
+        for (int seat = 0; seat < matchPlayers.size(); seat++) {
+            OnlineParticipant player = matchPlayers.get(seat);
+            boolean won = winners.contains(seat) && !forfeitedSeats.contains(seat);
+            players.add(new OnlineMatchResult.Player(player.getMemberId(), player.getNickname(), won));
+        }
+        return new OnlineMatchResult(gameType, List.copyOf(players), now);
+    }
+
+    /** 게임마다 다른 승자 표현(공통 틀·테트리스·오목)을 이긴 자리 번호 목록 하나로 모은다. 무승부면 빈 목록 */
+    private List<Integer> winnerSeats() {
+        if (OnlineGames.usesCommonGame(gameType)) return game == null ? List.of() : game.winnerSeats();
+        Integer winnerSeat = gameType == OnlineGameType.TETRIS
+            ? (tetrisBattle == null ? null : tetrisBattle.getWinnerSeat())
+            : (omokGame == null ? null : omokGame.getWinnerSeat());
+        return winnerSeat == null ? List.of() : List.of(winnerSeat);
     }
 
     private static String stoneName(int seat) {

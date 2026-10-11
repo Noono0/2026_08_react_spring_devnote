@@ -243,6 +243,15 @@ public class OneCardGame implements OnlineGame {
         return finished;
     }
 
+    /** 1위만 이긴 것으로 본다 */
+    @Override
+    public List<Integer> winnerSeats() {
+        if (!finished) return List.of();
+        List<Integer> firstPlaces = new ArrayList<>();
+        for (int seat = 0; seat < ranks.length; seat++) if (ranks[seat] == 1) firstPlaces.add(seat);
+        return List.copyOf(firstPlaces);
+    }
+
     @Override
     public String resultText() {
         List<String> parts = new ArrayList<>();

@@ -1,7 +1,8 @@
 /**
  * GameHomePage.tsx — 게임 목록(/games)
  *
- * 게임은 모두 브라우저 안에서만 계산하고, 최고 기록도 이 브라우저(localStorage)에만 저장한다 → 서버 부담이 없다.
+ * 혼자 하는 게임은 브라우저 안에서만 계산하고, 내 최고 기록은 이 브라우저(localStorage)에 저장한다.
+ * 다른 사람과 겨루고 싶으면 끝난 화면에서 "랭킹에 올리기"를 눌러 서버 랭킹(/games/rankings)에 올린다.
  * 카드 모양은 유틸리티 홈(utility-card)과 같은 스타일을 재사용한다.
  */
 import { Link } from "react-router-dom";
@@ -64,8 +65,18 @@ export const GameHomePage = () => (
 
     <div className="utility-home-notice">
       <strong>기록은 어디에 저장되나요?</strong>
-      <p>최고 기록은 지금 브라우저의 localStorage에만 저장됩니다. 다른 기기나 브라우저와 공유되지 않고, 브라우저 데이터를 지우면 사라집니다.</p>
+      <p>
+        내 최고 기록은 지금 브라우저의 localStorage에 저장되어 다른 기기와 공유되지 않습니다. 게임이 끝난 화면에서
+        <strong> 랭킹에 올리기</strong>를 누르면 서버 랭킹에도 남습니다. 온라인 대전 승패는 서버가 자동으로 기록합니다.
+      </p>
     </div>
+
+    <Link className="utility-card game-online-card" to="/games/rankings">
+      <span>🏆</span>
+      <h3>게임 랭킹</h3>
+      <p>종목마다 순위를 봅니다. 이번 주·이번 달·전체 버튼이나 날짜로 기간을 고릅니다. 비회원 기록은 1주일 뒤 사라집니다.</p>
+      <small className="utility-card-usecase">배우는 것 · 주소에 담는 화면 상태 · TanStack Query 조건별 캐시 · 서버 집계 SQL</small>
+    </Link>
 
     <Link className="utility-card game-online-card" to="/games/online">
       <span>🌐</span>

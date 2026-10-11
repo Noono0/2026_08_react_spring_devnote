@@ -18,6 +18,7 @@
  */
 import { useEffect, useReducer, useRef, useState, type KeyboardEvent } from "react";
 import { z } from "zod";
+import { GameRankingSubmitPanel } from "@/features/games/ranking/components/GameRankingSubmitPanel";
 import { GamePageShell, GameStats } from "@/features/games/shared/GamePageShell";
 import { readGameRecord, writeGameRecord } from "@/features/games/shared/gameRecordStorage";
 import minesweeperSandboxSource from "@/features/games/sandbox/examples/minesweeper-reveal-area.tsx?raw";
@@ -165,6 +166,10 @@ export const MinesweeperPage = () => {
         </div>
 
         <p className={`game-status${state.status === "WON" ? " success" : state.status === "LOST" ? " danger" : ""}`} aria-live="polite">{statusMessage}</p>
+
+        {state.status === "WON" ? (
+          <GameRankingSubmitPanel gameCode="MINESWEEPER" difficulty={difficulty} record={{ elapsedSeconds }} summary={`${minesweeperDifficulties[difficulty].label} ${elapsedSeconds}초`} />
+        ) : null}
 
         {/* 고급(30열)은 좁은 화면에서 넘치므로 판만 가로로 스크롤한다 */}
         <div className="minesweeper-scroll">

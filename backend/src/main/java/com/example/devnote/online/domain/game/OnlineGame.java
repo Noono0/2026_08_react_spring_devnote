@@ -29,6 +29,9 @@ public interface OnlineGame {
     /** 끝났을 때의 결과 문구(예: "1위 철수 · 2위 영희") */
     String resultText();
 
+    /** 끝났을 때 이긴 자리 번호(공동 승리면 여러 개, 무승부면 빈 목록). 랭킹 기록은 문구가 아니라 이 값을 쓴다 */
+    List<Integer> winnerSeats();
+
     /** 이 사람에게 보여 줄 게임 상태. seat이 null이면 관전자(숨긴 정보 없이) */
     Object viewFor(Integer seat);
 

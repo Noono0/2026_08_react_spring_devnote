@@ -345,6 +345,12 @@ public class ChessGame implements OnlineGame {
         return finished;
     }
 
+    /** 무승부(스테일메이트 등)면 winnerSeat이 null → 빈 목록 */
+    @Override
+    public List<Integer> winnerSeats() {
+        return winnerSeat == null ? List.of() : List.of(winnerSeat);
+    }
+
     @Override
     public String resultText() {
         return "체스 " + (result == null ? "끝" : result);

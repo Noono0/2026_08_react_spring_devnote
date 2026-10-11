@@ -243,6 +243,16 @@ public class MafiaGame implements OnlineGame {
         return phase == Phase.END;
     }
 
+    /** 팀 게임: 이긴 팀의 모든 자리(죽은 사람 포함). 시민 팀 = 마피아가 아닌 모든 직업 */
+    @Override
+    public List<Integer> winnerSeats() {
+        if (winnerTeam == null) return List.of();
+        boolean mafiaWon = "마피아".equals(winnerTeam);
+        List<Integer> seats = new ArrayList<>();
+        for (int seat = 0; seat < roles.length; seat++) if ((roles[seat] == Role.MAFIA) == mafiaWon) seats.add(seat);
+        return List.copyOf(seats);
+    }
+
     @Override
     public String resultText() {
         return "마피아 " + (winnerTeam == null ? "끝" : winnerTeam + " 팀 승리");

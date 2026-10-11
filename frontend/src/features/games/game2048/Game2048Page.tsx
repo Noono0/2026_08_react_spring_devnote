@@ -17,6 +17,7 @@
  */
 import { useEffect, useReducer, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 import { z } from "zod";
+import { GameRankingSubmitPanel } from "@/features/games/ranking/components/GameRankingSubmitPanel";
 import { GamePageShell, GameStats } from "@/features/games/shared/GamePageShell";
 import { readGameRecord, writeGameRecord } from "@/features/games/shared/gameRecordStorage";
 import game2048SandboxSource from "@/features/games/sandbox/examples/2048-slide-row.tsx?raw";
@@ -125,6 +126,11 @@ export const Game2048Page = () => {
         </div>
 
         <p className={`game-status${state.status === "WON" ? " success" : state.status === "LOST" ? " danger" : ""}`} aria-live="polite">{statusMessage}</p>
+
+        {/* 2048을 만들었을 때와 더 움직일 수 없을 때 모두 올릴 수 있다. 계속하기로 이어 가면 사라졌다가 끝날 때 다시 나온다 */}
+        {state.status !== "PLAYING" ? (
+          <GameRankingSubmitPanel gameCode="GAME_2048" record={{ score: state.score }} summary={`${state.score.toLocaleString("ko-KR")}점`} />
+        ) : null}
 
         <div className="game-2048-stage">
           <div

@@ -2,6 +2,13 @@
 
 [문서 목록으로](../README.md) · [작업 규칙](../AGENTS.md) · [검증 명령](verification.md)
 
+## 2026-10-11 — 게임 랭킹(종목별·기간 선택)
+
+- **화면**: `게임 → 게임 랭킹`(`/games/rankings?game=…&difficulty=…`). 종목(온라인 대전 11종 + 혼자 하는 게임 4종)·난이도·기간(이번 주·이번 달·전체 버튼, 시작일·종료일 직접 선택, 기본 이번 달)을 고르고 상위 50명을 봅니다. 혼자 하는 게임 4종은 끝난 화면에 `랭킹에 올리기` 폼(`GameRankingSubmitPanel`)이 나옵니다. 비회원 닉네임은 온라인 대전과 같은 저장값(`online.nickname`, `games/shared/playerNickname.ts`)을 씁니다.
+- **백엔드**: `com.example.devnote.ranking`(Controller → Service → DAO → `GameRankingMapper.xml`)과 테이블 `online_game_results`·`solo_game_records`를 추가했습니다. 온라인 대전은 `OnlineGame.winnerSeats()`(9종) + 오목·테트리스 승자로 `OnlineRoom`이 `OnlineMatchResult`를 만들고, `OnlineRoomService`가 방 잠금 밖에서 저장합니다. 정한 규칙: 2명 이상 판만, 한 회원이 두 자리에 앉은 판은 저장 안 함, 기권·퇴장은 패배, 순위는 승수 → 승률, 혼자 하는 게임은 사람마다 기간 안의 최고 기록 하나, 같은 기록은 같은 순위. 비회원 기록은 `GameRankingCleanupService`가 1시간마다 1주일 지난 것을 지웁니다. 기간은 한국 날짜로 받아 UTC 범위로 바꿉니다. 오류 코드 `GAME_RANKING_PERIOD_INVALID`·`GAME_DIFFICULTY_INVALID`·`GAME_RECORD_INVALID`·`GAME_RANKING_NICKNAME_INVALID` 추가.
+- **운영 DB 주의**: 새 테이블 두 개는 `schema.sql`의 `CREATE TABLE IF NOT EXISTS`로 서버가 켜질 때 만들어집니다. 기존 테이블 구조는 바꾸지 않았습니다.
+- **알려진 한계**: 혼자 하는 게임 점수는 브라우저가 보내는 값이라 범위만 검사합니다. 비회원은 닉네임만 다르면 다른 사람으로 보여 탭 두 개로 승수를 쌓는 것을 막지 못합니다(회원끼리 같은 방 두 자리는 막음).
+
 ## 2026-10-11 — 온라인 대전 마피아
 
 - **마피아(4~8인)**: `MafiaGame`이 직업을 섞어 나누고 밤(TARGET)·낮(VOTE, -1 = 건너뛰기)을 진행합니다. 해야 할 사람이 모두 고르면 결과를 내며, 낮 투표는 최다 득표 한 명이 건너뛰기보다 많을 때만 처형합니다. 남의 직업은 viewFor에서 빼고(마피아끼리만 공개, 끝나면 전체 공개), 경찰 조사 결과는 본인에게만 보냅니다. `OnlineGame.canChat`을 추가해 탈락자의 게임 중 채팅을 `OnlineRoom.addChat`에서 막습니다. 시간제한은 없고, 나가면 탈락 처리됩니다.

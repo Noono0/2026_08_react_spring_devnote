@@ -19,6 +19,7 @@
  */
 import { useEffect, useReducer, useState } from "react";
 import { z } from "zod";
+import { GameRankingSubmitPanel } from "@/features/games/ranking/components/GameRankingSubmitPanel";
 import { GamePageShell, GameStats } from "@/features/games/shared/GamePageShell";
 import { readGameRecord, writeGameRecord } from "@/features/games/shared/gameRecordStorage";
 import memorySandboxSource from "@/features/games/sandbox/examples/memory-shuffle.tsx?raw";
@@ -124,6 +125,15 @@ export const MemoryGamePage = () => {
 
         {/* aria-live: 내용이 바뀌면 화면 낭독기가 읽어 준다(짝 맞춤·승리 알림) */}
         <p className={`game-status${state.status === "WON" ? " success" : ""}`} aria-live="polite">{statusMessage}</p>
+
+        {winRecord ? (
+          <GameRankingSubmitPanel
+            gameCode="MEMORY"
+            difficulty={difficulty}
+            record={{ moves: winRecord.moves, elapsedSeconds: winRecord.seconds }}
+            summary={`${memoryDifficulties[difficulty].label} ${winRecord.moves}번 · ${formatSeconds(winRecord.seconds)}`}
+          />
+        ) : null}
 
         <div className="memory-board" style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`, maxWidth: columns * 104 }} aria-label="카드판">
           {state.cards.map((card, index) => {

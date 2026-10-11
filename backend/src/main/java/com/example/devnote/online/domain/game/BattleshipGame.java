@@ -161,6 +161,11 @@ public class BattleshipGame implements OnlineGame {
     }
 
     @Override
+    public List<Integer> winnerSeats() {
+        return winnerSeat == null ? List.of() : List.of(winnerSeat);
+    }
+
+    @Override
     public String resultText() {
         return winnerSeat == null ? "배틀십 끝" : "배틀십 " + nicknames.get(winnerSeat) + " 승리 (" + shotsFired + "발)";
     }

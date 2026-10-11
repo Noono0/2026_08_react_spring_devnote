@@ -128,6 +128,11 @@ public class MemoryMatchGame implements OnlineGame {
     }
 
     @Override
+    public List<Integer> winnerSeats() {
+        return List.copyOf(winners);
+    }
+
+    @Override
     public String resultText() {
         if (winners.isEmpty()) return "카드 짝 맞추기 끝";
         List<String> names = winners.stream().map(nicknames::get).toList();

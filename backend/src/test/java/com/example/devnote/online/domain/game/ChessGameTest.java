@@ -57,6 +57,7 @@ class ChessGameTest {
         game.act(0, move("h5", "f7"));
         assertThat(game.isFinished()).isTrue();
         assertThat(game.resultText()).isEqualTo("체스 체크메이트 — 백돌이 승리");
+        assertThat(game.winnerSeats()).containsExactly(0);
         assertThat(view(game, null).history()).containsExactly("e2-e4", "e7-e5", "Bf1-c4", "Nb8-c6", "Qd1-h5", "Ng8-f6", "Qh5xf7#");
         assertThat(view(game, null).capturedByWhite()).containsExactly("p");
     }
@@ -109,6 +110,7 @@ class ChessGameTest {
         stale.act(0, move("b1", "b6"));
         assertThat(stale.isFinished()).isTrue();
         assertThat(stale.resultText()).contains("스테일메이트");
+        assertThat(stale.winnerSeats()).isEmpty();
 
         ChessGame bare = newGame();
         // 백 킹이 마지막 흑 룩을 잡으면 킹 대 킹 → 무승부

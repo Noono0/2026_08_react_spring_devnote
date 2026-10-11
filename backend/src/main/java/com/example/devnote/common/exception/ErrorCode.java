@@ -103,7 +103,13 @@ public enum ErrorCode {
     ONLINE_MOVE_INVALID(HttpStatus.BAD_REQUEST, "ONLINE_MOVE_INVALID", "둘 수 없는 자리입니다."),
     ONLINE_CHAT_INVALID(HttpStatus.BAD_REQUEST, "ONLINE_CHAT_INVALID", "채팅은 1~200자로 입력해 주세요."),
     ONLINE_TOO_MANY_MESSAGES(HttpStatus.TOO_MANY_REQUESTS, "ONLINE_TOO_MANY_MESSAGES", "너무 빠르게 보내고 있습니다. 잠시 후 다시 보내 주세요."),
-    ONLINE_MESSAGE_INVALID(HttpStatus.BAD_REQUEST, "ONLINE_MESSAGE_INVALID", "알 수 없는 요청입니다.");
+    ONLINE_MESSAGE_INVALID(HttpStatus.BAD_REQUEST, "ONLINE_MESSAGE_INVALID", "알 수 없는 요청입니다."),
+
+    // ── 게임 랭킹 ──────────────────────────────────────────────────
+    GAME_RANKING_PERIOD_INVALID(HttpStatus.BAD_REQUEST, "GAME_RANKING_PERIOD_INVALID", "시작일은 종료일보다 늦을 수 없습니다."),
+    GAME_DIFFICULTY_INVALID(HttpStatus.BAD_REQUEST, "GAME_DIFFICULTY_INVALID", "이 게임에서 고를 수 없는 난이도입니다."),
+    GAME_RECORD_INVALID(HttpStatus.BAD_REQUEST, "GAME_RECORD_INVALID", "게임 기록 값을 확인해 주세요."),
+    GAME_RANKING_NICKNAME_INVALID(HttpStatus.BAD_REQUEST, "GAME_RANKING_NICKNAME_INVALID", "랭킹에 쓸 닉네임은 2~12자로 입력해 주세요.");
 
     // @RequiredArgsConstructor가 아래 final 필드 3개를 받는 생성자를 만들어, 위 상수들의 (괄호 안 값)이 순서대로 들어간다.
     private final HttpStatus httpStatus;

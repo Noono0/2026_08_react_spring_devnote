@@ -226,6 +226,11 @@ public class PokerGame implements OnlineGame {
     }
 
     @Override
+    public List<Integer> winnerSeats() {
+        return List.copyOf(winners);
+    }
+
+    @Override
     public String resultText() {
         Integer[] order = new Integer[players];
         for (int seat = 0; seat < players; seat++) order[seat] = seat;

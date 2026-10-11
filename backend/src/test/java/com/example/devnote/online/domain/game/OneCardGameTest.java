@@ -126,5 +126,6 @@ class OneCardGameTest {
         game.leave(2);
         assertThat(game.isFinished()).isTrue();
         assertThat(game.resultText()).isEqualTo("원카드 1위 영희 · 2위 민수 · 3위 철수");
+        assertThat(game.winnerSeats()).containsExactly(1); // 1위만 승리
     }
 }

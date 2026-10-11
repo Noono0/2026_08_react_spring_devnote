@@ -5,6 +5,7 @@ import com.example.devnote.common.exception.ErrorCode;
 import com.example.devnote.member.dao.row.MemberRow;
 import com.example.devnote.member.service.AuthenticationService;
 import com.example.devnote.online.domain.OnlineGameType;
+import com.example.devnote.online.domain.OnlineMatchResult;
 import com.example.devnote.online.domain.game.GameAction;
 import com.example.devnote.online.domain.game.NumberBaseballGame;
 import com.example.devnote.online.dto.OnlineClientMessage;
@@ -13,8 +14,11 @@ import com.example.devnote.online.dto.OnlineRoomCreatedResponse;
 import com.example.devnote.online.dto.OnlineRoomSettingsMessage;
 import com.example.devnote.online.dto.OnlineServerMessage;
 import com.example.devnote.online.store.OnlineRoomStore;
+import com.example.devnote.ranking.service.GameRankingService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.mock.web.MockHttpServletRequest;
 
 import java.time.Clock;
@@ -27,6 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class OnlineRoomServiceTest {
@@ -55,11 +60,18 @@ class OnlineRoomServiceTest {
     private final OnlineRoomStore roomStore = new OnlineRoomStore();
     private final RecordingSender sender = new RecordingSender();
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
+    private final GameRankingService gameRankingService = mock(GameRankingService.class);
     private OnlineRoomService service;
 
     @BeforeEach
     void setUp() {
-        service = new OnlineRoomService(roomStore, sender, authenticationService, Clock.fixed(Instant.ofEpochMilli(5_000_000), ZoneOffset.UTC));
+        service = new OnlineRoomService(roomStore, sender, authenticationService, gameRankingService, Clock.fixed(Instant.ofEpochMilli(5_000_000), ZoneOffset.UTC));
+    }
+
+    private OnlineMatchResult capturedMatch() {
+        ArgumentCaptor<OnlineMatchResult> captor = ArgumentCaptor.forClass(OnlineMatchResult.class);
+        verify(gameRankingService).recordOnlineMatch(captor.capture());
+        return captor.getValue();
     }
 
     private OnlineRoomCreatedResponse createRoom(String password, boolean membersOnly) {
@@ -213,6 +225,49 @@ class OnlineRoomServiceTest {
         var finished = sender.lastRoomStateFor("s3").room();
         assertThat(finished.status()).isEqualTo("WAITING");
         assertThat(finished.lastResult()).isEqualTo("숫자 야구 하나 승리 (1바퀴)");
+
+        OnlineMatchResult match = capturedMatch();
+        assertThat(match.gameType()).isEqualTo(OnlineGameType.NUMBER_BASEBALL);
+        assertThat(match.finishedAt()).isEqualTo(5_000_000);
+        assertThat(match.players()).containsExactly(
+            new OnlineMatchResult.Player(null, "하나", true),
+            new OnlineMatchResult.Player(null, "둘둘", false));
+    }
+
+    @Test
+    void 게임_중에_나가면_남은_사람의_승리로_저장되고_나간_사람도_패배로_남는다() {
+        OnlineRoomCreatedResponse created = createRoom(null, false);
+        OnlineConnection black = new OnlineConnection("s1", 7L, "흑회원");
+        OnlineConnection white = new OnlineConnection("s2", null, null);
+        service.join(black, joinMessage(created.roomId(), null, null, created.hostToken()));
+        service.join(white, joinMessage(created.roomId(), "백돌", null, null));
+        service.sit(black, 0);
+        service.sit(white, 1);
+        service.start(black);
+
+        service.leave("s1");
+
+        assertThat(capturedMatch().players()).containsExactly(
+            new OnlineMatchResult.Player(7L, "흑회원", false),
+            new OnlineMatchResult.Player(null, "백돌", true));
+    }
+
+    @Test
+    void 랭킹_저장이_실패해도_방은_다음_판을_시작할_수_있다() {
+        when(gameRankingService.recordOnlineMatch(any())).thenThrow(new DataAccessResourceFailureException("DB 연결 끊김"));
+        OnlineRoomCreatedResponse created = createRoom(null, false);
+        OnlineConnection black = new OnlineConnection("s1", null, null);
+        OnlineConnection white = new OnlineConnection("s2", null, null);
+        service.join(black, joinMessage(created.roomId(), "흑돌", null, created.hostToken()));
+        service.join(white, joinMessage(created.roomId(), "백돌", null, null));
+        service.sit(black, 0);
+        service.sit(white, 1);
+        service.start(black);
+
+        service.resign(white);
+        assertThat(sender.lastRoomStateFor("s1").room().status()).isEqualTo("WAITING");
+        service.start(black);
+        assertThat(sender.lastRoomStateFor("s1").room().status()).isEqualTo("PLAYING");
     }
 
     @Test

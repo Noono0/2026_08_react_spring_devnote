@@ -137,6 +137,11 @@ public class NumberBaseballGame implements OnlineGame {
     }
 
     @Override
+    public List<Integer> winnerSeats() {
+        return List.copyOf(winners);
+    }
+
+    @Override
     public String resultText() {
         if (winners.isEmpty()) return "숫자 야구 무승부";
         List<String> names = winners.stream().map(nicknames::get).toList();

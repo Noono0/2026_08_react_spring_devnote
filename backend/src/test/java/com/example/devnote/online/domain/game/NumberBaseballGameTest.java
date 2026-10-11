@@ -71,6 +71,7 @@ class NumberBaseballGameTest {
         game.act(2, guess("123")); // 민수가 철수 숫자를 맞힘
         assertThat(game.isFinished()).isTrue();
         assertThat(game.resultText()).isEqualTo("숫자 야구 철수 · 민수 공동 승리 (1바퀴)");
+        assertThat(game.winnerSeats()).containsExactly(0, 2);
         assertThat(view(game, null).secrets()).containsExactly("123", "456", "789"); // 끝나면 모두 공개
     }
 

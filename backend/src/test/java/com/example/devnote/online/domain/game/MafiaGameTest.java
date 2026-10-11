@@ -74,6 +74,7 @@ class MafiaGameTest {
         game.act(3, vote(0));
         assertThat(game.isFinished()).isTrue();
         assertThat(game.resultText()).isEqualTo("마피아 시민 팀 승리");
+        assertThat(game.winnerSeats()).containsExactly(1, 2, 3, 4); // 밤에 죽은 4번도 시민 팀이라 함께 이긴다
         assertThat(view(game, 3).players().get(0).role()).isEqualTo("MAFIA"); // 끝나면 모두 공개
     }
 
@@ -95,6 +96,7 @@ class MafiaGameTest {
         game.act(1, target(3));
         assertThat(game.isFinished()).isTrue();
         assertThat(game.resultText()).isEqualTo("마피아 마피아 팀 승리");
+        assertThat(game.winnerSeats()).containsExactly(0);
         assertThat(game.canChat(2)).isTrue();
     }
 

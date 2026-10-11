@@ -162,6 +162,7 @@ export const gameNavigationGroup: NavigationGroup = {
     { label: "지뢰 찾기", description: "첫 클릭 안전·빈 칸 연쇄 열기", route: "/games/minesweeper", symbol: "MS" },
     { label: "테트리스", description: "회전·충돌·줄 지우기", route: "/games/tetris", symbol: "TT" },
     { label: "온라인 대전", description: "방·관전·채팅 · 오목", route: "/games/online", symbol: "ON", matchChildren: true },
+    { label: "게임 랭킹", description: "종목별 순위 · 기간 선택", route: "/games/rankings", symbol: "RK" },
   ],
 };
 

@@ -416,6 +416,25 @@ API Workspace는 요청 실행·응답·History·Collection 기능을 모두 사
 - **학습용 한계**: 테트리스 판·점수는 서버가 다시 계산해 검증하지 않습니다(조작을 막으려면 서버가 같은 규칙으로 다시 계산해야 합니다).
 - **테스트**: `OnlineRoomTest`·`OmokGameTest`·`TetrisBattleTest`·`OnlineRoomServiceTest`(가짜 전송기), `OnlineGameWebSocketIntegrationTest`(실제 서버 + WebSocket 3개, Docker 필요), 화면은 `onlinePages.test.tsx`(가짜 WebSocket)입니다.
 
+### 게임 랭킹(서버 집계)
+
+`/games/rankings`는 종목마다 순위를 보여 줍니다. 기록이 들어오는 길이 두 가지라 "누가 결과를 정하는가"를 비교해 보기 좋습니다.
+
+| 위치 | 볼 것 |
+|---|---|
+| `online/domain/game/OnlineGame.winnerSeats()` | 결과 문구가 아니라 "이긴 자리 번호"를 데이터로 꺼냄. 공동 승리·무승부(빈 목록)·팀 승리(마피아)를 한 모양으로 |
+| `online/domain/OnlineRoom.java` | 시작할 때 앉은 사람을 남겨 두고(중간에 나가도 패배로 기록), 끝나면 `OnlineMatchResult`를 만든다. 기권·퇴장한 자리는 이긴 팀이어도 승리로 치지 않음 |
+| `online/service/OnlineRoomService.java` | 결과를 방 잠금 안에서 꺼내고(`drainFinishedMatch`) DB 저장은 잠금 밖에서. 저장 실패는 오류 로그만 남기고 게임은 계속 |
+| `ranking/service/GameRankingService.java` | 저장 규칙(2명 이상, 한 회원이 두 자리면 저장 안 함), 비회원 닉네임 검사, 게임마다 필요한 값만 받기, 한국 날짜 → UTC 범위, 같은 기록은 같은 순위(1, 1, 3) |
+| `mybatis/mapper/ranking/GameRankingMapper.xml` | 회원은 번호로·비회원은 닉네임으로 묶는 `GROUP BY`, 사람마다 최고 기록 하나를 고르는 `ROW_NUMBER() OVER (PARTITION BY …)`, `<include>`의 `property`로 같은 정렬 조각 재사용 |
+| `ranking/service/GameRankingCleanupService.java` | `@Scheduled`로 1시간마다 1주일 지난 비회원 기록 삭제 |
+| `frontend/.../games/ranking/GameRankingPage.tsx` | 종목·난이도는 주소(`useSearchParams`)에, 기간은 `useState`에. 주소 값은 목록에 있는지 확인 |
+| `ranking/components/RankingTables.tsx` | 조건이 들어간 queryKey로 조건마다 따로 캐시, 불러오는 중·오류·빈 결과 상태 |
+| `ranking/components/GameRankingSubmitPanel.tsx` | 끝난 화면에서만 그려 판마다 상태가 저절로 초기화, `useMutation` 성공 뒤 랭킹 캐시 무효화 |
+
+- **믿을 수 있는 값은 어디서 오나**: 온라인 대전 승패는 서버가 판정하므로 브라우저가 보내지 않습니다. 혼자 하는 게임 점수는 브라우저가 계산하므로 서버는 범위만 검사합니다(완전히 막으려면 서버가 게임을 다시 계산해야 합니다).
+- **테스트**: `GameRankingServiceTest`(규칙·기간·동점), `GameRankingMapperIntegrationTest`(실제 MySQL로 묶기·최고 기록·정리, Docker 필요), `OnlineRoomServiceTest`(끝난 판 저장·퇴장·저장 실패), 화면은 `GameRankingPage.test.tsx`·`rankingPeriod.test.ts`·`gamePages.test.tsx`입니다.
+
 ---
 
 ## 후속 확장 실습
