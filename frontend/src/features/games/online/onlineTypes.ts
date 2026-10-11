@@ -101,6 +101,8 @@ export const onlineRoomSchema = z.object({
   participants: z.array(participantSchema),
   omok: omokSchema.nullish(),
   tetris: tetrisSchema.nullish(),
+  /** 공통 틀 게임(숫자 야구 등)의 상태. 모양은 gameType마다 달라 각 게임 화면이 자기 스키마로 다시 확인한다 */
+  game: z.unknown().nullish(),
   lastResult: z.string().nullish(),
 });
 
@@ -154,4 +156,5 @@ export type OnlineClientMessage =
   | { type: "TETRIS_BOARD"; board: string; score: number; lines: number }
   | { type: "TETRIS_ATTACK"; cleared: number }
   | { type: "TETRIS_TOPPED_OUT" }
+  | { type: "GAME_ACTION"; action: string; text?: string; number?: number; numbers?: number[] }
   | { type: "PING" };

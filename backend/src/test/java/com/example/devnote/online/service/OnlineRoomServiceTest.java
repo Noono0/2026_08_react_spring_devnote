@@ -5,6 +5,8 @@ import com.example.devnote.common.exception.ErrorCode;
 import com.example.devnote.member.dao.row.MemberRow;
 import com.example.devnote.member.service.AuthenticationService;
 import com.example.devnote.online.domain.OnlineGameType;
+import com.example.devnote.online.domain.game.GameAction;
+import com.example.devnote.online.domain.game.NumberBaseballGame;
 import com.example.devnote.online.dto.OnlineClientMessage;
 import com.example.devnote.online.dto.OnlineRoomCreateRequest;
 import com.example.devnote.online.dto.OnlineRoomCreatedResponse;
@@ -65,7 +67,7 @@ class OnlineRoomServiceTest {
     }
 
     private static OnlineClientMessage joinMessage(String roomId, String nickname, String password, String hostToken) {
-        return new OnlineClientMessage("JOIN", roomId, nickname, password, hostToken, null, null, null, null, null, null, null, null, null);
+        return new OnlineClientMessage("JOIN", roomId, nickname, password, hostToken, null, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     private static void assertError(Runnable action, ErrorCode errorCode) {
@@ -181,6 +183,36 @@ class OnlineRoomServiceTest {
         var finished = sender.lastRoomStateFor("s3").room();
         assertThat(finished.status()).isEqualTo("WAITING");
         assertThat(finished.lastResult()).isEqualTo("1위 하나 · 2위 둘둘");
+    }
+
+    @Test
+    void 공통_틀_게임은_GAME_ACTION으로_진행하고_사람마다_다른_화면을_받는다() {
+        OnlineRoomCreatedResponse created = service.createRoom(new OnlineRoomCreateRequest("야구", OnlineGameType.NUMBER_BASEBALL, 2, null, false), new MockHttpServletRequest());
+        OnlineConnection first = new OnlineConnection("s1", null, null);
+        OnlineConnection second = new OnlineConnection("s2", null, null);
+        OnlineConnection watcher = new OnlineConnection("s3", null, null);
+        service.join(first, joinMessage(created.roomId(), "하나", null, created.hostToken()));
+        service.join(second, joinMessage(created.roomId(), "둘둘", null, null));
+        service.join(watcher, joinMessage(created.roomId(), "구경", null, null));
+        service.sit(first, 0);
+        service.sit(second, 1);
+        service.start(first);
+        service.gameAction(first, new GameAction("SET_SECRET", "123", null, null));
+
+        var mine = (NumberBaseballGame.View) sender.lastRoomStateFor("s1").room().game();
+        var theirs = (NumberBaseballGame.View) sender.lastRoomStateFor("s2").room().game();
+        var watching = (NumberBaseballGame.View) sender.lastRoomStateFor("s3").room().game();
+        assertThat(mine.mySecret()).isEqualTo("123");
+        assertThat(theirs.mySecret()).isNull();
+        assertThat(watching.mySecret()).isNull();
+        assertError(() -> service.gameAction(watcher, new GameAction("SET_SECRET", "456", null, null)), ErrorCode.ONLINE_NOT_YOUR_TURN);
+
+        service.gameAction(second, new GameAction("SET_SECRET", "456", null, null));
+        service.gameAction(first, new GameAction("GUESS", "456", null, null));
+        service.gameAction(second, new GameAction("GUESS", "789", null, null));
+        var finished = sender.lastRoomStateFor("s3").room();
+        assertThat(finished.status()).isEqualTo("WAITING");
+        assertThat(finished.lastResult()).isEqualTo("숫자 야구 하나 승리 (1바퀴)");
     }
 
     @Test

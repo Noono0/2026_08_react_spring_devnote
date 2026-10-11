@@ -1,5 +1,7 @@
 package com.example.devnote.online.dto;
 
+import java.util.List;
+
 /**
  * 화면 → 서버 WebSocket 메시지(JSON). type으로 무엇을 하려는지 구분하고, 필요한 칸만 채워 보낸다.
  *
@@ -12,6 +14,7 @@ package com.example.devnote.online.dto;
  *   { "type": "TETRIS_BOARD", "board": "....(200글자)", "score": 1200, "lines": 8 }   (블록이 굳을 때마다)
  *   { "type": "TETRIS_ATTACK", "cleared": 4 }   (2줄 이상 지웠을 때)
  *   { "type": "TETRIS_TOPPED_OUT" }   (더 쌓을 곳이 없을 때)
+ *   { "type": "GAME_ACTION", "action": "GUESS", "text": "382" }   (숫자 야구·배틀십·카드 게임 등 공통 틀 게임의 행동)
  *   { "type": "CHAT", "text": "안녕하세요" }
  *   { "type": "PING" }                       (연결 유지용. 서버는 PONG으로 답한다)
  *
@@ -33,5 +36,8 @@ public record OnlineClientMessage(
     String board,
     Integer score,
     Integer lines,
-    Integer cleared
+    Integer cleared,
+    String action,
+    Integer number,
+    List<Integer> numbers
 ) {}

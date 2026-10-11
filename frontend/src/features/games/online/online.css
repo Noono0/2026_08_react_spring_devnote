@@ -181,6 +181,27 @@
   .tetris-arena-slot.large { width: 48px; height: 48px; }
 }
 
+/* 숫자 야구 */
+.baseball { display: grid; gap: 12px; width: 100%; }
+.baseball-players { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.baseball-player { position: relative; display: grid; gap: 2px; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--background-muted); }
+.baseball-player span { color: var(--text-muted); font-size: 13px; }
+.baseball-player.turn { border-color: var(--primary-color); box-shadow: 0 0 0 2px var(--primary-soft); }
+.baseball-player.out { opacity: 0.5; }
+.baseball-player.winner { border-color: var(--success-color); }
+.baseball-badge { position: absolute; top: 8px; right: 8px; padding: 1px 8px; border-radius: 999px; color: #fff !important; background: var(--success-color); font-size: 11px !important; font-weight: 800; }
+.baseball-secret { margin: 0; font-size: 15px; }
+.baseball-secret strong { margin-left: 6px; color: var(--primary-color); font-size: 22px; letter-spacing: 0.3em; }
+.baseball-form { display: grid; gap: 6px; }
+.baseball-form > label { color: var(--text-secondary); font-size: 13px; }
+.baseball-form-row { display: flex; gap: 8px; }
+.baseball-form-row input { max-width: 160px; font-size: 22px; font-weight: 800; letter-spacing: 0.4em; text-align: center; }
+.baseball-history { width: 100%; border-collapse: collapse; font-size: 14px; }
+.baseball-history caption { margin-bottom: 6px; font-weight: 800; text-align: left; }
+.baseball-history th, .baseball-history td { padding: 6px 8px; border-bottom: 1px solid var(--border-color); text-align: left; }
+.baseball-history .baseball-guess { font-weight: 800; letter-spacing: 0.2em; }
+.baseball-history tr.hit td { color: var(--success-color); font-weight: 800; }
+
 /* 테트리스 대전은 판을 넓게 쓰도록 자리·채팅 패널을 판 아래로 내린다 */
 .online-room-layout.wide { grid-template-columns: minmax(0, 1fr); }
 .online-room-layout.wide .online-side { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }

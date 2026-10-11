@@ -42,8 +42,15 @@ final class OnlineRoomViewMapper {
             participants,
             toOmokView(room.getOmokGame()),
             toTetrisView(room.getTetrisBattle()),
+            room.getGame() == null ? null : room.getGame().viewFor(mySeat(room, myParticipantId)),
             room.getLastResult()
         );
+    }
+
+    /** 받는 사람의 자리(관전자면 null) — 게임이 남의 비밀을 빼고 화면을 만들 때 쓴다 */
+    private static Integer mySeat(OnlineRoom room, String participantId) {
+        int seat = room.seatOf(participantId);
+        return seat >= 0 ? seat : null;
     }
 
     static OnlineRoomSummaryResponse toSummary(OnlineRoom room) {

@@ -331,6 +331,65 @@ describe("온라인 테트리스 대전", () => {
   });
 });
 
+describe("온라인 숫자 야구", () => {
+  const baseballRoom = (game: Record<string, unknown>, overrides: Partial<OnlineRoom> = {}): OnlineRoom => ({
+    ...baseRoom,
+    gameType: "NUMBER_BASEBALL", gameTypeLabel: "숫자 야구", status: "PLAYING", seats: ["p1", "p2"],
+    participants: [
+      { participantId: "p1", nickname: "철수", member: false, seatIndex: 0 },
+      { participantId: "p2", nickname: "영희", member: false, seatIndex: 1 },
+    ],
+    game: {
+      phase: "SETUP", digits: 3, mySeat: 0, mySecret: null, secretReady: [false, true], active: [true, true],
+      turnSeat: null, targetSeat: null, round: 1, history: [], winners: [], secrets: null, ...game,
+    },
+    ...overrides,
+  });
+
+  const openBaseball = (game: Record<string, unknown>) => {
+    renderRoom();
+    const socket = latestSocket();
+    socket.serverOpen();
+    socket.serverSend({ type: "ROOM_STATE", room: baseballRoom(game) });
+    return socket;
+  };
+
+  it("준비 단계: 서로 다른 숫자 3개만 비밀 숫자로 보낸다", () => {
+    const socket = openBaseball({});
+    expect(screen.getByText("준비 완료")).toBeInTheDocument(); // 영희
+    const input = screen.getByLabelText(/내 비밀 숫자/);
+    fireEvent.change(input, { target: { value: "112" } });
+    fireEvent.click(screen.getByRole("button", { name: "숫자 정하기" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("서로 다른 숫자 3개");
+    fireEvent.change(input, { target: { value: "3a8b2" } }); // 숫자가 아닌 글자는 지운다
+    expect(input).toHaveValue("382");
+    fireEvent.click(screen.getByRole("button", { name: "숫자 정하기" }));
+    expect(socket.sent.at(-1)).toEqual({ type: "GAME_ACTION", action: "SET_SECRET", text: "382" });
+  });
+
+  it("진행 단계: 내 차례에만 맞히기 칸이 보이고, 기록에 S·B·OUT이 나온다", () => {
+    const socket = openBaseball({
+      phase: "PLAY", mySecret: "382", secretReady: [true, true], turnSeat: 0, targetSeat: 1, round: 2,
+      history: [{ round: 1, seat: 0, targetSeat: 1, guess: "123", strikes: 1, balls: 1 }, { round: 1, seat: 1, targetSeat: 0, guess: "456", strikes: 0, balls: 0 }],
+    });
+    expect(screen.getByText("382")).toBeInTheDocument(); // 내 비밀 숫자
+    expect(screen.getByText("1S 1B")).toBeInTheDocument();
+    expect(screen.getByText("OUT")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("영희의 숫자 맞히기"), { target: { value: "195" } });
+    fireEvent.click(screen.getByRole("button", { name: "던지기" }));
+    expect(socket.sent.at(-1)).toEqual({ type: "GAME_ACTION", action: "GUESS", text: "195" });
+
+    socket.serverSend({ type: "ROOM_STATE", room: baseballRoom({ phase: "PLAY", mySecret: "382", secretReady: [true, true], turnSeat: 1, targetSeat: 0 }) });
+    expect(screen.queryByRole("button", { name: "던지기" })).not.toBeInTheDocument();
+  });
+
+  it("끝나면 모두의 숫자를 공개하고 승리를 표시한다", () => {
+    openBaseball({ phase: "FINISHED", mySecret: "382", secretReady: [true, true], winners: [0], secrets: ["382", "456"] });
+    expect(screen.getByText("숫자 456")).toBeInTheDocument();
+    expect(screen.getByText("승리")).toBeInTheDocument();
+  });
+});
+
 describe("온라인 대전 대기실", () => {
   const renderLobby = () => render(withProviders(
     <MemoryRouter initialEntries={["/games/online"]}>

@@ -2,6 +2,9 @@ package com.example.devnote.online.domain;
 
 import com.example.devnote.common.exception.BusinessException;
 import com.example.devnote.common.exception.ErrorCode;
+import com.example.devnote.online.domain.game.GameAction;
+import com.example.devnote.online.domain.game.OnlineGame;
+import com.example.devnote.online.domain.game.OnlineGames;
 import lombok.AccessLevel;
 import lombok.Getter;
 
@@ -14,6 +17,7 @@ import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 /**
  * 온라인 대전 방 하나의 상태와 규칙입니다. (서버 메모리에만 있고 DB에는 저장하지 않는다)
@@ -62,6 +66,8 @@ public class OnlineRoom {
     private OmokGame omokGame;
     /** 테트리스 대전 판(시작 전이면 null) */
     private TetrisBattle tetrisBattle;
+    /** 공통 틀(OnlineGame)로 진행하는 게임(숫자 야구 등). 시작 전이면 null */
+    private OnlineGame game;
     /** 지난 판 결과 문구(예: "흑 철수 승리") */
     private String lastResult;
 
@@ -228,6 +234,7 @@ public class OnlineRoom {
             if (settings.gameType() != gameType) {
                 omokGame = null;
                 tetrisBattle = null;
+                game = null;
                 lastResult = null;
             }
             gameType = settings.gameType();
@@ -249,9 +256,15 @@ public class OnlineRoom {
         requireAvailable(gameType, seats.size());
         lastResult = null;
         status = Status.PLAYING;
+        List<String> nicknames = new ArrayList<>();
+        for (int seat = 0; seat < seats.size(); seat++) nicknames.add(nicknameAt(seat));
+        if (OnlineGames.usesCommonGame(gameType)) {
+            game = OnlineGames.create(gameType, nicknames, new Random(seed));
+            addSystemMessage(gameType.getLabel() + " 시작! " + String.join(" · ", nicknames), now);
+            afterGameChange(now);
+            return;
+        }
         if (gameType == OnlineGameType.TETRIS) {
-            List<String> nicknames = new ArrayList<>();
-            for (int seat = 0; seat < seats.size(); seat++) nicknames.add(nicknameAt(seat));
             tetrisBattle = new TetrisBattle(seed, nicknames);
             addSystemMessage("게임 시작! " + String.join(" · ", nicknames) + " — 마지막까지 살아남으면 1위", now);
             return;
@@ -271,10 +284,32 @@ public class OnlineRoom {
         }
     }
 
-    /** 기권: 오목은 상대가 이기고, 테트리스는 나만 탈락한다 */
+    /** 공통 틀 게임의 행동(GAME_ACTION). 관전자는 할 수 없다 */
+    public void gameAction(String participantId, GameAction action, long now) {
+        requireParticipant(participantId);
+        if (status != Status.PLAYING || game == null) throw new BusinessException(ErrorCode.ONLINE_GAME_NOT_PLAYING);
+        int seat = seatOf(participantId);
+        if (seat < 0) throw new BusinessException(ErrorCode.ONLINE_NOT_YOUR_TURN, "관전자는 게임에 참여할 수 없습니다.");
+        game.act(seat, action);
+        afterGameChange(now);
+    }
+
+    /** 게임이 남긴 안내를 채팅으로 옮기고, 끝났으면 방을 대기 상태로 돌린다 */
+    private void afterGameChange(long now) {
+        for (String announcement : game.drainAnnouncements()) addSystemMessage(announcement, now);
+        if (status == Status.PLAYING && game.isFinished()) finishGame(game.resultText(), now);
+    }
+
+    /** 기권: 오목은 상대가 이기고, 테트리스·공통 틀 게임은 나만 빠진다 */
     public void resign(String participantId, long now) {
         requireParticipant(participantId);
         int seat = seatOf(participantId);
+        if (status == Status.PLAYING && game != null && seat >= 0) {
+            addSystemMessage(nicknameAt(seat) + " 기권", now);
+            game.leave(seat);
+            afterGameChange(now);
+            return;
+        }
         if (status == Status.PLAYING && tetrisBattle != null && seat >= 0) {
             eliminateFromTetris(seat, nicknameAt(seat) + " 기권", now);
             return;
@@ -286,6 +321,11 @@ public class OnlineRoom {
     }
 
     private void finishByLeaving(int leftSeat, String leftNickname, long now) {
+        if (game != null) {
+            game.leave(leftSeat);
+            afterGameChange(now);
+            return;
+        }
         if (tetrisBattle != null) {
             eliminateFromTetris(leftSeat, leftNickname + "님이 나가 탈락", now);
             return;

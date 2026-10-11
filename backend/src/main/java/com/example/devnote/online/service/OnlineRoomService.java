@@ -9,6 +9,7 @@ import com.example.devnote.online.domain.OnlineParticipant;
 import com.example.devnote.online.domain.OnlineRoom;
 import com.example.devnote.online.domain.OnlineRoomSettings;
 import com.example.devnote.online.domain.TetrisBattle;
+import com.example.devnote.online.domain.game.GameAction;
 import com.example.devnote.online.dto.OnlineChatView;
 import com.example.devnote.online.dto.OnlineClientMessage;
 import com.example.devnote.online.dto.OnlineGameTypeResponse;
@@ -191,6 +192,11 @@ public class OnlineRoomService {
             int holeCol = secureRandom.nextInt(TetrisBattle.BOARD_COLS);
             messageSender.send(target.getSessionId(), OnlineServerMessage.garbage(attack.lines(), holeCol, fromNickname));
         }
+    }
+
+    /** 공통 틀 게임(숫자 야구 등)의 행동. 규칙 판단은 게임 클래스가, 결과는 모두에게 ROOM_STATE로 */
+    public void gameAction(OnlineConnection connection, GameAction action) {
+        withRoom(connection, true, (room, participantId) -> room.gameAction(participantId, action, now()));
     }
 
     public void tetrisToppedOut(OnlineConnection connection) {

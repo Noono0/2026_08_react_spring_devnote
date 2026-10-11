@@ -1,0 +1,24 @@
+/**
+ * CommonGameArea.tsx — 공통 틀(서버 OnlineGame)로 진행하는 게임의 화면 고르기
+ *
+ * 서버는 room.game에 "받는 사람에게 맞춘" 상태를 담아 보낸다. 모양은 gameType마다 다르므로,
+ * 각 게임 화면이 자기 zod 스키마로 확인한 뒤 그린다. 새 게임을 추가하면 여기에 한 줄을 더한다.
+ */
+import { NumberBaseballGame } from "@/features/games/online/games/NumberBaseballGame";
+import type { OnlineClientMessage, OnlineRoom } from "@/features/games/online/onlineTypes";
+
+export interface CommonGameProperties {
+  room: OnlineRoom;
+  mySeat: number | null;
+  connected: boolean;
+  send: (message: OnlineClientMessage) => boolean;
+}
+
+export const CommonGameArea = (properties: CommonGameProperties) => {
+  switch (properties.room.gameType) {
+    case "NUMBER_BASEBALL":
+      return <NumberBaseballGame {...properties} />;
+    default:
+      return <p className="online-hint">아직 준비 중인 게임입니다.</p>;
+  }
+};
