@@ -657,6 +657,57 @@ describe("온라인 포커", () => {
   });
 });
 
+describe("온라인 체스", () => {
+  const start = ["rnbqkbnr", "pppppppp", "........", "........", "........", "........", "PPPPPPPP", "RNBQKBNR"];
+  const chessRoom = (game: Record<string, unknown>): OnlineRoom => ({
+    ...baseRoom,
+    gameType: "CHESS", gameTypeLabel: "체스", status: "PLAYING", seats: ["p1", "p2"],
+    participants: [
+      { participantId: "p1", nickname: "철수", member: false, seatIndex: 0 },
+      { participantId: "p2", nickname: "영희", member: false, seatIndex: 1 },
+    ],
+    game: {
+      mySeat: 0, myColor: "WHITE", board: start, turnSeat: 0, inCheck: false, lastMove: null,
+      legalMoves: [[6, 4, 5, 4], [6, 4, 4, 4]], history: [], capturedByWhite: [], capturedByBlack: [],
+      winnerSeat: null, result: null, finished: false, ...game,
+    },
+  });
+
+  it("내 기물을 고르면 갈 수 있는 칸이 표시되고, 그 칸을 누르면 MOVE를 보낸다", () => {
+    renderRoom();
+    const socket = latestSocket();
+    socket.serverOpen();
+    socket.serverSend({ type: "ROOM_STATE", room: chessRoom({}) });
+    fireEvent.click(screen.getByRole("gridcell", { name: "e2 백 폰" }));
+    expect(screen.getByRole("gridcell", { name: "e4 (이동 가능)" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("gridcell", { name: "e4 (이동 가능)" }));
+    expect(socket.sent.at(-1)).toEqual({ type: "GAME_ACTION", action: "MOVE", numbers: [6, 4, 4, 4] });
+  });
+
+  it("폰이 끝 줄에 닿으면 바꿀 기물을 고른 뒤 보낸다", () => {
+    renderRoom();
+    const socket = latestSocket();
+    socket.serverOpen();
+    const board = ["....k...", "P.......", "........", "........", "........", "........", "........", "....K..."];
+    socket.serverSend({ type: "ROOM_STATE", room: chessRoom({ board, legalMoves: [[1, 0, 0, 0]] }) });
+    fireEvent.click(screen.getByRole("gridcell", { name: "a7 백 폰" }));
+    fireEvent.click(screen.getByRole("gridcell", { name: "a8 (이동 가능)" }));
+    fireEvent.click(within(screen.getByRole("group", { name: "프로모션 기물 고르기" })).getByRole("button", { name: "나이트" }));
+    expect(socket.sent.at(-1)).toEqual({ type: "GAME_ACTION", action: "MOVE", numbers: [1, 0, 0, 0], text: "N" });
+  });
+
+  it("흑은 판을 뒤집어 보고, 상대 차례에는 판을 누를 수 없다", () => {
+    renderRoom();
+    const socket = latestSocket();
+    socket.serverOpen();
+    socket.serverSend({ type: "ROOM_STATE", room: chessRoom({ mySeat: 1, myColor: "BLACK", turnSeat: 1, legalMoves: [], inCheck: true }) });
+    const cells = within(screen.getByRole("grid", { name: "체스판" })).getAllByRole("gridcell");
+    expect(cells[0]).toHaveAccessibleName("h1 백 룩");
+    expect(cells[0]).toBeDisabled();
+    expect(screen.getByText(/체크!/)).toBeInTheDocument();
+  });
+});
+
 describe("온라인 대전 대기실", () => {
   const renderLobby = () => render(withProviders(
     <MemoryRouter initialEntries={["/games/online"]}>

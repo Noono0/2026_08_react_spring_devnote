@@ -6,6 +6,7 @@
  */
 import { BattleshipGame } from "@/features/games/online/games/BattleshipGame";
 import { BlackjackGame } from "@/features/games/online/games/BlackjackGame";
+import { ChessGame } from "@/features/games/online/games/ChessGame";
 import { MemoryMatchGame } from "@/features/games/online/games/MemoryMatchGame";
 import { NumberBaseballGame } from "@/features/games/online/games/NumberBaseballGame";
 import { OneCardGame } from "@/features/games/online/games/OneCardGame";
@@ -36,6 +37,8 @@ export const CommonGameArea = (properties: CommonGameProperties) => {
       return <SutdaGame {...properties} />;
     case "POKER":
       return <PokerGame {...properties} />;
+    case "CHESS":
+      return <ChessGame {...properties} />;
     default:
       return <p className="online-hint">아직 준비 중인 게임입니다.</p>;
   }
