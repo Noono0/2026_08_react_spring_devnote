@@ -121,25 +121,69 @@
 .omok-cell.last .omok-stone::after { content: ""; position: absolute; inset: 36%; border-radius: 50%; background: var(--danger-color); }
 .omok-cell.win .omok-stone { outline: 3px solid var(--danger-color); outline-offset: 1px; }
 
-/* 테트리스 대전: 내 판(가운데)·보관/다음(왼쪽), 아래에 상대 판들. 판 크기는 칸 너비(cqi)에 맞춘다 */
+/*
+ * 테트리스 대전: 왼쪽 내 판(HOLD | 판 | 방해 줄 게이지 | NEXT), 오른쪽 다른 플레이어 판 3칸 격자.
+ * 크기는 .online-game-area(container)의 너비(cqi)에 맞춘다. 좁으면 내 판 아래로 다른 판을 내린다.
+ */
 .online-tetris { display: grid; gap: 12px; justify-items: center; width: 100%; }
-.online-tetris-stage { display: grid; grid-template-columns: minmax(96px, 130px) auto; align-items: start; gap: 12px; padding: 6px; border-radius: 14px; }
-.online-tetris-stage:focus-visible { outline: 3px solid var(--primary-color); outline-offset: 2px; }
-.online-tetris .tetris-board { --tetris-cell: min(26px, calc((100cqi - 180px) / 10)); }
-.online-tetris-stats { justify-content: center; }
+.tetris-arena { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 18px; width: 100%; }
+.tetris-arena-me { display: grid; justify-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border-color); border-radius: 18px; background: var(--background-muted); }
+.tetris-nameplate {
+  display: flex; align-items: center; gap: 6px; width: 100%; min-width: 0; padding: 4px 10px; border-radius: 8px;
+  color: #3a2500; background: linear-gradient(180deg, #ffd56b, #f3a224); font-size: 12px; font-weight: 800;
+}
+.tetris-nameplate strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tetris-nameplate > span:last-child { margin-left: auto; font-weight: 700; white-space: nowrap; }
+.tetris-host-mark { flex-shrink: 0; padding: 0 6px; border-radius: 999px; color: #fff; background: #e03131; font-size: 10px; }
+.tetris-arena-stage { display: grid; grid-template-columns: 64px auto 10px 64px; align-items: start; gap: 8px; padding: 4px; border-radius: 12px; }
+.tetris-arena-stage:focus-visible { outline: 3px solid var(--primary-color); outline-offset: 2px; }
+.tetris-arena .tetris-board { --tetris-cell: 24px; }
+/* 혼자 하기 CSS의 grid-area(board)를 풀어 내 판 칸(HOLD | 판 | 게이지 | NEXT) 순서대로 놓는다 */
+.tetris-arena-stage .tetris-board-wrap { grid-area: auto; }
+.tetris-arena-column { display: grid; justify-items: center; gap: 6px; }
+.tetris-arena-label { color: var(--text-secondary); font-size: 11px; font-weight: 900; letter-spacing: 0.08em; }
+.tetris-arena-slot { display: grid; place-items: center; width: 56px; height: 44px; border-radius: 8px; background: var(--tetris-board); }
+.tetris-arena-slot.large { width: 64px; height: 64px; }
+.tetris-arena-slot .tetris-preview-piece { min-height: 0; }
+.tetris-arena-slot .tetris-preview-row .tetris-cell { width: 11px; height: 11px; }
+.tetris-arena-slot.large .tetris-preview-row .tetris-cell { width: 14px; height: 14px; }
+.tetris-garbage-meter { position: relative; align-self: stretch; width: 10px; overflow: hidden; border-radius: 5px; background: var(--tetris-board); }
+.tetris-garbage-meter span { position: absolute; right: 0; bottom: 0; left: 0; background: var(--danger-color); transition: height 200ms ease-out; }
 .online-tetris-attack { margin: 0; padding: 6px 12px; border-radius: 999px; color: #fff; background: var(--danger-color); font-weight: 800; animation: online-attack-flash 600ms ease-out; }
 @keyframes online-attack-flash { from { transform: scale(1.15); } to { transform: scale(1); } }
-.tetris-touch-controls.online { width: min(100%, 420px); }
-.online-tetris-opponents { display: grid; gap: 8px; width: 100%; }
-.online-tetris-opponents h2 { margin: 0; font-size: 14px; text-align: center; }
-.online-tetris-minis { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
-.online-tetris-mini { display: grid; gap: 4px; justify-items: center; margin: 0; }
-.online-tetris-mini-board { --mini-cell: 9px; display: grid; grid-template-columns: repeat(10, var(--mini-cell)); grid-auto-rows: var(--mini-cell); padding: 3px; border-radius: 6px; background: var(--tetris-board); }
-.online-tetris-minis.spectator .online-tetris-mini-board { --mini-cell: min(16px, calc((100cqi - 80px) / 40)); }
-.online-tetris-mini-board .tetris-cell { border-radius: 1px; }
-.online-tetris-mini figcaption { display: grid; justify-items: center; font-size: 12px; }
-.online-tetris-mini figcaption span { color: var(--text-muted); }
-.online-tetris-mini.out { opacity: .45; }
+.tetris-touch-controls.online { grid-area: auto; width: min(100%, 420px); } /* 혼자 하기의 grid-area(controls)를 풀어 판 아래에 놓는다 */
+
+.tetris-arena-others { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-content: start; gap: 12px; }
+.tetris-arena-others.spectator { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); width: 100%; }
+.tetris-opponent { display: grid; gap: 4px; min-width: 0; margin: 0; padding: 6px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--background-muted); }
+.tetris-opponent .tetris-nameplate { padding: 3px 8px; font-size: 11px; }
+.tetris-opponent-board {
+  position: relative; display: grid; grid-template-columns: repeat(10, 1fr); grid-template-rows: repeat(20, 1fr);
+  aspect-ratio: 1 / 2; padding: 3px; border-radius: 6px; background: var(--tetris-board);
+}
+.tetris-opponent-board .tetris-cell { border-radius: 1px; }
+.tetris-opponent.empty .tetris-nameplate { color: var(--text-muted); background: var(--border-color); }
+.tetris-opponent.empty .tetris-opponent-board { opacity: 0.45; }
+.tetris-opponent.out .tetris-opponent-board .tetris-cell { filter: grayscale(1); }
+.tetris-opponent-out { position: absolute; inset: 0; display: grid; place-items: center; color: #fff; background: rgba(0, 0, 0, 0.45); font-size: 22px; font-weight: 900; }
+
+/* 판 칸(.online-game-area)이 좁으면: 내 판 위, 다른 판 아래(3칸 → 좁으면 2칸) */
+@container (max-width: 720px) {
+  .tetris-arena { grid-template-columns: minmax(0, 1fr); }
+  .tetris-arena-me { justify-self: center; }
+  .tetris-arena .tetris-board { --tetris-cell: min(24px, calc((100cqi - 200px) / 10)); }
+}
+@container (max-width: 420px) {
+  .tetris-arena-others { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tetris-arena-stage { grid-template-columns: 48px auto 8px 48px; gap: 5px; }
+  .tetris-arena .tetris-board { --tetris-cell: min(24px, calc((100cqi - 150px) / 10)); }
+  .tetris-arena-slot { width: 44px; height: 36px; }
+  .tetris-arena-slot.large { width: 48px; height: 48px; }
+}
+
+/* 테트리스 대전은 판을 넓게 쓰도록 자리·채팅 패널을 판 아래로 내린다 */
+.online-room-layout.wide { grid-template-columns: minmax(0, 1fr); }
+.online-room-layout.wide .online-side { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
 
 @media (prefers-reduced-motion: reduce) {
   .online-tetris-attack { animation: none; }
@@ -150,6 +194,7 @@
 }
 
 @media (max-width: 760px) {
+  .online-room-layout.wide .online-side { grid-template-columns: minmax(0, 1fr); }
   .online-room-form-row { grid-template-columns: minmax(0, 1fr); }
   .online-room-card { flex-direction: column; align-items: stretch; }
   .online-enter-link { text-align: center; }

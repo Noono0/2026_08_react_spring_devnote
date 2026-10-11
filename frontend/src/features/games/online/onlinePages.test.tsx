@@ -271,6 +271,34 @@ describe("온라인 테트리스 대전", () => {
     expect(board.querySelectorAll(".piece-g")).toHaveLength(18); // 2줄 × 9칸(구멍 1칸)
   });
 
+  it("왼쪽에 내 판, 오른쪽에 다른 자리 판들을 놓고 빈 자리는 빈 판으로 보여 준다(시작 전 6인 방)", () => {
+    renderRoom();
+    const socket = latestSocket();
+    socket.serverOpen();
+    socket.serverSend({ type: "ROOM_STATE", room: tetrisRoom({
+      status: "WAITING", tetris: null, seatCount: 6, seats: ["p1", "p2", null, null, null, null],
+    }) });
+    expect(screen.getByRole("region", { name: "내 판" })).toHaveTextContent("철수");
+    const others = screen.getByRole("region", { name: "다른 플레이어 판" });
+    expect(within(others).getAllByRole("figure")).toHaveLength(5);
+    expect(within(others).getByRole("figure", { name: "영희 판" })).toBeInTheDocument();
+    expect(within(others).getAllByRole("figure", { name: /빈 자리/ })).toHaveLength(4);
+    expect(screen.getByText("대기 중", { selector: ".game-overlay strong" })).toBeInTheDocument();
+  });
+
+  it("방해 줄 게이지는 받은 줄 수만큼 차고, 다음 블록이 굳으면 비워진다", () => {
+    renderRoom();
+    const socket = latestSocket();
+    socket.serverOpen();
+    socket.serverSend({ type: "ROOM_STATE", room: tetrisRoom() });
+    const meter = screen.getByRole("meter", { name: "받은 방해 줄" });
+    expect(meter).toHaveAttribute("aria-valuenow", "0");
+    socket.serverSend({ type: "TETRIS_GARBAGE", garbage: { lines: 4, holeCol: 0, fromNickname: "영희" } });
+    expect(meter).toHaveAttribute("aria-valuenow", "4");
+    fireEvent.keyDown(screen.getByRole("application", { name: /테트리스 대전 내 판/ }), { key: " " });
+    expect(meter).toHaveAttribute("aria-valuenow", "0");
+  });
+
   it("관전자는 모든 플레이어의 판을 보고, 탈락한 플레이어는 기권 버튼이 없다", () => {
     renderRoom();
     const socket = latestSocket();

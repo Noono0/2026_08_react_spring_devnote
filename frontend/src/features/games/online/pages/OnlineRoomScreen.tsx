@@ -145,7 +145,7 @@ export const OnlineRoomScreen = ({ roomId, nickname, hostToken, canUseMembersOnl
       ) : null}
       {visibleError ? <p key={visibleError.sequence} className="online-banner warning" role="alert">{visibleError.message}</p> : null}
 
-      <div className="online-room-layout">
+      <div className={`online-room-layout${isTetris ? " wide" : ""}`}>
         <div className="online-game-area">
           {isTetris ? (
             <OnlineTetrisGame room={room} mySeat={mySeat} connected={isOpen} incomingGarbage={state.incomingGarbage} send={send} />
