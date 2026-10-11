@@ -139,6 +139,8 @@ const GameHomePage = lazy(async () => ({ default: (await import("@/features/game
 const MemoryGamePage = lazy(async () => ({ default: (await import("@/features/games/memory/MemoryGamePage")).MemoryGamePage }));
 const Game2048Page = lazy(async () => ({ default: (await import("@/features/games/game2048/Game2048Page")).Game2048Page }));
 const MinesweeperPage = lazy(async () => ({ default: (await import("@/features/games/minesweeper/MinesweeperPage")).MinesweeperPage }));
+const OnlineLobbyPage = lazy(async () => ({ default: (await import("@/features/games/online/pages/OnlineLobbyPage")).OnlineLobbyPage }));
+const OnlineRoomPage = lazy(async () => ({ default: (await import("@/features/games/online/pages/OnlineRoomPage")).OnlineRoomPage }));
 const TetrisPage = lazy(async () => ({ default: (await import("@/features/games/tetris/TetrisPage")).TetrisPage }));
 const WebCrawlerPage = lazy(async () => ({ default: (await import("@/features/crawler/pages/WebCrawlerPage")).WebCrawlerPage }));
 
@@ -254,6 +256,9 @@ export const App = () => (
             <Route path="2048" element={<Suspense fallback={<UtilityLazyFallback name="2048" />}><Game2048Page /></Suspense>} />
             <Route path="minesweeper" element={<Suspense fallback={<UtilityLazyFallback name="지뢰 찾기" />}><MinesweeperPage /></Suspense>} />
             <Route path="tetris" element={<Suspense fallback={<UtilityLazyFallback name="테트리스" />}><TetrisPage /></Suspense>} />
+            {/* 온라인 대전: 대기실(방 목록·만들기)과 방(:roomId는 화면에서 모양을 검사한다) */}
+            <Route path="online" element={<Suspense fallback={<UtilityLazyFallback name="온라인 대전" />}><OnlineLobbyPage /></Suspense>} />
+            <Route path="online/:roomId" element={<Suspense fallback={<UtilityLazyFallback name="온라인 대전 방" />}><OnlineRoomPage /></Suspense>} />
           </Route>
           {/* 관리자 화면 묶음. 전부 RoleProtectedRoute로 감싸서 비관리자는 못 들어간다. */}
           <Route path="admin" element={<RoleProtectedRoute><AdminHomePage /></RoleProtectedRoute>} />

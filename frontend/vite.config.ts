@@ -22,6 +22,8 @@ export default defineConfig({
       "/api": {
         target: "http://localhost:8080",
         changeOrigin: true,
+        // 온라인 대전 WebSocket(/api/v1/online/ws)도 같은 주소로 전달한다. 없으면 WebSocket 연결이 백엔드에 닿지 않는다.
+        ws: true,
         configure: (proxyServer) => {
           proxyServer.on("proxyReq", (_proxyRequest, request) => {
             console.log("[ViteProxy] 백엔드 요청 전달", {

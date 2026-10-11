@@ -20,6 +20,7 @@
   /* 테트리스 블록 */
   --piece-i: #22b8cf; --piece-o: #fcc419; --piece-t: #9c36b5; --piece-s: #40c057;
   --piece-z: #fa5252; --piece-j: #3b5bdb; --piece-l: #fd7e14;
+  --piece-g: #868e96; /* 온라인 대전에서 받은 방해 줄 */
   --tetris-board: #101726; --tetris-grid: rgba(255, 255, 255, 0.05);
 }
 
@@ -155,6 +156,7 @@
 .tetris-cell[class*="piece-"] { box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.22), inset 0 2px 0 rgba(255, 255, 255, 0.28); }
 .piece-i { background: var(--piece-i); } .piece-o { background: var(--piece-o); } .piece-t { background: var(--piece-t); } .piece-s { background: var(--piece-s); }
 .piece-z { background: var(--piece-z); } .piece-j { background: var(--piece-j); } .piece-l { background: var(--piece-l); }
+.piece-g { background: var(--piece-g); }
 /* 고스트: 같은 색의 테두리만 보여 "여기에 떨어진다"를 알린다 */
 .tetris-cell.ghost { background: transparent; box-shadow: inset 0 0 0 2px var(--ghost-color, currentColor); opacity: .55; }
 .tetris-cell.ghost.piece-i { --ghost-color: var(--piece-i); } .tetris-cell.ghost.piece-o { --ghost-color: var(--piece-o); } .tetris-cell.ghost.piece-t { --ghost-color: var(--piece-t); }
@@ -192,3 +194,4 @@
   .memory-card-inner { transition: none; }
   .tile-new { animation: none; }
 }
+.game-online-card { margin-bottom: 18px; border-color: color-mix(in srgb, var(--primary-color) 45%, var(--border-color)); }

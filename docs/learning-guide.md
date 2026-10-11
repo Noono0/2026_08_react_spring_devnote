@@ -398,6 +398,24 @@ API Workspace는 요청 실행·응답·History·Collection 기능을 모두 사
 - **최고 기록**: 저장된 기록은 State로 두고, "새 기록인가?"는 그릴 때 계산하며, localStorage 저장은 `useEffect`가 합니다. 이벤트 처리 함수에서 옛 state로 다음 상태를 미리 계산하면 빠른 연속 입력 때 오래된 클로저로 틀릴 수 있기 때문입니다. 읽을 때는 zod 스키마로 모양을 확인합니다(`shared/gameRecordStorage.ts`).
 - **직접 만들어 보기**: 게임 화면 맨 아래 상자는 학습 단계와 같은 Sandpack 상자(`curriculum/components/PracticeSandboxSection.tsx`)를 씁니다. 예제는 `games/sandbox/examples/*.tsx`이고 핵심 함수 하나가 `TODO`로 비어 있으며, 미리보기의 채점표가 ✅/❌로 바로 알려 줍니다. `gameSandboxes.test.ts`가 예제 형식과 react 외 import가 없는지 확인합니다.
 
+### 온라인 대전(WebSocket)
+
+`/games/online`은 Spring WebSocket으로 방·자리·채팅·게임을 실시간으로 나눕니다. 새 의존성은 백엔드 `spring-boot-starter-websocket` 하나이고, 화면은 브라우저 기본 `WebSocket`을 씁니다.
+
+| 위치 | 볼 것 |
+|---|---|
+| `backend/.../online/domain/OnlineRoom.java` | 방 규칙(자리·관전자·방장 넘기기·인원 줄이기·방 정보 수정·채팅 도배 막기). 화면·네트워크를 몰라 단위 테스트로 확인 |
+| `OmokGame.java`, `TetrisBattle.java` | 게임 규칙. 오목은 서버가 판정하고, 테트리스는 각자 브라우저가 계산하고 서버는 판 요약·공격·탈락만 중계 |
+| `online/service/OnlineRoomService.java` | 방마다 `synchronized`로 잠가 동시에 같은 자리에 앉는 일을 막고, 바뀐 상태를 방 사람 모두에게 보냄 |
+| `online/websocket/*` | handshake에서 로그인 세션 확인, JSON 메시지를 type별로 나눠 Service 호출, 연결 끊김 정리, 허용한 Origin만 연결 |
+| `frontend/.../games/online/useOnlineRoom.ts` | 연결의 일생 = useEffect의 일생(연결·JOIN·PING·cleanup). `send`는 Effect 의존성에 쓰여 useCallback으로 고정 |
+| `onlineRoomReducer.ts`, `onlineTypes.ts` | 받은 메시지를 zod로 검사한 뒤 리듀서로 화면 상태에. 화면은 서버가 보낸 상태를 그대로 그림(서버가 정답) |
+| `components/OnlineTetrisGame.tsx` | 혼자 하기와 같은 `tetrisReducer`를 쓰고, "블록이 굳으면 판 보내기·방해 줄 넣기"를 Effect로 서버와 맞춤 |
+
+- **서버 부담**: 방은 DB 대신 메모리(`OnlineRoomStore`)에 두고, 방 50개·방당 10명·메시지 1초 20개·채팅 1초 2개로 제한합니다. 오목은 수마다 판(1KB)을 보내고, 테트리스는 블록이 굳을 때만 200글자 요약을 보냅니다.
+- **학습용 한계**: 테트리스 판·점수는 서버가 다시 계산해 검증하지 않습니다(조작을 막으려면 서버가 같은 규칙으로 다시 계산해야 합니다).
+- **테스트**: `OnlineRoomTest`·`OmokGameTest`·`TetrisBattleTest`·`OnlineRoomServiceTest`(가짜 전송기), `OnlineGameWebSocketIntegrationTest`(실제 서버 + WebSocket 3개, Docker 필요), 화면은 `onlinePages.test.tsx`(가짜 WebSocket)입니다.
+
 ---
 
 ## 후속 확장 실습

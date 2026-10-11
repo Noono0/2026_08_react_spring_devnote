@@ -2,6 +2,15 @@
 
 [문서 목록으로](../README.md) · [작업 규칙](../AGENTS.md) · [검증 명령](verification.md)
 
+## 2026-10-11 — 온라인 대전(방·관전·채팅) + 오목·테트리스 대전
+
+- **화면**: `게임 → 온라인 대전`(`/games/online`, `/games/online/:roomId`). 방 만들기(게임·인원·비밀번호·로그인 유저만 참가), 방 목록(5초마다 새로고침), 비회원 닉네임, 비밀번호 입장, 플레이어 자리·관전자, 방장의 방 정보 수정·게임 시작, 기권, 채팅. 게임은 오목(2인)과 테트리스 대전(2~4인)이고, 체스·배틀십·숫자 야구·원카드·마피아·카드 짝 대전·블랙잭·섯다·포커는 목록에 "준비 중"으로 보입니다.
+- **백엔드**: `spring-boot-starter-websocket` 추가(사용자 승인). `com.example.devnote.online`에 REST(`/api/v1/online/game-types`·`rooms`)와 WebSocket(`/api/v1/online/ws`)을 두고, 방은 DB 없이 메모리에 둡니다. 정한 규칙: 인원을 줄이면 앞자리 우선, 게임 종류·인원은 방장이 게임 중이 아닐 때만, 방 최대 10명, 게임 중 자리 이동 불가, 방장이 나가면 먼저 들어온 사람. 방 비밀번호는 솔트 + SHA-256(틀린 시도 5번이면 연결 종료), 방을 만든 사람은 hostToken으로 비밀번호 없이 방장 입장. 허용 Origin만 연결하고, 로그인 회원은 handshake의 세션 쿠키로 확인합니다.
+- **테트리스 대전**: 같은 seed로 시작해 각자 브라우저에서 계산하고, 서버는 판 요약(200글자)·공격(2줄→1, 3줄→2, 4줄→4, 다음 살아 있는 상대)·탈락만 처리합니다. `tetrisLogic`에 `ADD_GARBAGE`·`END`·`pieceCount`·방해 줄 칸("G")을 추가했고, 키 배치·작은 블록 그림을 `tetrisControls.ts`·`PiecePreview.tsx`로 빼 혼자 하기와 함께 씁니다.
+- **배포 설정**: `frontend/vite.config.ts` 프록시 `ws: true`, `frontend/nginx.conf`에 `/api/v1/online/ws` WebSocket 업그레이드 블록(읽기 제한 75초, 화면이 25초마다 PING).
+- **검증**: `gradlew.bat test`(온라인 테스트 포함 전체), 프론트 `lint`·`typecheck`·`test`·`build` 통과. 새 코드로 띄운 검증용 서버(백엔드 18080·Vite 5174)에서 두 탭으로 방 만들기 → 비밀번호 입장 → 앉기 → 오목 승리, 채팅(HTML이 글자로 보임, 1초 3개째 차단), 방 정보 수정을 확인했고, 테트리스 대전은 Node WebSocket 클라이언트 3개로 같은 seed·관전자 판 요약·방해 줄 대상·잘못된 판 거절·탈락 순위를 확인했습니다. 검증 중 오목 판이 1024px 폭에서 자리 패널을 덮던 문제(판 크기를 칸 너비 cqi로), 입장 전 오류가 방 안에 남던 문제, 빠른 채팅 글이 사라지던 문제를 고쳤습니다.
+- **미검증**: 테트리스 대전 화면을 브라우저에서 두 사람이 직접 조작하는 것(브라우저 창이 가려져 클릭 불가 — 화면 동작은 컴포넌트 테스트로 확인), 실제 Nginx(Docker 운영 구성)에서의 WebSocket 연결, 실제 터치 기기, `scripts/verify-static.py`(실제 Python 없음).
+
 ## 2026-10-11 — 게임 메뉴(카드 짝 맞추기·2048·지뢰 찾기·테트리스)
 
 - **화면**: 사이드바 `각종 유틸리티 게시판` 아래에 `게임` 그룹을 두고 `/games`(게임 홈)와 `/games/memory`·`/games/2048`·`/games/minesweeper`·`/games/tetris`를 추가했습니다. 모두 프론트엔드만 쓰고 최고 기록은 브라우저 localStorage(`devnote.games.*`, 읽을 때 zod 검사)에 둡니다. 각 페이지는 lazy 로딩이고 게임 CSS(`games/shared/games.css`)도 게임을 열 때만 내려받습니다. 라이트·다크, 760px 이하(테트리스는 판 바로 아래 터치 버튼), `prefers-reduced-motion`을 지원합니다.

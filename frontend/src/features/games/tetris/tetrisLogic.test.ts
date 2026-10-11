@@ -224,3 +224,55 @@ describe("화면용 판", () => {
     expect(display[VISIBLE_ROWS - 1]?.[4]).toEqual({ type: "O", kind: "GHOST" });
   });
 });
+
+describe("온라인 대전용 규칙", () => {
+  it("블록이 굳을 때마다 pieceCount가 1씩 는다", () => {
+    const state = run(started(3), { type: "HARD_DROP" }, { type: "HARD_DROP" });
+    expect(state.pieceCount).toBe(2);
+  });
+
+  it("방해 줄: 판을 위로 밀고 맨 아래에 구멍 한 칸짜리 회색 줄을 넣는다", () => {
+    const state = tetrisReducer(withPiece("O"), { type: "ADD_GARBAGE", lines: 2, holeCol: 3 });
+    const bottom = state.board[BOARD_ROWS - 1] ?? [];
+    expect(bottom.filter((cell) => cell === "G")).toHaveLength(BOARD_COLS - 1);
+    expect(bottom[3]).toBeNull();
+    expect(state.board[BOARD_ROWS - 2]?.[3]).toBeNull();
+    expect(state.board[BOARD_ROWS - 3]?.every((cell) => cell === null)).toBe(true);
+    expect(state.board).toHaveLength(BOARD_ROWS);
+    expect(state.status).toBe("PLAYING");
+  });
+
+  it("방해 줄 구멍에 세로 I를 넣으면 회색 줄도 지워진다", () => {
+    let state = tetrisReducer(withPiece("I"), { type: "ADD_GARBAGE", lines: 4, holeCol: 0 });
+    state = tetrisReducer(state, { type: "ROTATE", direction: "CW" });
+    for (let count = 0; count < 10; count += 1) state = tetrisReducer(state, { type: "MOVE", offset: -1 });
+    state = tetrisReducer(state, { type: "HARD_DROP" });
+    expect(state.lastClearedLines).toBe(4);
+    expect(state.board.flat().some((cell) => cell === "G")).toBe(false);
+  });
+
+  it("밀려 올라간 줄이 판 밖으로 나가거나 블록을 올릴 곳이 없으면 끝", () => {
+    const full = createEmptyTetrisBoard().map((row, rowIndex) => (rowIndex < 3 ? row : row.map((_, colIndex) => (colIndex === 0 ? null : "J" as const))));
+    const pushedOut = tetrisReducer({ ...withPiece("O", full), active: null }, { type: "ADD_GARBAGE", lines: 4, holeCol: 0 });
+    expect(pushedOut.status).toBe("GAME_OVER");
+  });
+
+  it("떨어지던 블록과 새 줄이 겹치면 블록을 위로 올린다", () => {
+    const state = tetrisReducer({ ...withPiece("O"), active: { ...spawnPiece("O"), row: BOARD_ROWS - 2 } }, { type: "ADD_GARBAGE", lines: 1, holeCol: 9 });
+    expect(state.active?.row).toBe(BOARD_ROWS - 3);
+    expect(state.status).toBe("PLAYING");
+  });
+
+  it("END: 진행 중이던 게임만 끝내고, 끝난 뒤의 방해 줄은 무시한다", () => {
+    const ended = tetrisReducer(started(), { type: "END" });
+    expect(ended.status).toBe("GAME_OVER");
+    expect(tetrisReducer(ended, { type: "ADD_GARBAGE", lines: 2, holeCol: 0 })).toBe(ended);
+    const ready = createTetrisState();
+    expect(tetrisReducer(ready, { type: "END" })).toBe(ready);
+  });
+
+  it("화면용 판은 회색 줄도 LOCKED 칸으로 보여 준다", () => {
+    const state = tetrisReducer(withPiece("O"), { type: "ADD_GARBAGE", lines: 1, holeCol: 0 });
+    expect(createDisplayBoard(state)[VISIBLE_ROWS - 1]?.[1]).toEqual({ type: "G", kind: "LOCKED" });
+  });
+});

@@ -67,6 +67,13 @@ export const GameHomePage = () => (
       <p>최고 기록은 지금 브라우저의 localStorage에만 저장됩니다. 다른 기기나 브라우저와 공유되지 않고, 브라우저 데이터를 지우면 사라집니다.</p>
     </div>
 
+    <Link className="utility-card game-online-card" to="/games/online">
+      <span>🌐</span>
+      <h3>온라인 대전</h3>
+      <p>방을 만들고 다른 사람과 실시간으로 겨룹니다. 플레이어·관전자·채팅·비밀번호·로그인 유저만 참가. 지금은 오목, 다른 게임은 차례로 추가합니다.</p>
+      <small className="utility-card-usecase">배우는 것 · WebSocket · 서버가 정답인 상태 · 방·자리 규칙</small>
+    </Link>
+
     <div className="utility-card-grid game-card-grid">
       {gameCards.map((card) => (
         <Link className="utility-card" key={card.to} to={card.to}>
