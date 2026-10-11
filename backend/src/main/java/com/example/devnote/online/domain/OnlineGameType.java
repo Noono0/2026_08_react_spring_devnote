@@ -26,7 +26,7 @@ public enum OnlineGameType {
     MAFIA("마피아", 4, 8, false),
     MEMORY_MATCH("카드 짝 맞추기 대전", 2, 4, true),
     BLACKJACK("블랙잭", 1, 4, true),
-    SUTDA("섯다", 2, 4, false),
+    SUTDA("섯다", 2, 4, true),
     POKER("포커", 2, 4, false);
 
     private final String label;

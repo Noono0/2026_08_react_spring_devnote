@@ -568,6 +568,50 @@ describe("온라인 블랙잭", () => {
   });
 });
 
+describe("온라인 섯다", () => {
+  const sutdaRoom = (game: Record<string, unknown>): OnlineRoom => ({
+    ...baseRoom,
+    gameType: "SUTDA", gameTypeLabel: "섯다", status: "PLAYING", seats: ["p1", "p2"],
+    participants: [
+      { participantId: "p1", nickname: "철수", member: false, seatIndex: 0 },
+      { participantId: "p2", nickname: "영희", member: false, seatIndex: 1 },
+    ],
+    game: {
+      phase: "BETTING", round: 2, maxRounds: 6, mySeat: 0, myCards: ["3G", "8G"], chips: [960, 1000], inHand: [true, true], active: [true, true],
+      pot: 40, currentBet: 20, contributed: [0, 20], toCall: 20, minRaise: 10, maxRaise: 940, turnSeat: 0, dealerSeat: 1,
+      lastRound: { cards: [["1G", "2B"], ["5B", "4B"]], handNames: ["알리", "갑오"], winners: [0], pot: 80, replay: false },
+      winners: [], ...game,
+    },
+  });
+
+  it("내 패를 보여 주고 콜·레이즈·다이를 보낸다", () => {
+    renderRoom();
+    const socket = latestSocket();
+    socket.serverOpen();
+    socket.serverSend({ type: "ROOM_STATE", room: sutdaRoom({}) });
+    const hand = screen.getByRole("region", { name: "내 패" });
+    expect(within(hand).getByRole("img", { name: "3월 벚꽃 광" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "콜 (20칩)" }));
+    expect(socket.sent.at(-1)).toEqual({ type: "GAME_ACTION", action: "CALL" });
+    fireEvent.change(screen.getByLabelText("올릴 칩"), { target: { value: "50" } });
+    fireEvent.click(screen.getByRole("button", { name: "레이즈 +50" }));
+    expect(socket.sent.at(-1)).toEqual({ type: "GAME_ACTION", action: "RAISE", number: 50 });
+    fireEvent.click(screen.getByRole("button", { name: "다이" }));
+    expect(socket.sent.at(-1)).toEqual({ type: "GAME_ACTION", action: "FOLD" });
+  });
+
+  it("지난 판에서 공개된 패와 족보를 보여 준다", () => {
+    renderRoom();
+    const socket = latestSocket();
+    socket.serverOpen();
+    socket.serverSend({ type: "ROOM_STATE", room: sutdaRoom({ turnSeat: 1 }) });
+    const last = screen.getByRole("region", { name: "지난 판" });
+    expect(within(last).getByText("알리")).toBeInTheDocument();
+    expect(within(last).getByText(/철수 승리/)).toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "베팅" })).not.toBeInTheDocument(); // 영희 차례
+  });
+});
+
 describe("온라인 대전 대기실", () => {
   const renderLobby = () => render(withProviders(
     <MemoryRouter initialEntries={["/games/online"]}>

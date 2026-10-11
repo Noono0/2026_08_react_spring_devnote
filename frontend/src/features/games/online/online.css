@@ -307,6 +307,39 @@ button.battleship-cell:hover { background: #3a8fd0; filter: none; }
 .blackjack-controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
 .blackjack-controls .ghost-button { color: #fff; border-color: rgba(255, 255, 255, 0.5); }
 
+/* 베팅 버튼(섯다·포커 공용) */
+.betting-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; }
+.betting-raise { display: inline-flex; align-items: center; gap: 6px; }
+.betting-raise label { font-size: 13px; font-weight: 700; }
+.betting-raise input { width: 90px; padding: 8px; }
+
+/* 섯다: 붉은 담요 위 화투 */
+.sutda { display: grid; gap: 12px; justify-items: center; width: 100%; }
+.sutda-players { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; width: 100%; }
+.sutda-player { display: grid; justify-items: center; gap: 4px; padding: 10px; border: 2px solid var(--border-color); border-radius: 14px; background: var(--background-muted); }
+.sutda-player h3 { margin: 0; font-size: 15px; }
+.sutda-player h3 small { padding: 0 6px; border-radius: 999px; color: #fff; background: #c92a2a; font-size: 11px; }
+.sutda-player.turn { border-color: var(--primary-color); box-shadow: 0 0 0 2px var(--primary-soft); }
+.sutda-player.folded, .sutda-player.out { opacity: 0.5; }
+.sutda-chips { color: var(--warning-color); font-weight: 800; }
+.sutda-table { display: grid; justify-items: center; gap: 2px; width: min(100%, 420px); padding: 14px; border-radius: 16px; color: #fff; background: #8b1e2d; font-size: 13px; }
+.sutda-pot { font-size: 20px; font-weight: 900; }
+.sutda-hand, .sutda-last { display: grid; justify-items: center; gap: 6px; width: 100%; }
+.sutda-hand h3, .sutda-last h3 { margin: 0; font-size: 15px; }
+.sutda-cards { display: inline-flex; gap: 6px; }
+.sutda-last-hands { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+.sutda-last-hands > div { display: grid; justify-items: center; gap: 4px; padding: 8px; border-radius: 12px; background: var(--background-muted); }
+.sutda-last-hands > div.winner { box-shadow: 0 0 0 2px var(--success-color); }
+.hwatu-card {
+  display: inline-grid; place-content: center; justify-items: center; width: 44px; height: 68px; border: 2px solid #f1f3f5; border-radius: 6px;
+  color: #fff; background: linear-gradient(160deg, #e03131, #a61e4d); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25); line-height: 1.1;
+}
+.hwatu-card strong { font-size: 22px; }
+.hwatu-card small { font-size: 11px; font-weight: 800; }
+.hwatu-card.kind-g { background: linear-gradient(160deg, #f59f00, #e8590c); }
+.hwatu-card.kind-y { background: linear-gradient(160deg, #1971c2, #3b5bdb); }
+.hwatu-card.back { background: repeating-linear-gradient(45deg, #c92a2a 0 6px, #a61e1e 6px 12px); }
+
 /* 테트리스 대전은 판을 넓게 쓰도록 자리·채팅 패널을 판 아래로 내린다 */
 .online-room-layout.wide { grid-template-columns: minmax(0, 1fr); }
 .online-room-layout.wide .online-side { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }

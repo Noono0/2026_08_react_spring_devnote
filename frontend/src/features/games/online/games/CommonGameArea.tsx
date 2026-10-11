@@ -9,6 +9,7 @@ import { BlackjackGame } from "@/features/games/online/games/BlackjackGame";
 import { MemoryMatchGame } from "@/features/games/online/games/MemoryMatchGame";
 import { NumberBaseballGame } from "@/features/games/online/games/NumberBaseballGame";
 import { OneCardGame } from "@/features/games/online/games/OneCardGame";
+import { SutdaGame } from "@/features/games/online/games/SutdaGame";
 import type { OnlineClientMessage, OnlineRoom } from "@/features/games/online/onlineTypes";
 
 export interface CommonGameProperties {
@@ -30,6 +31,8 @@ export const CommonGameArea = (properties: CommonGameProperties) => {
       return <OneCardGame {...properties} />;
     case "BLACKJACK":
       return <BlackjackGame {...properties} />;
+    case "SUTDA":
+      return <SutdaGame {...properties} />;
     default:
       return <p className="online-hint">아직 준비 중인 게임입니다.</p>;
   }

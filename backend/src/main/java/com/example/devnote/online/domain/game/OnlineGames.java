@@ -27,6 +27,7 @@ public final class OnlineGames {
             case MEMORY_MATCH -> new MemoryMatchGame(nicknames, random);
             case ONE_CARD -> new OneCardGame(nicknames, random);
             case BLACKJACK -> new BlackjackGame(nicknames, random);
+            case SUTDA -> new SutdaGame(nicknames, random);
             default -> throw new IllegalStateException("아직 만들지 않은 게임입니다: " + type);
         };
     }
