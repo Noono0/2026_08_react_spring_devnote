@@ -523,6 +523,51 @@ describe("온라인 원카드", () => {
   });
 });
 
+describe("온라인 블랙잭", () => {
+  const blackjackRoom = (game: Record<string, unknown>): OnlineRoom => ({
+    ...baseRoom,
+    gameType: "BLACKJACK", gameTypeLabel: "블랙잭", status: "PLAYING", seats: ["p1", "p2"],
+    participants: [
+      { participantId: "p1", nickname: "철수", member: false, seatIndex: 0 },
+      { participantId: "p2", nickname: "영희", member: false, seatIndex: 1 },
+    ],
+    game: {
+      phase: "BETTING", round: 1, maxRounds: 5, mySeat: 0, chips: [1000, 1000], bets: [0, 50], hands: [[], []], handValues: [0, 0],
+      done: [false, false], active: [true, true], dealerCards: [], dealerValue: null, dealerHidden: false, turnSeat: null,
+      lastResults: [], lastDealerCards: [], winners: [], ...game,
+    },
+  });
+
+  it("베팅 단계: 금액을 골라 BET을 보낸다", () => {
+    renderRoom();
+    const socket = latestSocket();
+    socket.serverOpen();
+    socket.serverSend({ type: "ROOM_STATE", room: blackjackRoom({}) });
+    fireEvent.click(screen.getByRole("button", { name: "200" }));
+    fireEvent.click(screen.getByRole("button", { name: "200칩 걸기" }));
+    expect(socket.sent.at(-1)).toEqual({ type: "GAME_ACTION", action: "BET", number: 200 });
+    expect(screen.getByText(/1\/2명 완료/)).toBeInTheDocument();
+  });
+
+  it("내 차례: 딜러 두 번째 카드는 뒷면이고 받기·멈추기·더블을 보낸다", () => {
+    renderRoom();
+    const socket = latestSocket();
+    socket.serverOpen();
+    socket.serverSend({ type: "ROOM_STATE", room: blackjackRoom({
+      phase: "PLAYING", bets: [100, 50], turnSeat: 0,
+      hands: [[{ id: 4, code: "S5" }, { id: 5, code: "S6" }], [{ id: 20, code: "H8" }, { id: 21, code: "H9" }]], handValues: [11, 17],
+      dealerCards: [{ id: 30, code: "D5" }, null], dealerValue: 5, dealerHidden: true,
+    }) });
+    const dealer = screen.getByRole("region", { name: "딜러" });
+    expect(within(dealer).getByRole("img", { name: "뒷면 카드" })).toBeInTheDocument();
+    expect(within(dealer).getByText("5 + ?")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "받기 (HIT)" }));
+    expect(socket.sent.at(-1)).toEqual({ type: "GAME_ACTION", action: "HIT" });
+    fireEvent.click(screen.getByRole("button", { name: /더블/ }));
+    expect(socket.sent.at(-1)).toEqual({ type: "GAME_ACTION", action: "DOUBLE" });
+  });
+});
+
 describe("온라인 대전 대기실", () => {
   const renderLobby = () => render(withProviders(
     <MemoryRouter initialEntries={["/games/online"]}>

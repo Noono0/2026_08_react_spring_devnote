@@ -5,6 +5,7 @@
  * 각 게임 화면이 자기 zod 스키마로 확인한 뒤 그린다. 새 게임을 추가하면 여기에 한 줄을 더한다.
  */
 import { BattleshipGame } from "@/features/games/online/games/BattleshipGame";
+import { BlackjackGame } from "@/features/games/online/games/BlackjackGame";
 import { MemoryMatchGame } from "@/features/games/online/games/MemoryMatchGame";
 import { NumberBaseballGame } from "@/features/games/online/games/NumberBaseballGame";
 import { OneCardGame } from "@/features/games/online/games/OneCardGame";
@@ -27,6 +28,8 @@ export const CommonGameArea = (properties: CommonGameProperties) => {
       return <MemoryMatchGame {...properties} />;
     case "ONE_CARD":
       return <OneCardGame {...properties} />;
+    case "BLACKJACK":
+      return <BlackjackGame {...properties} />;
     default:
       return <p className="online-hint">아직 준비 중인 게임입니다.</p>;
   }

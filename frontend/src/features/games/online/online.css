@@ -283,6 +283,30 @@ button.battleship-cell:hover { background: #3a8fd0; filter: none; }
 .one-card-suit-picker { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px; }
 .one-card-suit-picker .red { color: #d6336c; }
 
+/* 블랙잭: 초록 테이블 위에 딜러, 아래에 플레이어 자리 */
+.blackjack { display: grid; gap: 12px; justify-items: center; width: 100%; padding: 14px; border-radius: 18px; background: radial-gradient(ellipse at top, #2b8a57, #1b5e3a); }
+.blackjack .game-status { color: #fff; }
+.blackjack-dealer { display: grid; justify-items: center; gap: 8px; }
+.blackjack-dealer h3, .blackjack-player h3 { margin: 0; color: #fff; font-size: 15px; }
+.blackjack-dealer h3 small { margin-left: 6px; color: #d3f9d8; }
+.blackjack-cards { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; min-height: 80px; }
+.blackjack-cards .online-hint { color: #d3f9d8; }
+.blackjack-cards.small .playing-card { width: 44px; height: 64px; }
+.blackjack-cards.small .playing-card-suit { font-size: 20px; }
+.blackjack-players { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; width: 100%; }
+.blackjack-player { display: grid; justify-items: center; gap: 6px; padding: 10px; border: 2px solid rgba(255, 255, 255, 0.2); border-radius: 14px; background: rgba(0, 0, 0, 0.18); }
+.blackjack-player.turn { border-color: #ffd43b; }
+.blackjack-player.out { opacity: 0.5; }
+.blackjack-player.winner { border-color: #69db7c; }
+.blackjack-chips { color: #ffe066; font-size: 13px; font-weight: 800; }
+.blackjack-value { color: #fff; font-weight: 900; }
+.blackjack-value.bust { color: #ff8787; }
+.blackjack-result { padding: 2px 10px; border-radius: 999px; color: #fff; background: rgba(0, 0, 0, 0.35); font-size: 13px; font-weight: 800; }
+.blackjack-result.win { background: #2f9e44; }
+.blackjack-result.lose { background: #c92a2a; }
+.blackjack-controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.blackjack-controls .ghost-button { color: #fff; border-color: rgba(255, 255, 255, 0.5); }
+
 /* 테트리스 대전은 판을 넓게 쓰도록 자리·채팅 패널을 판 아래로 내린다 */
 .online-room-layout.wide { grid-template-columns: minmax(0, 1fr); }
 .online-room-layout.wide .online-side { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
