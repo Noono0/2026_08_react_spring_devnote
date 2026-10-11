@@ -2,6 +2,13 @@
 
 [문서 목록으로](../README.md) · [작업 규칙](../AGENTS.md) · [검증 명령](verification.md)
 
+## 2026-10-12 — 게임 규칙 직접 만들어 보기를 React 연습으로 옮기고 혼자 하는 게임 화면 정리
+
+- **사용자 결정**: Sandpack 연습(iframe에서 따로 실행, 실제 게임에 영향 없음)은 게임 메뉴가 아니라 React 연습 과정에 둡니다. 혼자 하는 게임 화면 네 개(`/games/memory`·`/games/2048`·`/games/minesweeper`·`/games/tetris`)는 없앱니다.
+- **React 연습으로 옮김**: 예제 4개를 `games/sandbox/examples` → `curriculum/sandbox/examples/game-*.tsx`로 옮기고(git mv), 스도쿠 `isValidPlacement` 연습을 새로 만들어 5개가 됐습니다. 목록은 `curriculum/data/gameExercises.ts`(exerciseId·난이도·배우는 것·실제 코드 위치), 원문은 학습 단계와 같은 `stageSandboxes.ts`에 exerciseId 키로 등록했습니다. 그래서 `PracticeSandboxSection`·`StageSandboxPanel`의 `source` prop은 쓰는 곳이 없어 지웠습니다. 난이도는 목록 설명에 맞춰 초급(카드 섞기·2048 한 줄 밀기·스도쿠 숫자 놓기 검사), 중급(테트리스 줄 지우기·지뢰 찾기 BFS)으로 정했고, 난이도별 목록과 전체 로드맵 아래 `게임 규칙 직접 만들어 보기` 카드 묶음(`GameExerciseSection`)에서 새 연습 화면 `/react/game-exercises/:exerciseId`(`GameExercisePage`, 없는 id는 `/react`로)로 갑니다. 진도 단계 수에는 넣지 않았습니다. 탭 제목(`pageTitle.ts`)·상단 제목(`ApplicationTopBar`)도 맞췄습니다.
+- **게임 메뉴 정리**: 네 화면과 `GamePageShell`을 지우고, 옛 주소는 `App.tsx` 리다이렉트 모음에서 `/games/online`으로 `replace` 이동합니다. 게임 메뉴는 게임 홈·온라인 대전·게임 랭킹 3개, 게임 홈은 두 카드 + 게임 규칙 연습 안내(다섯 연습 링크)로 바꿨습니다. 랭킹의 혼자 하는 게임 `하러 가기`는 모두 `/games/online`입니다. 규칙 모듈(`*Logic.ts`)·`games.css`·`tetrisControls.ts`·`PiecePreview.tsx`는 온라인 대전이 쓰므로 그대로 두고, 쓰지 않게 된 CSS(`.game-page`·`.game-learning-*`)만 지웠습니다. `scripts/verify-static.py`는 게임 파일 이름을 직접 적지 않아 고칠 곳이 없었습니다.
+- **검증**: 프론트 `lint`·`typecheck`·`test`(130파일 592개)·`build` 통과. 새 테스트: `App.test.tsx`(옛 주소 4개 → `/games/online`, 기록을 남기지 않음), `GameHomePage.test.tsx`, `LearningLevelPage.test.tsx`(초급 3·중급 2·심화 없음), `GameExercisePage.test.tsx`, `LearningRoadmapPage.test.tsx`에 연습 묶음, `gameExerciseSandboxes.test.tsx`(형식·import·처음 코드의 채점표에 ❌). 스도쿠 예제는 모범 답안을 넣은 임시 사본을 그려 채점표 6개가 모두 ✅인 것을 확인하고 지웠습니다. 백엔드는 바꾸지 않아 실행하지 않았고, `scripts/verify-static.py`는 Python이 없어 실행하지 못했습니다. 실제 브라우저의 Sandpack 미리보기는 열어 보지 않았습니다.
+
 ## 2026-10-12 — 온라인 2048 대전·지뢰 찾기 대전 + 방장 게임 옵션
 
 - **게임 옵션**: 방마다 `gameOption` 코드 하나를 둡니다. 고를 수 있는 값·이름·처음 값은 `OnlineGameType.getOptions()`/`getDefaultOption()`에만 적습니다(스도쿠 EASY·NORMAL·HARD = 고정 숫자 40·32·26, 2048 목표 256·512·1024·2048(처음 512), 지뢰 찾기 BEGINNER·INTERMEDIATE·EXPERT(처음 BEGINNER)). 만들기 요청·`UPDATE_ROOM` 설정에 넣고, 비우면 같은 게임은 그대로·다른 게임은 처음 값, 고를 수 없는 값은 `ONLINE_GAME_OPTION_INVALID`, 게임 중 변경은 `ONLINE_GAME_IN_PROGRESS`입니다. 방 화면 상태(`gameOption`·`gameOptionLabel`)와 방 목록(`gameOptionLabel`), 게임 종류 목록(`options`·`defaultOption`)에 실립니다. 화면: 방 만들기·수정 폼의 `게임 옵션` 칸, 대기 중 방장의 판 아래 바로 바꾸기, 모두에게 보이는 `게임 옵션: …` 표시.

@@ -3,7 +3,8 @@
  * LearningLevelPage.tsx — 난이도별 학습 목록 (/react/level/:level)
  * ============================================================================
  *
- * 하나의 컴포넌트가 URL의 값에 따라 네 가지 화면(왕초보/초급/중급/고급)을 그린다.
+ * 하나의 컴포넌트가 URL의 값에 따라 다섯 가지 화면(왕초보/초급/중급/고급/심화)을 그린다.
+ * 같은 난이도의 "게임 규칙 직접 만들어 보기"(gameExercises.ts)도 학습 단계 카드 아래에 붙인다.
  *
  * [배울 개념]
  *   1. useParams로 URL의 값 꺼내기
@@ -12,7 +13,9 @@
  */
 
 import { Link, Navigate, useParams } from "react-router-dom";
+import { gameExerciseList } from "@/features/curriculum/data/gameExercises";
 import { ADVANCED_TOPIC_FIRST_STAGE_NUMBER, learningStageRoutes, roadmapLearningGuides, type LearningGuide } from "@/features/curriculum/data/learningGuides";
+import { GameExerciseSection } from "@/features/curriculum/components/GameExerciseSection";
 import { LearningGuideTitle } from "@/features/curriculum/components/LearningGuideTitle";
 
 /** 1~14단계(기본 CRUD 과정)인지 확인한다. 15단계부터는 난이도와 관계없이 "심화"에서 보여 준다. */
@@ -63,7 +66,13 @@ export const LearningLevelPage = () => {
   // 이 난이도에 해당하는 학습 항목만 골라낸다.
   // definition.matches(guide) 부분에서 위에 담아 둔 판단 함수가 실행된다.
   const guides = roadmapLearningGuides.filter((guide) => definition.matches(guide));
+  // 게임 규칙 연습은 난이도 이름(초급·중급…)이 같은 것만 이 화면 아래에 붙인다. 심화에는 없다.
+  const exercises = gameExerciseList.filter((exercise) => exercise.level === definition.title);
   return (
-    <section className="learning-page"><div className="page-hero"><span className="page-kicker">React Level</span><LearningGuideTitle guideId="roadmap">{definition.title} 학습 과정</LearningGuideTitle><p>{definition.description}</p></div><div className="roadmap-grid">{guides.map((guide) => <article className="roadmap-card" key={guide.guideId}><div className="roadmap-card-heading"><span className="roadmap-stage-number">{guide.stageNumber}</span><span className="difficulty-badge">난이도 {guide.difficultyScore}/10</span></div><h2>{guide.title}</h2><p>{guide.description}</p><ul className="topic-chip-list">{guide.learningTopics.slice(0, 5).map((topic) => <li key={topic}>{topic}</li>)}</ul><Link className="primary-link" to={learningStageRoutes[guide.guideId] ?? "/react"}>실습 시작</Link></article>)}</div></section>
+    <section className="learning-page">
+      <div className="page-hero"><span className="page-kicker">React Level</span><LearningGuideTitle guideId="roadmap">{definition.title} 학습 과정</LearningGuideTitle><p>{definition.description}</p></div>
+      <div className="roadmap-grid">{guides.map((guide) => <article className="roadmap-card" key={guide.guideId}><div className="roadmap-card-heading"><span className="roadmap-stage-number">{guide.stageNumber}</span><span className="difficulty-badge">난이도 {guide.difficultyScore}/10</span></div><h2>{guide.title}</h2><p>{guide.description}</p><ul className="topic-chip-list">{guide.learningTopics.slice(0, 5).map((topic) => <li key={topic}>{topic}</li>)}</ul><Link className="primary-link" to={learningStageRoutes[guide.guideId] ?? "/react"}>실습 시작</Link></article>)}</div>
+      <GameExerciseSection exercises={exercises} description="이 난이도에 맞는 게임 규칙 함수 하나를 사이트 안 편집기에서 완성합니다. 편집기는 따로 실행되어 실제 게임에는 영향이 없습니다." />
+    </section>
   );
 };

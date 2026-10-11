@@ -1,5 +1,7 @@
 import { Link } from "react-router-dom";
+import { GameExerciseSection } from "@/features/curriculum/components/GameExerciseSection";
 import { LearningGuideTitle } from "@/features/curriculum/components/LearningGuideTitle";
+import { gameExerciseList } from "@/features/curriculum/data/gameExercises";
 import { ADVANCED_TOPIC_FIRST_STAGE_NUMBER, learningStageRoutes, roadmapLearningGuides, type LearningGuide } from "@/features/curriculum/data/learningGuides";
 import { useLearningProgressStore } from "@/features/curriculum/state/learningProgressStore";
 
@@ -95,6 +97,11 @@ export const LearningRoadmapPage = () => {
           </div>
         </section>
       ))}
+
+      <GameExerciseSection
+        exercises={gameExerciseList}
+        description="게임에서 쓰는 규칙 함수 하나를 사이트 안 편집기에서 완성합니다. 난이도별 목록(초급·중급)에서도 같은 연습을 볼 수 있고, 진도에는 세지 않습니다."
+      />
   
       <article className="learning-note-card roadmap-learning-method">
         <h2>각 단계를 배우는 방법</h2>

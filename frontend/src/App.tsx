@@ -94,6 +94,7 @@ const RefsFocusPracticePage = lazy(async () => ({ default: (await import("@/feat
 const UseSuspensePracticePage = lazy(async () => ({ default: (await import("@/features/practice/24-use-suspense/pages/UseSuspensePracticePage")).UseSuspensePracticePage }));
 const TestingPracticePage = lazy(async () => ({ default: (await import("@/features/practice/25-testing/pages/TestingPracticePage")).TestingPracticePage }));
 const LearningLevelPage = lazy(async () => ({ default: (await import("@/features/practice/00-roadmap/pages/LearningLevelPage")).LearningLevelPage }));
+const GameExercisePage = lazy(async () => ({ default: (await import("@/features/practice/00-roadmap/pages/GameExercisePage")).GameExercisePage }));
 const UtilityHomePage = lazy(async () => ({ default: (await import("@/features/utility/pages/UtilityHomePage")).UtilityHomePage }));
 const DeveloperToolsPage = lazy(async () => ({ default: (await import("@/features/utility/pages/DeveloperToolsPage")).DeveloperToolsPage }));
 const PollPage = lazy(async () => ({ default: (await import("@/features/utility/pages/PollPage")).PollPage }));
@@ -136,12 +137,8 @@ const DiagramListPage = lazy(async () => ({ default: (await import("@/features/u
 const DiagramEditorPage = lazy(async () => ({ default: (await import("@/features/utility/diagrams/pages/DiagramEditorPage")).DiagramEditorPage }));
 const DependencyAnalyzerPage = lazy(async () => ({ default: (await import("@/features/utility/pages/DependencyAnalyzerPage")).DependencyAnalyzerPage }));
 const GameHomePage = lazy(async () => ({ default: (await import("@/features/games/pages/GameHomePage")).GameHomePage }));
-const MemoryGamePage = lazy(async () => ({ default: (await import("@/features/games/memory/MemoryGamePage")).MemoryGamePage }));
-const Game2048Page = lazy(async () => ({ default: (await import("@/features/games/game2048/Game2048Page")).Game2048Page }));
-const MinesweeperPage = lazy(async () => ({ default: (await import("@/features/games/minesweeper/MinesweeperPage")).MinesweeperPage }));
 const OnlineLobbyPage = lazy(async () => ({ default: (await import("@/features/games/online/pages/OnlineLobbyPage")).OnlineLobbyPage }));
 const OnlineRoomPage = lazy(async () => ({ default: (await import("@/features/games/online/pages/OnlineRoomPage")).OnlineRoomPage }));
-const TetrisPage = lazy(async () => ({ default: (await import("@/features/games/tetris/TetrisPage")).TetrisPage }));
 const GameRankingPage = lazy(async () => ({ default: (await import("@/features/games/ranking/GameRankingPage")).GameRankingPage }));
 const WebCrawlerPage = lazy(async () => ({ default: (await import("@/features/crawler/pages/WebCrawlerPage")).WebCrawlerPage }));
 
@@ -250,13 +247,9 @@ export const App = () => (
               </RoleProtectedRoute>
             } />
           </Route>
-          {/* 게임: 혼자 하는 게임은 브라우저에서 계산하고, 온라인 대전·랭킹만 서버를 쓴다. 게임마다 코드가 커서 각각 따로 내려받는다(lazy). */}
+          {/* 게임: 게임 홈·온라인 대전·랭킹. 화면마다 코드가 커서 각각 따로 내려받는다(lazy). */}
           <Route path="games" element={<UtilityLayout />}>
             <Route index element={<Suspense fallback={<UtilityLazyFallback name="게임 홈" />}><GameHomePage /></Suspense>} />
-            <Route path="memory" element={<Suspense fallback={<UtilityLazyFallback name="카드 짝 맞추기" />}><MemoryGamePage /></Suspense>} />
-            <Route path="2048" element={<Suspense fallback={<UtilityLazyFallback name="2048" />}><Game2048Page /></Suspense>} />
-            <Route path="minesweeper" element={<Suspense fallback={<UtilityLazyFallback name="지뢰 찾기" />}><MinesweeperPage /></Suspense>} />
-            <Route path="tetris" element={<Suspense fallback={<UtilityLazyFallback name="테트리스" />}><TetrisPage /></Suspense>} />
             {/* 랭킹: 종목·난이도는 주소의 ?game=·?difficulty=로 받는다(화면에서 목록에 있는 값인지 검사한다) */}
             <Route path="rankings" element={<Suspense fallback={<UtilityLazyFallback name="게임 랭킹" />}><GameRankingPage /></Suspense>} />
             {/* 온라인 대전: 대기실(방 목록·만들기)과 방(:roomId는 화면에서 모양을 검사한다) */}
@@ -276,6 +269,8 @@ export const App = () => (
         <Route path="/react" element={<ApplicationLayout />}>
           <Route index element={<LearningRoadmapPage />} />
           <Route path="level/:level" element={<LearningLevelPage />} />
+          {/* 게임 규칙 직접 만들어 보기: 난이도별 목록에서 들어온다(:exerciseId는 화면에서 목록에 있는지 검사한다) */}
+          <Route path="game-exercises/:exerciseId" element={<GameExercisePage />} />
           {/* 왕초보: React의 기본 문법 (useState, props, 이벤트) */}
           <Route path="fundamentals" element={<ReactFundamentalsPage />} />
           {/* 초급: 서버 없이 배열 State만으로 하는 CRUD 연습 */}
@@ -341,6 +336,12 @@ export const App = () => (
         <Route path="/documents/*" element={<LegacyDocumentRedirect />} />
         <Route path="/practice/admin-users" element={<Navigate to="/react/admin-users" replace />} />
         <Route path="/development/scenarios" element={<Navigate to="/react/development/scenarios" replace />} />
+        {/* 혼자 하는 게임 화면은 없앴다. 규칙 직접 만들어 보기는 React 연습(/react/game-exercises/…)으로 옮겼고,
+            게임 목록이 있는 온라인 대전 대기실로 보낸다. */}
+        <Route path="/games/memory" element={<Navigate to="/games/online" replace />} />
+        <Route path="/games/2048" element={<Navigate to="/games/online" replace />} />
+        <Route path="/games/minesweeper" element={<Navigate to="/games/online" replace />} />
+        <Route path="/games/tetris" element={<Navigate to="/games/online" replace />} />
         {/* 위의 어떤 규칙에도 안 걸린 주소 = 존재하지 않는 페이지(404).
             반드시 맨 마지막에 둬야 한다. 위에 두면 모든 주소를 다 잡아먹는다. */}
         <Route path="*" element={<Navigate to="/" replace />} />

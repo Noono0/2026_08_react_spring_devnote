@@ -1,8 +1,8 @@
 /**
  * PracticeSandboxSection.tsx — 화면 아래 "직접 해 보기" 접기·펼치기 상자(공통)
  *
- * 학습 단계(StageSandboxSection)와 게임 화면(GamePage)이 함께 쓴다.
- * 무엇을 편집할지(sandboxId·source)와 제목만 다르고, 접기·크게 보기·크기 조절은 모두 같다.
+ * 학습 단계(StageSandboxSection)와 게임 규칙 연습 화면(GameExercisePage)이 함께 쓴다.
+ * 무엇을 편집할지(sandboxId)와 제목만 다르고, 접기·크게 보기·크기 조절은 모두 같다.
  *
  * [접기·펼치기 버튼의 접근성]
  *   aria-expanded : 화면 낭독기에 "펼쳐짐/접힘" 상태를 알린다.
@@ -26,15 +26,13 @@ import { SANDBOX_LAYOUT_HEIGHT_RANGE, STAGE_SANDBOX_SECTION_ID, useStageSandboxS
 const StageSandboxPanel = lazy(() => import("@/features/curriculum/components/StageSandboxPanel"));
 
 interface PracticeSandboxSectionProperties {
-  /** 편집기를 구분하는 키(펼침 상태도 이 키로 기억한다). 학습 단계는 guideId, 게임은 "game-2048" 등 */
+  /** 편집기를 구분하는 키(펼침 상태도 이 키로 기억한다). 학습 단계는 guideId, 게임 규칙 연습은 exerciseId */
   sandboxId: string;
-  heading: string; // 예: "2단계 직접 해 보기", "2048 직접 만들어 보기"
+  heading: string; // 예: "2단계 직접 해 보기", "2048 한 줄 밀기 직접 만들어 보기"
   description: string;
-  /** 편집기에 넣을 App.tsx 원문. 학습 단계는 비워 두면 stageSandboxes.ts에서 찾는다. */
-  source?: string;
 }
 
-export const PracticeSandboxSection = ({ sandboxId, heading, description, source }: PracticeSandboxSectionProperties) => {
+export const PracticeSandboxSection = ({ sandboxId, heading, description }: PracticeSandboxSectionProperties) => {
   const expandedGuideId = useStageSandboxStore((state) => state.expandedGuideId);
   const toggle = useStageSandboxStore((state) => state.toggle);
   const maximized = useStageSandboxStore((state) => state.maximized);
@@ -139,7 +137,7 @@ export const PracticeSandboxSection = ({ sandboxId, heading, description, source
       {expanded ? (
         <div id={panelId} className="stage-sandbox-body">
           <Suspense fallback={<p className="state-panel" role="status">편집기를 불러오는 중입니다…</p>}>
-            <StageSandboxPanel sandboxId={sandboxId} source={source} />
+            <StageSandboxPanel sandboxId={sandboxId} />
           </Suspense>
           <SandboxResizeHandle
             orientation="corner"

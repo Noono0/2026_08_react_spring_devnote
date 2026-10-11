@@ -42,18 +42,18 @@ const minesweeperOrder: MinesweeperDifficulty[] = ["BEGINNER", "INTERMEDIATE", "
 const memoryOrder: MemoryDifficulty[] = ["EASY", "NORMAL", "HARD"];
 const sudokuOrder: SudokuDifficulty[] = ["EASY", "NORMAL", "HARD"];
 
+// 혼자 하는 게임 화면은 없앴다. 하러 가기는 모두 온라인 대전 대기실로 안내한다
 export const soloRankingGames: SoloRankingGame[] = [
-  { kind: "SOLO", id: "solo:GAME_2048", code: "GAME_2048", label: "2048", playRoute: "/games/2048", metric: "SCORE", difficulties: [] },
-  { kind: "SOLO", id: "solo:TETRIS", code: "TETRIS", label: "테트리스", playRoute: "/games/tetris", metric: "SCORE", difficulties: [] },
+  { kind: "SOLO", id: "solo:GAME_2048", code: "GAME_2048", label: "2048", playRoute: "/games/online", metric: "SCORE", difficulties: [] },
+  { kind: "SOLO", id: "solo:TETRIS", code: "TETRIS", label: "테트리스", playRoute: "/games/online", metric: "SCORE", difficulties: [] },
   {
-    kind: "SOLO", id: "solo:MINESWEEPER", code: "MINESWEEPER", label: "지뢰 찾기", playRoute: "/games/minesweeper", metric: "TIME",
+    kind: "SOLO", id: "solo:MINESWEEPER", code: "MINESWEEPER", label: "지뢰 찾기", playRoute: "/games/online", metric: "TIME",
     difficulties: minesweeperOrder.map((value) => ({ value, label: minesweeperDifficulties[value].label })),
   },
   {
-    kind: "SOLO", id: "solo:MEMORY", code: "MEMORY", label: "카드 짝 맞추기", playRoute: "/games/memory", metric: "MOVES_THEN_TIME",
+    kind: "SOLO", id: "solo:MEMORY", code: "MEMORY", label: "카드 짝 맞추기", playRoute: "/games/online", metric: "MOVES_THEN_TIME",
     difficulties: memoryOrder.map((value) => ({ value, label: memoryDifficulties[value].label })),
   },
-  // 스도쿠는 혼자 하는 화면이 따로 없다. 기록은 온라인 대전 방에서 기다리며 하는 연습에서 들어오므로 그쪽으로 안내한다
   {
     kind: "SOLO", id: "solo:SUDOKU", code: "SUDOKU", label: "스도쿠", playRoute: "/games/online", metric: "TIME",
     difficulties: sudokuOrder.map((value) => ({ value, label: sudokuDifficulties[value].label })),

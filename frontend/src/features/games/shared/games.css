@@ -1,5 +1,6 @@
 /*
- * games.css — 게임 화면 스타일(카드 짝 맞추기·2048·지뢰 찾기·테트리스)
+ * games.css — 게임 판 스타일(카드 짝 맞추기·2048·지뢰 찾기·테트리스)과 게임 홈·랭킹의 공통 상자
+ * 온라인 대전 화면(online.css)이 이 판 모양을 그대로 가져다 쓴다.
  *
  * 색은 사이트 공통 변수(--background-panel, --text-primary …)를 써서 라이트·다크 모드를 함께 따른다.
  * 게임에만 있는 색(2048 타일·지뢰 숫자·테트리스 블록)은 아래 :root 변수로 두고 다크 모드에서 바꾼다.
@@ -37,8 +38,6 @@
 }
 
 /* ── 공통 ─────────────────────────────────────────────── */
-.game-page { display: grid; gap: 22px; }
-.game-page > .page-hero { margin-bottom: 0; }
 .game-panel { display: grid; gap: 14px; padding: 22px; border: 1px solid var(--border-color); border-radius: 20px; background: var(--background-panel); box-shadow: var(--shadow-small); }
 .game-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
 .game-toolbar .segmented-buttons button { font-size: 13px; }
@@ -55,13 +54,12 @@
   background: color-mix(in srgb, var(--background-panel) 82%, transparent); backdrop-filter: blur(2px);
 }
 .game-overlay strong { font-size: 26px; }
-.game-learning-points { padding: 20px 22px; border: 1px solid var(--border-color); border-radius: 18px; background: var(--background-panel); }
-.game-learning-points h2 { margin: 0 0 10px; font-size: 17px; }
-.game-learning-points ul { display: grid; gap: 6px; margin: 0; padding-left: 20px; color: var(--text-secondary); font-size: 14px; line-height: 1.6; }
-.game-learning-source { margin: 12px 0 0; color: var(--text-muted); font-size: 13px; }
-.game-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+/* 게임 홈: 온라인 대전·랭킹 두 카드 */
+.game-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: 18px; }
 .game-card-grid .utility-card > span { font-size: 20px; }
 .game-card-grid .utility-card-usecase { display: block; margin-top: 6px; }
+.game-home-exercises { margin: 8px 0 0; padding-left: 20px; }
+.game-home-exercises li { margin: 4px 0; }
 
 /* ── 카드 짝 맞추기 ──────────────────────────────────── */
 .memory-board { display: grid; gap: 10px; width: 100%; margin: 0 auto; } /* 최대 너비는 열 수에 맞춰 화면에서 정한다(카드 한 장 약 100px) */
@@ -194,4 +192,4 @@
   .memory-card-inner { transition: none; }
   .tile-new { animation: none; }
 }
-.game-online-card { margin-bottom: 18px; border-color: color-mix(in srgb, var(--primary-color) 45%, var(--border-color)); }
+.game-online-card { border-color: color-mix(in srgb, var(--primary-color) 45%, var(--border-color)); }

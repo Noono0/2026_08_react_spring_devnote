@@ -46,7 +46,7 @@ Docker 실행 후 `/react`에서 아래 단계를 확인할 수 있습니다. �
 
 | 선택 | 실행 범위 | 특징 |
 |---|---|---|
-| 이 화면 아래에서 바로 편집 (Sandpack) | 단계 핵심만 담은 연습 예제 | 사이트를 떠나지 않고 연습 화면 맨 아래 `N단계 직접 해 보기` 영역이 펼쳐지며 편집기·미리보기·콘솔이 나옵니다. 메뉴 없이 그 영역의 제목 버튼으로 바로 펼치고 접을 수도 있습니다(넓은 화면은 좌우, 760px 이하는 위아래 배치). 예제는 `frontend/src/features/curriculum/sandbox/examples/`의 25개 파일이고, 파일 맨 위 주석의 `해 볼 것`부터 시작합니다. 도구 막대의 `색 테마`(사이트 테마 따라가기·밝게·어둡게·베이지·남색 밤)로 편집기와 미리보기의 배경·글자 색을 함께 바꿀 수 있고, 고른 테마는 브라우저에 저장됩니다. 넓은 화면에서는 펼친 상자 오른쪽 아래 모서리(◢)를 끌어 상자 전체의 너비(본문 폭 이하)와 높이를 함께 바꿀 수 있고, 본문 폭까지 넓히면 기본값(본문 폭 전체)으로 돌아갑니다. 본문보다 넓게 쓰려면 상자 제목 줄 오른쪽 `크게 보기`를 누르면 브라우저 창 전체(사이드바 위까지)를 덮고, 다시 누르거나 `Esc`(코드 편집기 밖에서)·접기로 원래 자리로 돌아옵니다. 또 편집기·미리보기 사이 세로 막대(⋮)로 좌우 비율(20~80%)을, 아래 가로 막대(⋯)로 높이(320~1000px)를 끌어서 바꿀 수 있습니다. 막대에 포커스를 두고 방향키로도 조절되며(`Shift`는 크게), 더블클릭하면 기본 크기로 돌아갑니다. 조절한 크기도 브라우저에 저장됩니다. `처음 코드로 되돌리기`로 원래 예제로 돌아가며, 영역을 접거나 다른 화면으로 가면 고친 내용은 사라집니다. 번들링은 CodeSandbox 서버가 하므로 인터넷이 필요합니다. |
+| 이 화면 아래에서 바로 편집 (Sandpack) | 단계 핵심만 담은 연습 예제 | 사이트를 떠나지 않고 연습 화면 맨 아래 `N단계 직접 해 보기` 영역이 펼쳐지며 편집기·미리보기·콘솔이 나옵니다. 메뉴 없이 그 영역의 제목 버튼으로 바로 펼치고 접을 수도 있습니다(넓은 화면은 좌우, 760px 이하는 위아래 배치). 예제는 `frontend/src/features/curriculum/sandbox/examples/`의 `01-…`~`25-…` 파일이고(같은 폴더의 `game-*.tsx`는 아래 [게임 규칙 직접 만들어 보기](#게임-규칙-직접-만들어-보기react-연습) 예제), 파일 맨 위 주석의 `해 볼 것`부터 시작합니다. 도구 막대의 `색 테마`(사이트 테마 따라가기·밝게·어둡게·베이지·남색 밤)로 편집기와 미리보기의 배경·글자 색을 함께 바꿀 수 있고, 고른 테마는 브라우저에 저장됩니다. 넓은 화면에서는 펼친 상자 오른쪽 아래 모서리(◢)를 끌어 상자 전체의 너비(본문 폭 이하)와 높이를 함께 바꿀 수 있고, 본문 폭까지 넓히면 기본값(본문 폭 전체)으로 돌아갑니다. 본문보다 넓게 쓰려면 상자 제목 줄 오른쪽 `크게 보기`를 누르면 브라우저 창 전체(사이드바 위까지)를 덮고, 다시 누르거나 `Esc`(코드 편집기 밖에서)·접기로 원래 자리로 돌아옵니다. 또 편집기·미리보기 사이 세로 막대(⋮)로 좌우 비율(20~80%)을, 아래 가로 막대(⋯)로 높이(320~1000px)를 끌어서 바꿀 수 있습니다. 막대에 포커스를 두고 방향키로도 조절되며(`Shift`는 크게), 더블클릭하면 기본 크기로 돌아갑니다. 조절한 크기도 브라우저에 저장됩니다. `처음 코드로 되돌리기`로 원래 예제로 돌아가며, 영역을 접거나 다른 화면으로 가면 고친 내용은 사라집니다. 번들링은 CodeSandbox 서버가 하므로 인터넷이 필요합니다. |
 | StackBlitz에서 실제 코드 열기 | 실제 `frontend/` 전체 | 로그인 불필요. `pnpm run dev:online`(`.env.online`, 더미 데이터 MSW)으로 시작하고 해당 단계 파일(`file=`)과 화면(`initialPath=`)을 바로 엽니다. GitHub의 `main` 브랜치를 엽니다. |
 | Codespaces에서 전체 실행 | 저장소 전체(React + Spring Boot + MySQL) | GitHub 로그인 필요. `.devcontainer/devcontainer.json`이 JDK 21·Node 22·Docker를 준비하고, 열린 뒤 터미널에서 `bash scripts/start-codespace.sh`를 실행하면 MySQL → 백엔드 → 프론트엔드 순서로 켜집니다. |
 
@@ -383,21 +383,35 @@ API Workspace는 요청 실행·응답·History·Collection 기능을 모두 사
 
 각 화면 오른쪽 위의 `?` 학습 가이드에서 사용법, 소스 흐름과 확장 과제를 확인할 수 있습니다.
 
-## 게임으로 연습하기
+## 게임 규칙 직접 만들어 보기(React 연습)
 
-사이드바 `게임` 메뉴(`/games`)의 네 게임은 서버 없이 브라우저에서만 동작합니다. 코드는 `frontend/src/features/games/`에 있고, 게임마다 **규칙(`*Logic.ts`, 순수 함수 + 리듀서)** 과 **화면(`*Page.tsx`)** 을 나눴습니다. 규칙은 `*Logic.test.ts`가 화면 없이 확인하고, 화면 동작은 `gamePages.test.tsx`가 확인합니다.
+게임에서 실제로 쓰는 규칙 함수 하나를 사이트 안 편집기(Sandpack)에서 완성하는 연습입니다. 예전에는 혼자 하는 게임 화면 아래에 있었고, 지금은 React 연습의 난이도별 목록(`/react/level/basic`·`/react/level/intermediate`)과 전체 로드맵(`/react`) 아래 `게임 규칙 직접 만들어 보기` 묶음에 있습니다. 카드의 `연습 시작`을 누르면 `/react/game-exercises/:exerciseId` 화면에서 배우는 개념과 실제 코드 위치를 보고, 아래 `… 직접 만들어 보기` 상자를 펼칩니다. 편집기는 iframe 안에서 따로 실행되므로 고친 코드는 실제 게임에 영향을 주지 않습니다. 진도(완료 표시)에는 세지 않습니다.
 
-| 게임 | 규칙에서 볼 것 | 화면에서 볼 것 | 직접 만들어 보기 |
-|---|---|---|---|
-| 카드 짝 맞추기 | 피셔–예이츠 섞기, 두 장 비교 리듀서 | 틀린 두 장 덮기(`setTimeout`)·타이머(`setInterval`) cleanup | `shuffle` |
-| 2048 | 한 줄 밀기(`slideRow`) + 뒤집기·전치로 네 방향 | 포커스된 판의 키보드, Pointer 이벤트 스와이프, `useRef` | `slideRow` |
-| 지뢰 찾기 | 첫 클릭 안전 지뢰 배치, BFS 연쇄 열기, chord | 오른쪽 클릭(`onContextMenu`), 로빙 탭인덱스 | `revealArea` |
-| 테트리스 | 행렬 회전·월 킥·충돌, 7-bag, 줄 지우기·점수·레벨 | 레벨별 중력 `setInterval`, 포커스를 잃으면 자동 일시정지 | `clearLines` |
+| 난이도 | 연습 | 완성할 함수 | 배우는 것 | 실제 게임 코드(`features/games/`) |
+|---|---|---|---|---|
+| 초급 | 카드 섞기(피셔–예이츠) | `shuffle` | 배열 복사·불변성, 고르게 섞기, `setTimeout` cleanup | `shared/random.ts`, `memory/memoryLogic.ts` |
+| 초급 | 2048 한 줄 밀기 | `slideRow` | filter·합치기·길이 맞추기, 뒤집기·전치로 네 방향 재사용 | `game2048/game2048Logic.ts` |
+| 초급 | 스도쿠 숫자 놓기 검사 | `isValidPlacement` | 2차원 배열 읽기, 3×3 상자 계산, 겹침을 그릴 때 계산 | `sudoku/sudokuLogic.ts` |
+| 중급 | 테트리스 줄 지우기 | `clearLines` | 2차원 배열 filter·빈 줄 채우기, 타이머 + 리듀서 | `tetris/tetrisLogic.ts` |
+| 중급 | 지뢰 찾기 빈 칸 연쇄 열기(BFS) | `revealArea` | 큐로 넓혀 가는 BFS, 멈춤 조건, 불변 2차원 판 | `minesweeper/minesweeperLogic.ts` |
 
-- **스도쿠 규칙(`sudoku/sudokuLogic.ts`)**: 혼자 하는 화면은 아직 없고 온라인 대전 스도쿠 화면이 겹침 표시에 씁니다. 백트래킹으로 정답 판을 만들고, 칸을 지울 때마다 "답이 하나뿐인가"를 `countSolutions(판, 2)`로 확인합니다. 난이도(쉬움 40·보통 32·어려움 26개)마다 시드가 같으면 같은 문제가 나오는 것을 `sudokuLogic.test.ts`가 확인합니다. 숫자 넣기는 `setCell`이 새 판을 만들어 불변성을 지킵니다.
+- **난이도를 정한 기준**: 난이도별 목록의 설명에 맞췄습니다. 초급(배열 CRUD·Reducer)은 배열 하나·판 읽기로 끝나는 연습, 중급(계층 데이터·업무 규칙)은 2차원 판을 새로 만들거나 탐색하는 게임 규칙입니다. 스도쿠 연습은 이번에 새로 만들었습니다.
+- **코드 위치**: 목록과 설명은 `curriculum/data/gameExercises.ts`, 카드 묶음은 `curriculum/components/GameExerciseSection.tsx`, 연습 화면은 `practice/00-roadmap/pages/GameExercisePage.tsx`(주소의 `exerciseId`가 목록에 없으면 로드맵으로 보냄)입니다. 예제는 `curriculum/sandbox/examples/game-*.tsx`이고 학습 단계 예제와 함께 `stageSandboxes.ts`에 `exerciseId` 키로 등록해, 편집기 상자(`PracticeSandboxSection`)가 같은 방법으로 원문을 찾습니다.
+- **예제 형식**: 핵심 함수 하나가 `TODO`로 비어 있고(스도쿠는 가로줄 검사만 들어 있음), 미리보기의 채점표가 ✅/❌로 바로 알려 줍니다. `gameExerciseSandboxes.test.tsx`가 예제 형식, react 외 import가 없는지, 처음 코드를 그렸을 때 채점표에 ❌가 남아 있는지를 확인합니다.
+
+### 게임 규칙 코드(`frontend/src/features/games/`)
+
+게임마다 **규칙(`*Logic.ts`, 순수 함수 + 리듀서)** 을 화면과 나눴고, `*Logic.test.ts`가 화면 없이 확인합니다. 온라인 대전 화면이 이 규칙과 판 모양(`shared/games.css`)을 가져다 씁니다.
+
+| 게임 | 규칙에서 볼 것 |
+|---|---|
+| 카드 짝 맞추기 | 피셔–예이츠 섞기, 두 장 비교 리듀서 |
+| 2048 | 한 줄 밀기(`slideRow`) + 뒤집기·전치로 네 방향 |
+| 지뢰 찾기 | 첫 클릭 안전 지뢰 배치, BFS 연쇄 열기, chord |
+| 테트리스 | 행렬 회전·월 킥·충돌, 7-bag, 줄 지우기·점수·레벨 |
+
+- **스도쿠 규칙(`sudoku/sudokuLogic.ts`)**: 온라인 대전 스도쿠 화면이 겹침 표시에 씁니다. 백트래킹으로 정답 판을 만들고, 칸을 지울 때마다 "답이 하나뿐인가"를 `countSolutions(판, 2)`로 확인합니다. 난이도(쉬움 40·보통 32·어려움 26개)마다 시드가 같으면 같은 문제가 나오는 것을 `sudokuLogic.test.ts`가 확인합니다. 숫자 넣기는 `setCell`이 새 판을 만들어 불변성을 지킵니다.
 - **무작위 값과 순수 리듀서**: 리듀서 안에서 `Math.random`을 부르지 않습니다. 2048은 무작위 값을, 지뢰 찾기는 시드를 action에 담고, 테트리스는 난수 상태(`randomState`)를 게임 상태에 두고 `stepSeededRandom`으로 한 걸음씩 나아갑니다. 그래서 테스트가 매번 같은 결과를 확인합니다(`shared/random.ts`).
-- **최고 기록**: 저장된 기록은 State로 두고, "새 기록인가?"는 그릴 때 계산하며, localStorage 저장은 `useEffect`가 합니다. 이벤트 처리 함수에서 옛 state로 다음 상태를 미리 계산하면 빠른 연속 입력 때 오래된 클로저로 틀릴 수 있기 때문입니다. 읽을 때는 zod 스키마로 모양을 확인합니다(`shared/gameRecordStorage.ts`).
-- **직접 만들어 보기**: 게임 화면 맨 아래 상자는 학습 단계와 같은 Sandpack 상자(`curriculum/components/PracticeSandboxSection.tsx`)를 씁니다. 예제는 `games/sandbox/examples/*.tsx`이고 핵심 함수 하나가 `TODO`로 비어 있으며, 미리보기의 채점표가 ✅/❌로 바로 알려 줍니다. `gameSandboxes.test.ts`가 예제 형식과 react 외 import가 없는지 확인합니다.
 
 ### 온라인 대전(WebSocket)
 
@@ -441,7 +455,7 @@ API Workspace는 요청 실행·응답·History·Collection 기능을 모두 사
 | `ranking/components/GameRankingSubmitPanel.tsx` | 끝난 화면에서만 그려 판마다 상태가 저절로 초기화, `useMutation` 성공 뒤 랭킹 캐시 무효화 |
 
 - **믿을 수 있는 값은 어디서 오나**: 온라인 대전 승패는 서버가 판정하므로 브라우저가 보내지 않습니다. 혼자 하는 게임 점수는 브라우저가 계산하므로 서버는 범위만 검사합니다(완전히 막으려면 서버가 게임을 다시 계산해야 합니다).
-- **테스트**: `GameRankingServiceTest`(규칙·기간·동점), `GameRankingMapperIntegrationTest`(실제 MySQL로 묶기·최고 기록·정리, Docker 필요), `OnlineRoomServiceTest`(끝난 판 저장·퇴장·저장 실패), 화면은 `GameRankingPage.test.tsx`·`rankingPeriod.test.ts`·`gamePages.test.tsx`입니다.
+- **테스트**: `GameRankingServiceTest`(규칙·기간·동점), `GameRankingMapperIntegrationTest`(실제 MySQL로 묶기·최고 기록·정리, Docker 필요), `OnlineRoomServiceTest`(끝난 판 저장·퇴장·저장 실패), 화면은 `GameRankingPage.test.tsx`·`rankingPeriod.test.ts`입니다.
 
 ---
 

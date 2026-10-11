@@ -9,6 +9,7 @@
  * [제목은 어디서 가져오나?]
  *   새 목록을 또 만들지 않고 이미 있는 데이터를 쓴다. (같은 정보를 두 곳에 두지 않기)
  *     /react/...      → 학습 가이드 제목 (learningGuides.ts)
+ *     /react/game-exercises/... → 게임 규칙 연습 제목 (gameExercises.ts)
  *     그 밖의 주소    → 사이드바 메뉴 이름 (navigationGroups.ts)
  */
 
@@ -20,6 +21,7 @@ import {
   reactNavigationGroup,
   utilityNavigationGroup,
 } from "@/app/navigation/navigationGroups";
+import { findGameExerciseById, GAME_EXERCISE_ROUTE_PREFIX } from "@/features/curriculum/data/gameExercises";
 import { findLearningGuideByPathname } from "@/features/curriculum/data/learningGuides";
 
 const SITE_NAME = "DevNote";
@@ -33,6 +35,10 @@ const navigationItems = [portfolioNavigationGroup, reactNavigationGroup, utility
 export const resolvePageName = (pathname: string): string | undefined => {
   if (pathname === "/") return undefined;
   if (pathname.startsWith("/projects/")) return "프로젝트 상세";
+  if (pathname.startsWith(GAME_EXERCISE_ROUTE_PREFIX)) {
+    const exercise = findGameExerciseById(pathname.slice(GAME_EXERCISE_ROUTE_PREFIX.length));
+    if (exercise) return exercise.title;
+  }
   if (pathname === "/react" || pathname.startsWith("/react/")) {
     const learningGuide = findLearningGuideByPathname(pathname);
     if (learningGuide) return learningGuide.title;

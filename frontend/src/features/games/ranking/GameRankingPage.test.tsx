@@ -66,7 +66,7 @@ describe("GameRankingPage", () => {
     expect(mockedGetSoloRanking).toHaveBeenCalledWith("MINESWEEPER", "EXPERT", periodForPreset("MONTH"));
     expect(screen.getByRole("combobox", { name: "종목" })).toHaveValue("solo:MINESWEEPER");
     expect(screen.getByRole("button", { name: /고급/ })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("link", { name: "지뢰 찾기 하러 가기" })).toHaveAttribute("href", "/games/minesweeper");
+    expect(screen.getByRole("link", { name: "지뢰 찾기 하러 가기" })).toHaveAttribute("href", "/games/online");
   });
 
   it("스도쿠 랭킹은 난이도마다 조회하고, 하러 가기는 온라인 대전으로 안내한다", async () => {

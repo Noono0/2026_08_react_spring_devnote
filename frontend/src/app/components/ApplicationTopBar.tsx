@@ -59,6 +59,7 @@ const getCurrentPageTitle = (pathname: string): string => {
   if (learningPathname.includes("/edit")) return "고급 문서 수정";
   if (learningPathname.startsWith("/documents")) return "문서 에디터·이미지 CRUD";
   if (learningPathname.startsWith("/development")) return "개발 오류 시나리오";
+  if (learningPathname.startsWith("/game-exercises")) return "게임 규칙 직접 만들어 보기";
   // 위 어디에도 안 걸리면 기본 제목을 쓴다.
   // 함수는 모든 경로에서 값을 return 해야 하므로 이런 "기본값 줄"이 꼭 필요하다.
   return "DevNote Practice";

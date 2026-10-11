@@ -5,13 +5,14 @@ describe("createDocumentTitle", () => {
     expect(createDocumentTitle("/")).toBe("DevNote Portfolio");
     expect(createDocumentTitle("/react/infinite-feed")).toBe("무한 스크롤 피드 | DevNote");
     expect(createDocumentTitle("/react/documents/3/edit")).toContain("| DevNote");
+    expect(createDocumentTitle("/react/game-exercises/minesweeper-reveal-area")).toBe("지뢰 찾기 빈 칸 연쇄 열기(BFS) | DevNote");
   });
 
   it("하위 주소는 가장 긴 메뉴 주소의 이름을 쓴다", () => {
     expect(createDocumentTitle("/utilities/api-workspace/mock")).toBe("Mock API | DevNote");
     expect(createDocumentTitle("/history/12")).toBe("나의 업무 History | DevNote");
     expect(createDocumentTitle("/admin/members")).toBe("회원관리 | DevNote");
-    expect(createDocumentTitle("/games/minesweeper")).toBe("지뢰 찾기 | DevNote");
+    expect(createDocumentTitle("/games/online/abcd2345")).toBe("온라인 대전 | DevNote");
     expect(createDocumentTitle("/games")).toBe("게임 홈 | DevNote");
   });
 
