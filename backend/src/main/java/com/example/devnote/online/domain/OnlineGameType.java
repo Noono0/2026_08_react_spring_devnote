@@ -20,7 +20,7 @@ public enum OnlineGameType {
     OMOK("오목", 2, 2, true),
     TETRIS("테트리스 대전", 2, 6, true),
     CHESS("체스", 2, 2, false),
-    BATTLESHIP("배틀십", 2, 2, false),
+    BATTLESHIP("배틀십", 2, 2, true),
     NUMBER_BASEBALL("숫자 야구", 2, 4, true),
     ONE_CARD("원카드", 2, 4, false),
     MAFIA("마피아", 4, 8, false),

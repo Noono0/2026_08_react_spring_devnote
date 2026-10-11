@@ -2,6 +2,11 @@
 
 [문서 목록으로](../README.md) · [작업 규칙](../AGENTS.md) · [검증 명령](verification.md)
 
+## 2026-10-11 — 온라인 대전 배틀십
+
+- **배틀십(2인)**: `BattleshipGame`(공통 틀). 배치(무작위·다시 배치·준비 완료) → 번갈아 쏘기 → 모두 격침하면 승리, 기권·퇴장 시 상대 승리. 내 배 위치는 나에게만(상대·관전자에게는 o·X와 격침된 배만), 끝나면 모두 공개.
+- **검증**: `BattleshipGameTest`(무작위 배치 겹침 없음·숨김·차례·같은 칸 금지·격침/승리·기권), 화면 테스트 2개, 프론트 lint·typecheck·test, 백엔드 온라인 테스트 통과. 검증용 서버(18080)에서 WebSocket 클라이언트로 상대·관전자에게 배가 숨겨지고 33발 만에 승리·격침 안내 5번·끝난 뒤 공개를 확인했습니다.
+
 ## 2026-10-11 — 온라인 대전 공통 게임 틀 + 숫자 야구
 
 - **공통 틀**: 새 게임은 `online/domain/game/OnlineGame`(행동 `act`·기권/퇴장 `leave`·결과·사람마다 다른 화면 `viewFor`·안내 문구)을 구현하고 `OnlineGames`에 등록합니다. 화면은 `GAME_ACTION`(action·text·number·numbers) 하나로 행동을 보내고, 서버는 `ROOM_STATE.room.game`에 받는 사람마다 다른 상태(남의 비밀 제외)를 담습니다. 화면 쪽은 `online/games/CommonGameArea.tsx`가 gameType별 화면을 고르고, 각 화면이 자기 zod 스키마로 확인합니다. 오목·테트리스는 기존 전용 코드 그대로입니다.

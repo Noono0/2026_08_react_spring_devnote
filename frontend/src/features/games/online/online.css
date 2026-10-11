@@ -202,6 +202,30 @@
 .baseball-history .baseball-guess { font-weight: 800; letter-spacing: 0.2em; }
 .baseball-history tr.hit td { color: var(--success-color); font-weight: 800; }
 
+/* 배틀십: 내 함대 | 상대 바다. 칸 크기는 판 칸(.online-game-area) 너비에 맞춘다 */
+.battleship { display: grid; gap: 12px; justify-items: center; width: 100%; }
+.battleship-seas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; width: 100%; }
+.battleship-sea { display: grid; gap: 6px; justify-items: center; }
+.battleship-sea h3 { margin: 0; font-size: 15px; }
+.battleship-sea h3 small { margin-left: 6px; color: var(--text-muted); font-weight: 600; }
+.battleship-grid {
+  --sea-cell: min(30px, calc((50cqi - 40px) / 10));
+  display: grid; grid-template-columns: repeat(10, var(--sea-cell)); grid-auto-rows: var(--sea-cell); gap: 2px;
+  padding: 4px; border-radius: 10px; background: #0b3a5c;
+}
+.battleship-cell { display: grid; place-items: center; width: var(--sea-cell); height: var(--sea-cell); min-height: 0; padding: 0; border: 0; border-radius: 3px; background: #1c6ea4; }
+button.battleship-cell { cursor: crosshair; }
+button.battleship-cell:hover { background: #3a8fd0; filter: none; }
+.battleship-cell.mark-s { background: #7d8b99; }
+.battleship-cell.mark-o::after { content: ""; width: 30%; height: 30%; border-radius: 50%; background: rgba(255, 255, 255, 0.75); }
+.battleship-cell.mark-x { background: #e8590c; }
+.battleship-cell.mark-x::after { content: "✕"; color: #fff; font-size: calc(var(--sea-cell) * 0.6); font-weight: 900; line-height: 1; }
+.battleship-cell.mark-sunk { background: #3b2a2a; box-shadow: inset 0 0 0 2px #e03131; }
+@container (max-width: 560px) {
+  .battleship-seas { grid-template-columns: minmax(0, 1fr); }
+  .battleship-grid { --sea-cell: min(30px, calc((100cqi - 40px) / 10)); }
+}
+
 /* 테트리스 대전은 판을 넓게 쓰도록 자리·채팅 패널을 판 아래로 내린다 */
 .online-room-layout.wide { grid-template-columns: minmax(0, 1fr); }
 .online-room-layout.wide .online-side { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }

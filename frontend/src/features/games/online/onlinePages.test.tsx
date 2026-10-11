@@ -390,6 +390,55 @@ describe("온라인 숫자 야구", () => {
   });
 });
 
+describe("온라인 배틀십", () => {
+  const sea = (first: string) => [first, ...Array.from({ length: 9 }, () => "..........")];
+  const battleshipRoom = (game: Record<string, unknown>): OnlineRoom => ({
+    ...baseRoom,
+    gameType: "BATTLESHIP", gameTypeLabel: "배틀십", status: "PLAYING", seats: ["p1", "p2"],
+    participants: [
+      { participantId: "p1", nickname: "철수", member: false, seatIndex: 0 },
+      { participantId: "p2", nickname: "영희", member: false, seatIndex: 1 },
+    ],
+    game: {
+      phase: "PLACE", size: 10, shipLengths: [5, 4, 3, 3, 2], mySeat: 0, ready: [false, false], turnSeat: null, winnerSeat: null, shotsFired: 0,
+      boards: [{ seat: 0, rows: sea("SSSSS....."), shipsLeft: 5 }, { seat: 1, rows: sea(".........."), shipsLeft: 5 }],
+      ...game,
+    },
+  });
+
+  it("배치 단계: 다시 배치·준비 완료를 보내고, 내 배는 내 함대에만 보인다", () => {
+    renderRoom();
+    const socket = latestSocket();
+    socket.serverOpen();
+    socket.serverSend({ type: "ROOM_STATE", room: battleshipRoom({}) });
+    const myFleet = screen.getByRole("region", { name: "내 함대" });
+    expect(within(myFleet).getAllByRole("img", { name: /내 배/ })).toHaveLength(5);
+    fireEvent.click(screen.getByRole("button", { name: "다시 배치" }));
+    expect(socket.sent.at(-1)).toEqual({ type: "GAME_ACTION", action: "RANDOMIZE" });
+    fireEvent.click(screen.getByRole("button", { name: "준비 완료" }));
+    expect(socket.sent.at(-1)).toEqual({ type: "GAME_ACTION", action: "READY" });
+  });
+
+  it("내 차례에 상대 바다의 안 쏜 칸만 누를 수 있다", () => {
+    renderRoom();
+    const socket = latestSocket();
+    socket.serverOpen();
+    socket.serverSend({ type: "ROOM_STATE", room: battleshipRoom({
+      phase: "PLAY", ready: [true, true], turnSeat: 0,
+      boards: [{ seat: 0, rows: sea("XSSSS....."), shipsLeft: 5 }, { seat: 1, rows: sea("o#........"), shipsLeft: 4 }],
+    }) });
+    const enemySea = screen.getByRole("region", { name: "영희의 바다" });
+    expect(within(enemySea).queryByRole("button", { name: /^A1 / })).not.toBeInTheDocument(); // 이미 쏜 칸(빗나감)
+    expect(within(enemySea).getByRole("img", { name: "B1 격침된 배" })).toBeInTheDocument();
+    fireEvent.click(within(enemySea).getByRole("button", { name: "C1 바다 — 쏘기" }));
+    expect(socket.sent.at(-1)).toEqual({ type: "GAME_ACTION", action: "FIRE", numbers: [0, 2] });
+    expect(within(screen.getByRole("region", { name: "내 함대" })).queryAllByRole("button")).toHaveLength(0);
+
+    socket.serverSend({ type: "ROOM_STATE", room: battleshipRoom({ phase: "PLAY", ready: [true, true], turnSeat: 1 }) });
+    expect(within(screen.getByRole("region", { name: "영희의 바다" })).queryAllByRole("button")).toHaveLength(0);
+  });
+});
+
 describe("온라인 대전 대기실", () => {
   const renderLobby = () => render(withProviders(
     <MemoryRouter initialEntries={["/games/online"]}>
