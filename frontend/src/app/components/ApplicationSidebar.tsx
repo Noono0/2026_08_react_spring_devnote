@@ -26,6 +26,7 @@ import { useAuthSessionQuery } from "@/features/auth/hooks/useAuthSession";
 import { DataSourceToggle } from "@/features/development/components/DataSourceToggle";
 import {
   administratorNavigationGroup,
+  gameNavigationGroup,
   portfolioNavigationGroup,
   reactNavigationGroup,
   utilityNavigationGroup,
@@ -82,6 +83,7 @@ const getInitiallyExpandedGroups = (pathname: string): Set<string> => {
   const expandedGroups = new Set<string>();
   if (pathname.startsWith("/react")) expandedGroups.add(reactNavigationGroup.id);
   if (pathname.startsWith("/utilities")) expandedGroups.add(utilityNavigationGroup.id);
+  if (pathname.startsWith("/games")) expandedGroups.add(gameNavigationGroup.id);
   if (pathname.startsWith("/admin")) expandedGroups.add(administratorNavigationGroup.id);
   // 3단계: 지금 화면이 들어 있는 작은 묶음도 펼친다(예: /utilities/sql-formatter → "코드 작성 보조").
   for (const subgroup of utilityNavigationGroup.subgroups ?? []) {
@@ -125,11 +127,11 @@ export const ApplicationSidebar = () => {
     closeMobileSidebar,
   } = useApplicationUiStore();
 
-  // 누구나 볼 수 있는 그룹 3개를 먼저 담는다.
+  // 누구나 볼 수 있는 그룹 4개(유틸리티 아래에 게임)를 먼저 담는다.
   // ★ 이 배열은 화면을 그릴 때마다 새로 만들어지는 "임시 변수"다.
   //   State가 아니므로 여기에 push해도 문제없다.
   //   (State 배열이었다면 push는 절대 금지! 새 배열을 만들어야 한다)
-  const navigationGroups = [portfolioNavigationGroup, reactNavigationGroup, utilityNavigationGroup];
+  const navigationGroups = [portfolioNavigationGroup, reactNavigationGroup, utilityNavigationGroup, gameNavigationGroup];
 
   // `?.` = 옵셔널 체이닝(optional chaining).
   //   sessionQuery.data는 로그인 정보를 아직 못 받았으면 undefined다.

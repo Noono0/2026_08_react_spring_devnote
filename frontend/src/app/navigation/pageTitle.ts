@@ -15,6 +15,7 @@
 import {
   administratorNavigationGroup,
   flattenNavigationItems,
+  gameNavigationGroup,
   portfolioNavigationGroup,
   reactNavigationGroup,
   utilityNavigationGroup,
@@ -25,7 +26,7 @@ const SITE_NAME = "DevNote";
 const HOME_TITLE = "DevNote Portfolio";
 
 // 3단계 메뉴(유틸리티 묶음 안의 메뉴)까지 모두 찾는다.
-const navigationItems = [portfolioNavigationGroup, reactNavigationGroup, utilityNavigationGroup, administratorNavigationGroup]
+const navigationItems = [portfolioNavigationGroup, reactNavigationGroup, utilityNavigationGroup, gameNavigationGroup, administratorNavigationGroup]
   .flatMap(flattenNavigationItems);
 
 /** 주소에 가장 잘 맞는 화면 이름. 못 찾으면 undefined */

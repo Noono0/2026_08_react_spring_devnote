@@ -8,7 +8,7 @@ import { StageSandboxSection } from "./StageSandboxSection";
 
 // 실제 Sandpack은 외부 번들러(iframe)를 쓰므로 테스트에서는 가짜 패널로 바꾼다.
 vi.mock("@/features/curriculum/components/StageSandboxPanel", () => ({
-  default: ({ learningGuide }: { learningGuide: { title: string } }) => <p>{learningGuide.title} 편집기 패널</p>,
+  default: ({ sandboxId }: { sandboxId: string }) => <p>{sandboxId} 편집기 패널</p>,
 }));
 
 beforeEach(() => {
@@ -34,15 +34,15 @@ describe("연습 화면 아래 직접 해 보기 영역", () => {
     const toggle = screen.getByRole("button", { name: /2단계 직접 해 보기/ });
 
     expect(toggle).toHaveAttribute("aria-expanded", "false");
-    expect(screen.queryByText("할 일 인라인 CRUD 편집기 패널")).not.toBeInTheDocument();
+    expect(screen.queryByText("todo 편집기 패널")).not.toBeInTheDocument();
 
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute("aria-expanded", "true");
-    expect(await screen.findByText("할 일 인라인 CRUD 편집기 패널")).toBeInTheDocument();
+    expect(await screen.findByText("todo 편집기 패널")).toBeInTheDocument();
 
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute("aria-expanded", "false");
-    expect(screen.queryByText("할 일 인라인 CRUD 편집기 패널")).not.toBeInTheDocument();
+    expect(screen.queryByText("todo 편집기 패널")).not.toBeInTheDocument();
   });
 
   it("제목 옆 메뉴의 '이 화면 아래에서 바로 편집'을 누르면 아래 영역이 펼쳐진다", async () => {
@@ -50,7 +50,7 @@ describe("연습 화면 아래 직접 해 보기 영역", () => {
     fireEvent.click(screen.getByRole("button", { name: /이 화면 아래에서 바로 편집/ }));
 
     expect(screen.getByRole("button", { name: /2단계 직접 해 보기/ })).toHaveAttribute("aria-expanded", "true");
-    expect(await screen.findByText("할 일 인라인 CRUD 편집기 패널")).toBeInTheDocument();
+    expect(await screen.findByText("todo 편집기 패널")).toBeInTheDocument();
   });
 
   it("크게 보기는 창 전체로 펼치고, Esc나 접기로 원래 크기로 돌아오며 뒤 페이지 스크롤을 되돌린다", () => {

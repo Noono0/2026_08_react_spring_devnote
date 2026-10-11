@@ -82,7 +82,7 @@ macOS/Linux에서는 `./start-docker.sh`, Windows에서는 `start-docker.cmd`로
 - `/utilities`: API Workspace부터 Regex, Formatter, Converter, Diff, JWT, Markdown, 테스트 데이터, 회원별 Snippet, Cron, Quick Tools와 서버 공유 토픽 투표까지 제공합니다.
 - `/admin`: 관리자와 슈퍼관리자에게만 보이는 회원·등급·권한·일간·월간 방문 통계와 최근 이용 이력 메뉴입니다.
 
-데스크톱 내비게이션은 별도 상단 메뉴 없이 하나의 왼쪽 사이드바로 통합합니다. 홈·업무 History, React 전체 로드맵과 왕초보·초급·중급·고급, 구현된 유틸리티 화면을 같은 메뉴에서 이동하며 관리자 항목은 관리자 역할에만 추가로 표시됩니다. 모바일에서는 화면 폭을 확보하기 위해 햄버거 버튼으로 이 사이드바를 엽니다.
+데스크톱 내비게이션은 별도 상단 메뉴 없이 하나의 왼쪽 사이드바로 통합합니다. 홈·업무 History, React 전체 로드맵과 왕초보·초급·중급·고급, 구현된 유틸리티 화면, 게임을 같은 메뉴에서 이동하며 관리자 항목은 관리자 역할에만 추가로 표시됩니다. 모바일에서는 화면 폭을 확보하기 위해 햄버거 버튼으로 이 사이드바를 엽니다.
 
 비회원도 공개 화면과 유틸리티를 사용할 수 있습니다. 가입 회원은 `BRONZE`·`USER`로 시작하며 등급은 `BRONZE`, `SILVER`, `GOLD`, `PLATINUM`, `DIAMOND`, 역할은 `USER`, `ADMIN`, `SUPER_ADMIN`을 사용합니다. 포트폴리오와 업무 History 편집 버튼은 로그인한 `SUPER_ADMIN`에게만 표시됩니다.
 

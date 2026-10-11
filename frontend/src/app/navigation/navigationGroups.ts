@@ -149,6 +149,21 @@ export const utilityNavigationGroup: NavigationGroup = {
   ],
 };
 
+// 게임은 서버 없이 브라우저에서만 돌아간다. 각 게임 아래에 규칙 함수를 직접 만들어 보는 편집기가 붙어 있다.
+export const gameNavigationGroup: NavigationGroup = {
+  id: "games",
+  title: "게임",
+  symbol: "GM",
+  collapsible: true,
+  items: [
+    { label: "게임 홈", description: "게임 목록과 배울 점", route: "/games", symbol: "GM" },
+    { label: "카드 짝 맞추기", description: "섞기·두 장 비교·타이머", route: "/games/memory", symbol: "MM" },
+    { label: "2048", description: "줄 밀기·합치기·방향 키", route: "/games/2048", symbol: "48" },
+    { label: "지뢰 찾기", description: "첫 클릭 안전·빈 칸 연쇄 열기", route: "/games/minesweeper", symbol: "MS" },
+    { label: "테트리스", description: "회전·충돌·줄 지우기", route: "/games/tetris", symbol: "TT" },
+  ],
+};
+
 export const administratorNavigationGroup: NavigationGroup = {
   id: "admin",
   title: "관리자",

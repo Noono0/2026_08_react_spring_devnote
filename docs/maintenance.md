@@ -2,6 +2,14 @@
 
 [문서 목록으로](../README.md) · [작업 규칙](../AGENTS.md) · [검증 명령](verification.md)
 
+## 2026-10-11 — 게임 메뉴(카드 짝 맞추기·2048·지뢰 찾기·테트리스)
+
+- **화면**: 사이드바 `각종 유틸리티 게시판` 아래에 `게임` 그룹을 두고 `/games`(게임 홈)와 `/games/memory`·`/games/2048`·`/games/minesweeper`·`/games/tetris`를 추가했습니다. 모두 프론트엔드만 쓰고 최고 기록은 브라우저 localStorage(`devnote.games.*`, 읽을 때 zod 검사)에 둡니다. 각 페이지는 lazy 로딩이고 게임 CSS(`games/shared/games.css`)도 게임을 열 때만 내려받습니다. 라이트·다크, 760px 이하(테트리스는 판 바로 아래 터치 버튼), `prefers-reduced-motion`을 지원합니다.
+- **구조**: 게임마다 순수 규칙(`*Logic.ts`)과 화면(`*Page.tsx`)을 나눴습니다. 무작위 값은 action·시드·게임 상태의 난수 상태로 넣어 리듀서를 순수하게 유지합니다(`shared/random.ts`에 `stepSeededRandom` 추가). 최고 기록은 "저장값 State + 그릴 때 계산 + useEffect로 저장"으로 처리해 빠른 연속 입력에서도 오래된 클로저 문제가 없습니다.
+- **직접 만들어 보기**: 학습 단계의 Sandpack 상자를 `PracticeSandboxSection`(sandboxId·제목·source를 받는 공통 상자)으로 분리하고 `StageSandboxSection`은 그것을 감싸는 얇은 컴포넌트로 바꿨습니다(`StageSandboxPanel`은 `learningGuide` 대신 `sandboxId`·`source`를 받음). 게임 예제 4개(`games/sandbox/examples`)는 핵심 함수 하나를 TODO로 비우고 채점표를 보여 줍니다. 모범 답안을 넣으면 채점표가 모두 통과하고, 처음 코드와 흔한 잘못된 섞기(`sort(() => Math.random() - 0.5)`, 전체 범위 교환)는 실패하는 것을 임시 테스트로 확인했습니다(임시 파일은 지웠습니다).
+- **검증**: `eslint`·`tsc -b` 통과, Vitest 전체 통과(규칙 테스트 78개, 화면 테스트 11개, 예제 형식·사이드바·탭 제목 테스트 추가), `vite build` 성공. 내장 브라우저에서 사이드바 그룹 순서·자동 펼침, 2048 연속 키 입력 후 점수=최고 점수 저장, 테트리스 중력·고스트·게임 끝·기록 저장, 지뢰 찾기 첫 클릭 안전·깃발, 카드 틀린 두 장 덮기, Sandpack 미리보기의 채점표, 375px 화면 가로 넘침 없음을 확인했습니다.
+- **미검증**: 실제 터치 기기에서의 스와이프·터치 버튼 조작감은 데스크톱 브라우저 에뮬레이션으로만 확인했습니다.
+
 ## 2026-10-10 — 코드·데이터 입력·결과 문법 색 전체 적용
 
 - **적용 화면**: 코드·데이터 형식을 입력하거나 보여 주는 곳에 공통 문법 색을 넣었습니다. Markdown Editor(입력·문법 도움말 예시), Data Converter(입력·결과·JSON Schema·JSON Tree), JSON ↔ CSV(JSON 쪽), JSONPath Explorer(입력·결과), JWT Decoder(Header·Payload), API Workspace(요청 Body·응답 Pretty/Raw·Actual Request·생성 코드·cURL), OpenAPI Studio(문서 JSON/YAML·Request 예시), Mock API(응답 Body·테스트 응답), WebSocket·SSE(보낼 메시지·로그 데이터), SQL Schema·ERD(DDL), Dependency Analyzer(package.json·Gradle), Developer Snippet(편집·카드, 고른 언어), 25단계 학습 테스트 코드. 일반 글(게시판·댓글), 로그, 정규식, Cron, CSV, Code Diff(이미 diff 색)는 문법 색이 일반적이지 않아 그대로 둡니다.

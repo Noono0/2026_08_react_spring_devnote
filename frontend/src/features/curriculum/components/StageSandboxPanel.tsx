@@ -25,14 +25,16 @@ import { useEffect, useMemo, useRef, type CSSProperties } from "react";
 import { SandpackCodeEditor, SandpackConsole, SandpackLayout, SandpackPreview, SandpackProvider, useSandpack } from "@codesandbox/sandpack-react";
 import { useApplicationUiStore } from "@/app/state/applicationUiStore";
 import { SandboxResizeHandle, type ResizeAxis } from "@/features/curriculum/components/SandboxResizeHandle";
-import type { LearningGuide } from "@/features/curriculum/data/learningGuides";
 import { selectSandboxDependencies } from "@/features/curriculum/sandbox/sandboxSetup";
 import { createSandboxStyles, isSandboxThemeChoice, resolveSandboxTheme, sandboxEditorThemes, sandboxThemeChoices, sandboxThemeLabels } from "@/features/curriculum/sandbox/sandboxThemes";
 import { stageSandboxSources } from "@/features/curriculum/sandbox/stageSandboxes";
 import { SANDBOX_EDITOR_WIDTH_RANGE, SANDBOX_LAYOUT_HEIGHT_RANGE, useStageSandboxStore } from "@/features/curriculum/state/stageSandboxStore";
 
 interface StageSandboxPanelProperties {
-  learningGuide: LearningGuide;
+  /** 편집기를 구분하는 키. 학습 단계는 guideId("todo" 등), 게임은 "game-2048"처럼 쓴다. 바뀌면 편집기를 새로 만든다. */
+  sandboxId: string;
+  /** 편집기에 넣을 App.tsx 원문. 없으면 학습 단계 예제(stageSandboxes.ts)에서 sandboxId로 찾는다. */
+  source?: string;
 }
 
 /** 고친 코드를 처음 예제로 되돌리는 버튼. useSandpack은 SandpackProvider 안에서만 쓸 수 있어 따로 뺐다. */
@@ -55,13 +57,13 @@ function PreviewThemeSync({ styles }: { styles: string }) {
   return null;
 }
 
-const StageSandboxPanel = ({ learningGuide }: StageSandboxPanelProperties) => {
+const StageSandboxPanel = ({ sandboxId, source: providedSource }: StageSandboxPanelProperties) => {
   const siteTheme = useApplicationUiStore((state) => state.applicationTheme);
   const themeChoice = useStageSandboxStore((state) => state.themeChoice);
   const setThemeChoice = useStageSandboxStore((state) => state.setThemeChoice);
   const themeName = resolveSandboxTheme(themeChoice, siteTheme);
   const styles = createSandboxStyles(themeName);
-  const source = stageSandboxSources[learningGuide.guideId];
+  const source = providedSource ?? stageSandboxSources[sandboxId];
 
   // useMemo를 쓰는 이유: 위 [색 테마] 설명처럼 객체가 바뀌면 Sandpack이 고친 코드를 되돌린다.
   // 그래서 테마(styles)는 의존성에 넣지 않고, 편집기를 처음 만들 때의 테마 색만 getState()로 한 번 읽는다.
@@ -112,7 +114,7 @@ const StageSandboxPanel = ({ learningGuide }: StageSandboxPanelProperties) => {
   return (
     // key: 단계가 바뀌면 편집기를 새로 만들어 이전 단계 코드가 섞이지 않게 한다.
     <SandpackProvider
-      key={learningGuide.guideId}
+      key={sandboxId}
       template="react-ts"
       theme={sandboxEditorThemes[themeName]}
       files={sandpackFiles}
