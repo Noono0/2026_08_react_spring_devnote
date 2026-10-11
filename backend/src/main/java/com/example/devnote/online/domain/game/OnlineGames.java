@@ -25,6 +25,7 @@ public final class OnlineGames {
             case NUMBER_BASEBALL -> new NumberBaseballGame(nicknames);
             case BATTLESHIP -> new BattleshipGame(nicknames, random);
             case MEMORY_MATCH -> new MemoryMatchGame(nicknames, random);
+            case ONE_CARD -> new OneCardGame(nicknames, random);
             default -> throw new IllegalStateException("아직 만들지 않은 게임입니다: " + type);
         };
     }

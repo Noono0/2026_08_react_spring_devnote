@@ -7,6 +7,7 @@
 import { BattleshipGame } from "@/features/games/online/games/BattleshipGame";
 import { MemoryMatchGame } from "@/features/games/online/games/MemoryMatchGame";
 import { NumberBaseballGame } from "@/features/games/online/games/NumberBaseballGame";
+import { OneCardGame } from "@/features/games/online/games/OneCardGame";
 import type { OnlineClientMessage, OnlineRoom } from "@/features/games/online/onlineTypes";
 
 export interface CommonGameProperties {
@@ -24,6 +25,8 @@ export const CommonGameArea = (properties: CommonGameProperties) => {
       return <BattleshipGame {...properties} />;
     case "MEMORY_MATCH":
       return <MemoryMatchGame {...properties} />;
+    case "ONE_CARD":
+      return <OneCardGame {...properties} />;
     default:
       return <p className="online-hint">아직 준비 중인 게임입니다.</p>;
   }

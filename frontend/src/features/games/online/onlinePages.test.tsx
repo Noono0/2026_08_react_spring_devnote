@@ -477,6 +477,52 @@ describe("온라인 카드 짝 맞추기 대전", () => {
   });
 });
 
+describe("온라인 원카드", () => {
+  const oneCardRoom = (game: Record<string, unknown>): OnlineRoom => ({
+    ...baseRoom,
+    gameType: "ONE_CARD", gameTypeLabel: "원카드", status: "PLAYING", seats: ["p1", "p2"],
+    participants: [
+      { participantId: "p1", nickname: "철수", member: false, seatIndex: 0 },
+      { participantId: "p2", nickname: "영희", member: false, seatIndex: 1 },
+    ],
+    game: {
+      mySeat: 0, myHand: [{ id: 4, code: "S5" }, { id: 21, code: "H9" }, { id: 29, code: "D3" }, { id: 6, code: "S7" }],
+      handCounts: [4, 6], top: { id: 8, code: "S9" }, currentSuit: "S", anyCard: false, attackPenalty: 0, direction: 1,
+      turnSeat: 0, drawPileCount: 30, active: [true, true], ranks: [0, 0], finished: false, ...game,
+    },
+  });
+
+  it("낼 수 있는 카드만 누를 수 있고, 7은 무늬를 골라 낸다", () => {
+    renderRoom();
+    const socket = latestSocket();
+    socket.serverOpen();
+    socket.serverSend({ type: "ROOM_STATE", room: oneCardRoom({}) });
+    expect(screen.getByRole("button", { name: "다이아몬드 3 내기" })).toBeDisabled(); // 무늬·숫자 다름
+    fireEvent.click(screen.getByRole("button", { name: "하트 9 내기" })); // 숫자 9
+    expect(socket.sent.at(-1)).toEqual({ type: "GAME_ACTION", action: "PLAY", number: 21 });
+    fireEvent.click(screen.getByRole("button", { name: "스페이드 7 내기" }));
+    fireEvent.click(within(screen.getByRole("group", { name: "바꿀 무늬 고르기" })).getByRole("button", { name: /하트/ }));
+    expect(socket.sent.at(-1)).toEqual({ type: "GAME_ACTION", action: "PLAY", number: 6, text: "H" });
+    fireEvent.click(screen.getByRole("button", { name: "한 장 받기" }));
+    expect(socket.sent.at(-1)).toEqual({ type: "GAME_ACTION", action: "DRAW" });
+  });
+
+  it("공격받는 중에는 공격 카드만 낼 수 있고 받기 버튼에 장수가 나온다", () => {
+    renderRoom();
+    const socket = latestSocket();
+    socket.serverOpen();
+    socket.serverSend({ type: "ROOM_STATE", room: oneCardRoom({
+      top: { id: 1, code: "S2" }, attackPenalty: 2,
+      myHand: [{ id: 0, code: "S1" }, { id: 21, code: "H9" }, { id: 53, code: "CJ" }],
+    }) });
+    expect(screen.getByRole("button", { name: "하트 9 내기" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "스페이드 A 내기" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "컬러 조커 내기" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "2장 받기" })).toBeInTheDocument();
+    expect(screen.getByText("공격 +2")).toBeInTheDocument();
+  });
+});
+
 describe("온라인 대전 대기실", () => {
   const renderLobby = () => render(withProviders(
     <MemoryRouter initialEntries={["/games/online"]}>

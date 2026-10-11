@@ -241,6 +241,48 @@ button.battleship-cell:hover { background: #3a8fd0; filter: none; }
 .seat-2, .by-seat-2 { --seat-color: #2f9e44; }
 .seat-3, .by-seat-3 { --seat-color: #ae3ec9; }
 
+/* 트럼프 카드(원카드·블랙잭·포커 공용) */
+.playing-card {
+  display: inline-grid; grid-template-rows: auto 1fr; justify-items: center; width: 56px; height: 80px; padding: 5px 4px;
+  border: 1px solid #c9cfd8; border-radius: 8px; color: #1d2433; background: #fff; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+  font-weight: 900; line-height: 1;
+}
+.playing-card.red { color: #d6336c; }
+.playing-card.joker { color: #7048e8; background: linear-gradient(160deg, #fff, #f3f0ff); }
+.playing-card.joker.red { color: #e8590c; background: linear-gradient(160deg, #fff, #fff4e6); }
+.playing-card-rank { font-size: 16px; }
+.playing-card-suit { align-self: center; font-size: 26px; }
+.playing-card.joker .playing-card-rank { font-size: 10px; letter-spacing: 0.04em; }
+.playing-card.back { border-color: #24398f; background: repeating-linear-gradient(45deg, #3461ff 0 6px, #2a4fd6 6px 12px); }
+.playing-card.small { width: 22px; height: 32px; padding: 0; border-radius: 4px; box-shadow: none; }
+.playing-card.small .playing-card-rank { font-size: 9px; }
+.playing-card.small .playing-card-suit { font-size: 11px; }
+
+/* 원카드 */
+.one-card { display: grid; gap: 12px; justify-items: center; width: 100%; }
+.one-card-opponents { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.one-card-opponent { display: grid; gap: 4px; justify-items: center; min-width: 120px; padding: 8px 10px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--background-muted); }
+.one-card-opponent.turn { border-color: var(--primary-color); box-shadow: 0 0 0 2px var(--primary-soft); }
+.one-card-opponent.out { opacity: 0.5; }
+.one-card-opponent > span:last-child { color: var(--text-muted); font-size: 13px; }
+.one-card-backs { display: flex; }
+.one-card-backs .playing-card + .playing-card { margin-left: -12px; }
+.one-card-table { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 22px; padding: 14px 20px; border-radius: 16px; background: #1f6f43; }
+.one-card-pile, .one-card-top { display: grid; justify-items: center; gap: 6px; }
+.one-card-pile .online-hint { color: #d3f9d8; }
+.one-card-suit { color: #fff; font-size: 14px; font-weight: 800; }
+.one-card-info { display: grid; gap: 6px; color: #fff; font-size: 13px; font-weight: 700; }
+.one-card-attack { padding: 4px 10px; border-radius: 999px; background: var(--danger-color); font-size: 16px; font-weight: 900; text-align: center; }
+.one-card-hand { display: grid; gap: 8px; justify-items: center; width: 100%; }
+.one-card-hand h3 { margin: 0; font-size: 15px; }
+.one-card-hand h3 small { color: var(--text-muted); font-weight: 600; }
+.one-card-hand-cards { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.one-card-card { min-height: 0; padding: 0; border: 0; border-radius: 8px; background: transparent; }
+.one-card-card:disabled { opacity: 0.45; }
+.one-card-card.playable { transform: translateY(-6px); box-shadow: 0 0 0 3px var(--primary-color); }
+.one-card-suit-picker { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px; }
+.one-card-suit-picker .red { color: #d6336c; }
+
 /* 테트리스 대전은 판을 넓게 쓰도록 자리·채팅 패널을 판 아래로 내린다 */
 .online-room-layout.wide { grid-template-columns: minmax(0, 1fr); }
 .online-room-layout.wide .online-side { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
