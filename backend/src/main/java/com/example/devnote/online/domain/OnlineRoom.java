@@ -410,6 +410,10 @@ public class OnlineRoom {
         OnlineParticipant participant = requireParticipant(participantId);
         String normalized = text == null ? "" : text.replaceAll("[\\r\\n\\t]+", " ").strip();
         if (normalized.isEmpty() || normalized.length() > CHAT_MAX_LENGTH) throw new BusinessException(ErrorCode.ONLINE_CHAT_INVALID);
+        int seat = seatOf(participantId);
+        if (status == Status.PLAYING && game != null && seat >= 0 && !game.canChat(seat)) {
+            throw new BusinessException(ErrorCode.ONLINE_CHAT_INVALID, "탈락한 플레이어는 게임이 끝날 때까지 채팅할 수 없습니다.");
+        }
         if (!participant.tryRecordChat(now)) throw new BusinessException(ErrorCode.ONLINE_TOO_MANY_MESSAGES);
         appendChat(new OnlineChatMessage(++chatSequence, participant.getNickname(), normalized, now, false, seatOf(participantId) < 0));
     }

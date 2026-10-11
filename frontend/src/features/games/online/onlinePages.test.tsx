@@ -708,6 +708,63 @@ describe("온라인 체스", () => {
   });
 });
 
+describe("온라인 마피아", () => {
+  const players = (count: number) => Array.from({ length: count }, (_, seat) => ({ participantId: `p${seat + 1}`, nickname: ["철수", "영희", "민수", "지수"][seat] ?? `${seat}`, member: false, seatIndex: seat }));
+  const mafiaRoom = (game: Record<string, unknown>): OnlineRoom => ({
+    ...baseRoom,
+    gameType: "MAFIA", gameTypeLabel: "마피아", status: "PLAYING", seats: ["p1", "p2", "p3", "p4"],
+    participants: players(4),
+    game: {
+      mySeat: 0, myRole: "MAFIA", phase: "NIGHT", round: 1,
+      players: [{ alive: true, role: "MAFIA", done: false }, { alive: true, role: null, done: false }, { alive: true, role: null, done: false }, { alive: true, role: null, done: false }],
+      myChoice: null, mafiaChoices: {}, investigations: [], log: ["게임 시작!"], winnerTeam: null, finished: false, ...game,
+    },
+  });
+
+  it("밤에는 내 직업과 지목 버튼을 보여 주고 TARGET을 보낸다", () => {
+    renderRoom();
+    const socket = latestSocket();
+    socket.serverOpen();
+    socket.serverSend({ type: "ROOM_STATE", room: mafiaRoom({}) });
+    expect(screen.getByRole("region", { name: "내 직업" })).toHaveTextContent("나의 직업: 마피아");
+    const list = screen.getByRole("list", { name: "플레이어" });
+    expect(within(list).getAllByRole("button", { name: "지목" })).toHaveLength(3); // 나(마피아)는 빼고
+    fireEvent.click(within(list).getAllByRole("button", { name: "지목" })[1]!);
+    expect(socket.sent.at(-1)).toEqual({ type: "GAME_ACTION", action: "TARGET", number: 2 });
+  });
+
+  it("낮에는 투표·건너뛰기를 보내고, 경찰은 조사 결과를 본다", () => {
+    renderRoom();
+    const socket = latestSocket();
+    socket.serverOpen();
+    socket.serverSend({ type: "ROOM_STATE", room: mafiaRoom({
+      myRole: "POLICE", phase: "DAY",
+      players: [{ alive: true, role: "POLICE", done: true }, { alive: true, role: null, done: false }, { alive: false, role: null, done: false }, { alive: true, role: null, done: false }],
+      investigations: [{ seat: 1, mafia: true }],
+    }) });
+    expect(screen.getByRole("region", { name: "조사 결과" })).toHaveTextContent("영희: 마피아입니다!");
+    expect(screen.getByText(/투표 1\/3/)).toBeInTheDocument();
+    const list = screen.getByRole("list", { name: "플레이어" });
+    expect(within(list).getAllByRole("button", { name: "투표" })).toHaveLength(2); // 나와 탈락자는 빼고
+    fireEvent.click(within(list).getAllByRole("button", { name: "투표" })[0]!);
+    expect(socket.sent.at(-1)).toEqual({ type: "GAME_ACTION", action: "VOTE", number: 1 });
+    fireEvent.click(screen.getByRole("button", { name: "투표 건너뛰기" }));
+    expect(socket.sent.at(-1)).toEqual({ type: "GAME_ACTION", action: "VOTE", number: -1 });
+  });
+
+  it("시민은 밤에 버튼 없이 기다리고, 탈락하면 안내만 보인다", () => {
+    renderRoom();
+    const socket = latestSocket();
+    socket.serverOpen();
+    socket.serverSend({ type: "ROOM_STATE", room: mafiaRoom({ myRole: "CITIZEN", players: [{ alive: true, role: "CITIZEN", done: false }, { alive: true, role: null, done: false }, { alive: true, role: null, done: false }, { alive: true, role: null, done: false }] }) });
+    expect(screen.getByText(/시민은 밤에 할 일이 없습니다/)).toBeInTheDocument();
+    expect(within(screen.getByRole("list", { name: "플레이어" })).queryAllByRole("button")).toHaveLength(0);
+    socket.serverSend({ type: "ROOM_STATE", room: mafiaRoom({ myRole: "CITIZEN", phase: "DAY", players: [{ alive: false, role: "CITIZEN", done: false }, { alive: true, role: null, done: false }, { alive: true, role: null, done: false }, { alive: true, role: null, done: false }] }) });
+    expect(screen.getByText(/탈락했습니다/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "투표 건너뛰기" })).not.toBeInTheDocument();
+  });
+});
+
 describe("온라인 대전 대기실", () => {
   const renderLobby = () => render(withProviders(
     <MemoryRouter initialEntries={["/games/online"]}>

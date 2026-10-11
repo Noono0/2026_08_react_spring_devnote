@@ -32,6 +32,11 @@ public interface OnlineGame {
     /** 이 사람에게 보여 줄 게임 상태. seat이 null이면 관전자(숨긴 정보 없이) */
     Object viewFor(Integer seat);
 
+    /** 게임 중 이 자리가 채팅할 수 있는지. 마피아처럼 탈락한 사람이 정보를 흘리면 안 되는 게임만 막는다 */
+    default boolean canChat(int seat) {
+        return true;
+    }
+
     /** 지난번 이후 새로 생긴 안내 문구(채팅에 시스템 메시지로 남긴다). 꺼내면 비워진다 */
     default List<String> drainAnnouncements() {
         return List.of();

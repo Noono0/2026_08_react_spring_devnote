@@ -30,6 +30,7 @@ public final class OnlineGames {
             case SUTDA -> new SutdaGame(nicknames, random);
             case POKER -> new PokerGame(nicknames, random);
             case CHESS -> new ChessGame(nicknames);
+            case MAFIA -> new MafiaGame(nicknames, random);
             default -> throw new IllegalStateException("아직 만들지 않은 게임입니다: " + type);
         };
     }

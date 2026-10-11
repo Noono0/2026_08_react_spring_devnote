@@ -118,7 +118,7 @@ class OnlineRoomTest {
         assertError(() -> room.updateSettings("A", new OnlineRoomSettings("새 제목", OnlineGameType.OMOK, 2, "12", false, false), NOW),
             ErrorCode.ONLINE_ROOM_SETTINGS_INVALID); // 비밀번호 4자 미만
         assertThat(room.getTitle()).isEqualTo("한 판 해요");
-        assertError(() -> room.updateSettings("A", new OnlineRoomSettings("새 제목", OnlineGameType.MAFIA, 4, null, false, false), NOW),
+        assertError(() -> room.updateSettings("A", new OnlineRoomSettings("새 제목", null, 2, null, false, false), NOW), // 게임 종류 없음
             ErrorCode.ONLINE_GAME_NOT_AVAILABLE);
         assertError(() -> room.updateSettings("A", new OnlineRoomSettings("새 제목", OnlineGameType.OMOK, 4, null, false, false), NOW),
             ErrorCode.ONLINE_SEAT_COUNT_INVALID);

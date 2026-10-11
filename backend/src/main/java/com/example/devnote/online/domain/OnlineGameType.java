@@ -23,7 +23,7 @@ public enum OnlineGameType {
     BATTLESHIP("배틀십", 2, 2, true),
     NUMBER_BASEBALL("숫자 야구", 2, 4, true),
     ONE_CARD("원카드", 2, 4, true),
-    MAFIA("마피아", 4, 8, false),
+    MAFIA("마피아", 4, 8, true),
     MEMORY_MATCH("카드 짝 맞추기 대전", 2, 4, true),
     BLACKJACK("블랙잭", 1, 4, true),
     SUTDA("섯다", 2, 4, true),

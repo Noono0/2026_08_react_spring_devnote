@@ -381,6 +381,23 @@ button.battleship-cell:hover { background: #3a8fd0; filter: none; }
 .chess-promotion { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px; }
 .chess-history { display: flex; flex-wrap: wrap; gap: 4px 12px; width: min(100%, 480px); max-height: 120px; margin: 0; padding-left: 24px; overflow-y: auto; font-family: monospace; font-size: 13px; }
 
+/* 마피아: 밤에는 어두운 배경, 탈락한 사람은 흐리게 */
+.mafia { display: grid; gap: 12px; width: 100%; padding: 12px; border-radius: 16px; transition: background 0.4s; }
+.mafia.night { color: #e9ecef; background: #1d2433; }
+.mafia.night .game-status { color: #e9ecef; }
+.mafia.day { background: var(--background-muted); }
+.mafia-role { display: grid; gap: 4px; padding: 10px 14px; border-left: 6px solid var(--primary-color); border-radius: 10px; background: rgba(127, 127, 127, 0.15); }
+.mafia-role.role-mafia { border-left-color: #e03131; }
+.mafia-role.role-police { border-left-color: #1c7ed6; }
+.mafia-role.role-doctor { border-left-color: #2f9e44; }
+.mafia-players { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; margin: 0; padding: 0; list-style: none; }
+.mafia-player { display: grid; justify-items: center; gap: 4px; padding: 10px; border: 2px solid var(--border-color); border-radius: 12px; color: var(--text-color); background: var(--background-color); text-align: center; }
+.mafia-player.chosen { border-color: var(--primary-color); box-shadow: 0 0 0 2px var(--primary-soft); }
+.mafia-player.dead { opacity: 0.45; text-decoration: line-through; }
+.mafia-secret { margin: 0; padding: 8px 12px; border: 1px dashed #e03131; border-radius: 10px; }
+.mafia-secret ul { margin: 4px 0 0; padding-left: 20px; }
+.mafia-log { display: grid; gap: 2px; max-height: 160px; margin: 0; padding-left: 24px; overflow-y: auto; font-size: 13px; }
+
 /* 테트리스 대전은 판을 넓게 쓰도록 자리·채팅 패널을 판 아래로 내린다 */
 .online-room-layout.wide { grid-template-columns: minmax(0, 1fr); }
 .online-room-layout.wide .online-side { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
