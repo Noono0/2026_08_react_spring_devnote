@@ -409,8 +409,10 @@ API Workspace는 요청 실행·응답·History·Collection 기능을 모두 사
 | 2048 | 한 줄 밀기(`slideRow`) + 뒤집기·전치로 네 방향 |
 | 지뢰 찾기 | 첫 클릭 안전 지뢰 배치, BFS 연쇄 열기, chord |
 | 테트리스 | 행렬 회전·월 킥·충돌, 7-bag, 줄 지우기·점수·레벨 |
+| 뿌요뿌요 | 한 쌍 회전·벽 킥, 4개 연결 터짐·방해 뿌요, 연쇄 점수 |
 
-- **스도쿠 규칙(`sudoku/sudokuLogic.ts`)**: 온라인 대전 스도쿠 화면이 겹침 표시에 씁니다. 백트래킹으로 정답 판을 만들고, 칸을 지울 때마다 "답이 하나뿐인가"를 `countSolutions(판, 2)`로 확인합니다. 난이도(쉬움 40·보통 32·어려움 26개)마다 시드가 같으면 같은 문제가 나오는 것을 `sudokuLogic.test.ts`가 확인합니다. 숫자 넣기는 `setCell`이 새 판을 만들어 불변성을 지킵니다.
+- **스도쿠 규칙(`sudoku/sudokuLogic.ts`)**: 온라인 대전 스도쿠 화면이 겹침 표시에 씁니다. 백트래킹으로 정답 판을 만들고, 칸을 지울 때마다 "답이 하나뿐인가"를 `countSolutions(판, 2)`로 확인합니다. 난이도(쉬움 40·보통 32·어려움 26개)마다 시드가 같으면 같은 문제가 나오는 것을 `sudokuLogic.test.ts`가 확인합니다. 숫자 넣기는 `setCell`이 새 판을 만들어 불변성을 지킵니다. 혼자 연습(`SudokuPractice`)은 `sudokuReducer`로 숫자 넣기·시간을 맡고, 답이 하나뿐인 문제라 겹침 없이 다 채우면 완성입니다.
+- **대기 중 혼자 연습(`games/practice/`)**: 테트리스·뿌요뿌요·카드 짝 맞추기·2048·지뢰 찾기·스도쿠만, 방 상태가 `WAITING`일 때 `WaitingPracticePanel`이 같은 규칙 모듈로 혼자 하게 합니다. 오목·체스·마피아처럼 상대가 필요한 게임과 블랙잭(딜러 규칙이 서버에만 있음)은 빼 두었습니다. 게임이 시작되면 패널을 그리지 않아 연습이 닫힙니다. 끝난 판의 `연습 기록 올리기`는 브라우저가 계산한 값을 보내므로 대전 승패와 나눕니다.
 - **무작위 값과 순수 리듀서**: 리듀서 안에서 `Math.random`을 부르지 않습니다. 2048은 무작위 값을, 지뢰 찾기는 시드를 action에 담고, 테트리스는 난수 상태(`randomState`)를 게임 상태에 두고 `stepSeededRandom`으로 한 걸음씩 나아갑니다. 그래서 테스트가 매번 같은 결과를 확인합니다(`shared/random.ts`).
 
 ### 온라인 대전(WebSocket)
@@ -420,12 +422,12 @@ API Workspace는 요청 실행·응답·History·Collection 기능을 모두 사
 | 위치 | 볼 것 |
 |---|---|
 | `backend/.../online/domain/OnlineRoom.java` | 방 규칙(자리·관전자·방장 넘기기·인원 줄이기·방 정보 수정·채팅 도배 막기). 화면·네트워크를 몰라 단위 테스트로 확인 |
-| `OmokGame.java`, `TetrisBattle.java` | 게임 규칙. 오목은 서버가 판정하고, 테트리스는 각자 브라우저가 계산하고 서버는 판 요약·공격·탈락만 중계 |
+| `OmokGame.java`, `TetrisBattle.java`, `PuyoBattle.java` | 게임 규칙. 오목은 서버가 판정하고, 테트리스·뿌요뿌요는 각자 브라우저가 계산하고 서버는 판 요약·공격·탈락만 중계 |
 | `online/service/OnlineRoomService.java` | 방마다 `synchronized`로 잠가 동시에 같은 자리에 앉는 일을 막고, 바뀐 상태를 방 사람 모두에게 보냄 |
 | `online/websocket/*` | handshake에서 로그인 세션 확인, JSON 메시지를 type별로 나눠 Service 호출, 연결 끊김 정리, 허용한 Origin만 연결 |
 | `frontend/.../games/online/useOnlineRoom.ts` | 연결의 일생 = useEffect의 일생(연결·JOIN·PING·cleanup). `send`는 Effect 의존성에 쓰여 useCallback으로 고정 |
 | `onlineRoomReducer.ts`, `onlineTypes.ts` | 받은 메시지를 zod로 검사한 뒤 리듀서로 화면 상태에. 화면은 서버가 보낸 상태를 그대로 그림(서버가 정답) |
-| `components/OnlineTetrisGame.tsx` | 혼자 하기와 같은 `tetrisReducer`를 쓰고, "블록이 굳으면 판 보내기·방해 줄 넣기"를 Effect로 서버와 맞춤 |
+| `components/OnlineTetrisGame.tsx`, `OnlinePuyoGame.tsx` | 혼자 하기와 같은 리듀서를 쓰고, "쌍·블록이 굳으면 판 보내기·방해 넣기"를 Effect로 서버와 맞춤 |
 | `online/domain/game/SudokuGenerator.java`, `SudokuGame.java` | 서버가 백트래킹으로 답이 하나뿐인 문제를 만들어 모두에게 같은 문제를 줌. 판은 사람마다 따로, 남에게는 채운 칸 수만(맞은 칸 수를 보내면 정답을 알아낼 수 있음), 채점은 서버가 하고 처음 완성한 사람에서 바로 끝 |
 | `online/games/SudokuGame.tsx`, `SudokuBoard.tsx` | 숫자를 넣어도 화면이 판을 바꾸지 않고 PLACE·CLEAR만 보냄(서버가 보낸 내 판으로 다시 그림). 겹침은 내 판만으로 화면이 계산, 로빙 탭인덱스 키보드 조작 |
 | `online/domain/OnlineGameType.java`(`getOptions`·`getDefaultOption`), `OnlineRoom.resolveGameOption` | 방장이 고르는 게임 옵션. 고를 수 있는 값은 게임 종류 옆에 한 곳에만 적고, 서버가 검사(틀리면 `ONLINE_GAME_OPTION_INVALID`)·게임을 바꾸면 처음 값으로·게임 중에는 못 바꿈. 시작할 때 `OnlineGames.create`에 넘김 |
@@ -434,9 +436,9 @@ API Workspace는 요청 실행·응답·History·Collection 기능을 모두 사
 | `online/domain/game/MinesweeperGame.java` | 지뢰 배치는 서버만 알고 `viewFor`는 게임이 끝나기 전엔 지뢰 글자를 아예 쓰지 않음(숨긴 정보는 보내지 않는 것이 가장 안전). BFS 연쇄 열기·CHORD·클릭 수 |
 | `online/games/Game2048Battle.tsx`, `MinesweeperBattle.tsx` | 테트리스 대전 같은 배치(내 큰 판 + 남의 작은 판), 혼자 하기 CSS·`moveBoard` 재사용, 바뀌지 않을 행동은 보내지 않기, 로빙 탭인덱스·오른쪽 클릭·깃발 모드 |
 
-- **서버 부담**: 방은 DB 대신 메모리(`OnlineRoomStore`)에 두고, 방 50개·방당 10명·메시지 1초 20개·채팅 1초 2개로 제한합니다. 오목은 수마다 판(1KB)을 보내고, 테트리스는 블록이 굳을 때만 200글자 요약을 보냅니다.
-- **학습용 한계**: 테트리스 판·점수는 서버가 다시 계산해 검증하지 않습니다(조작을 막으려면 서버가 같은 규칙으로 다시 계산해야 합니다).
-- **테스트**: `OnlineRoomTest`·`OmokGameTest`·`TetrisBattleTest`·`Game2048GameTest`·`MinesweeperGameTest`·`RaceStandingsTest`·`OnlineRoomServiceTest`(가짜 전송기), `OnlineGameWebSocketIntegrationTest`(실제 서버 + WebSocket 3개, Docker 필요), 화면은 `onlinePages.test.tsx`(가짜 WebSocket)입니다.
+- **서버 부담**: 방은 DB 대신 메모리(`OnlineRoomStore`)에 두고, 방 50개·방당 10명·메시지 1초 20개·채팅 1초 2개로 제한합니다. 오목은 수마다 판(1KB)을 보내고, 테트리스는 블록이 굳을 때만 200글자, 뿌요뿌요는 72글자 요약을 보냅니다.
+- **학습용 한계**: 테트리스·뿌요뿌요 판·점수는 서버가 다시 계산해 검증하지 않습니다(조작을 막으려면 서버가 같은 규칙으로 다시 계산해야 합니다).
+- **테스트**: `OnlineRoomTest`·`OmokGameTest`·`TetrisBattleTest`·`PuyoBattleTest`·`Game2048GameTest`·`MinesweeperGameTest`·`RaceStandingsTest`·`OnlineRoomServiceTest`(가짜 전송기), `OnlineGameWebSocketIntegrationTest`(실제 서버 + WebSocket 3개, Docker 필요), 화면은 `onlinePages.test.tsx`(가짜 WebSocket)입니다.
 
 ### 게임 랭킹(서버 집계)
 

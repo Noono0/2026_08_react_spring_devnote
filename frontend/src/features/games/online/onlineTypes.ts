@@ -90,6 +90,24 @@ const tetrisSchema = z.object({
   players: z.array(tetrisPlayerSchema),
 });
 
+/** 뿌요뿌요 대전 판 요약: 보이는 12줄 × 6칸 = 72글자("." 빈칸, R·G·B·Y·P 색, N 방해 뿌요) */
+export const PUYO_BOARD_TEXT_LENGTH = 72;
+const puyoPlayerSchema = z.object({
+  seatIndex: z.number().int(),
+  nickname: z.string(),
+  alive: z.boolean(),
+  score: z.number().int(),
+  chains: z.number().int(),
+  board: z.string().regex(/^[.RGBYPN]{72}$/),
+  rank: z.number().int(),
+});
+
+const puyoSchema = z.object({
+  seed: z.number().int(),
+  winnerSeat: z.number().int().nullish(),
+  players: z.array(puyoPlayerSchema),
+});
+
 const participantSchema = z.object({
   participantId: z.string(),
   nickname: z.string(),
@@ -116,6 +134,7 @@ export const onlineRoomSchema = z.object({
   participants: z.array(participantSchema),
   omok: omokSchema.nullish(),
   tetris: tetrisSchema.nullish(),
+  puyo: puyoSchema.nullish(),
   /** 공통 틀 게임(숫자 야구 등)의 상태. 모양은 gameType마다 달라 각 게임 화면이 자기 스키마로 다시 확인한다 */
   game: z.unknown().nullish(),
   lastResult: z.string().nullish(),
@@ -137,6 +156,7 @@ export const onlineServerMessageSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("ERROR"), error: z.object({ code: z.string(), message: z.string() }) }),
   z.object({ type: z.literal("PONG") }),
   z.object({ type: z.literal("TETRIS_GARBAGE"), garbage: z.object({ lines: z.number().int().min(1).max(20), holeCol: z.number().int().min(0).max(9), fromNickname: z.string() }) }),
+  z.object({ type: z.literal("PUYO_GARBAGE"), garbage: z.object({ lines: z.number().int().min(1).max(30), holeCol: z.number().int().min(0).max(5), fromNickname: z.string() }) }),
 ]);
 
 export type OnlineRoom = z.infer<typeof onlineRoomSchema>;
@@ -145,6 +165,8 @@ export type OnlineChat = z.infer<typeof chatSchema>;
 export type OmokState = z.infer<typeof omokSchema>;
 export type TetrisBattleState = z.infer<typeof tetrisSchema>;
 export type TetrisBattlePlayer = z.infer<typeof tetrisPlayerSchema>;
+export type PuyoBattleState = z.infer<typeof puyoSchema>;
+export type PuyoBattlePlayer = z.infer<typeof puyoPlayerSchema>;
 export type OnlineServerMessage = z.infer<typeof onlineServerMessageSchema>;
 
 // ── 방 안(WebSocket, 화면 → 서버) ─────────────────────────────
@@ -173,5 +195,8 @@ export type OnlineClientMessage =
   | { type: "TETRIS_BOARD"; board: string; score: number; lines: number }
   | { type: "TETRIS_ATTACK"; cleared: number }
   | { type: "TETRIS_TOPPED_OUT" }
+  | { type: "PUYO_BOARD"; board: string; score: number; lines: number }
+  | { type: "PUYO_ATTACK"; cleared: number }
+  | { type: "PUYO_TOPPED_OUT" }
   | { type: "GAME_ACTION"; action: string; text?: string; number?: number; numbers?: number[] }
   | { type: "PING" };

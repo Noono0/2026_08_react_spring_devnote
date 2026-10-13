@@ -20,6 +20,21 @@ vi.mock("@/shared/config/applicationEnvironment", () => ({
   applicationEnvironment: { VITE_API_BASE_URL: "/api/v1", VITE_HTTP_CLIENT: "axios", VITE_DEVELOPMENT_MEMBER_ID: "1" },
 }));
 vi.mock("@/features/auth/api/authApi", () => ({ getAuthSession: vi.fn() }));
+// 3D 당구대(three.js·WebGL)는 jsdom에서 그릴 수 없으므로, 받은 값을 글자로 보여 주고 콜백을 버튼으로 부르는 가짜로 바꾼다
+vi.mock("@/features/games/online/games/billiards/BilliardsTable3D", () => ({
+  default: (props: {
+    replay: { seq: number } | null; aim: { degrees: number } | null;
+    onReplayEnd: () => void; onAimDegrees: (degrees: number) => void; onPlace: (point: { x: number; y: number }) => void;
+  }) => (
+    <div data-testid="billiards-3d">
+      <span>{props.replay ? `재생 ${props.replay.seq}` : "정지"}</span>
+      <span>{props.aim ? "조준 가능" : "조준 없음"}</span>
+      <button type="button" onClick={props.onReplayEnd}>재생 끝</button>
+      <button type="button" onClick={() => props.onAimDegrees(90)}>위로 조준</button>
+      <button type="button" onClick={() => props.onPlace({ x: 600, y: 300 })}>여기에 놓기</button>
+    </div>
+  ),
+}));
 vi.mock("@/features/games/online/onlineApi", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/features/games/online/onlineApi")>()),
   getOnlineGameTypes: vi.fn(() => Promise.resolve([
@@ -268,6 +283,53 @@ describe("온라인 대전 방 화면", () => {
     socket.serverSend({ type: "ROOM_STATE", room: { ...baseRoom, myParticipantId: "p2" } });
     expect(screen.queryByRole("button", { name: "방 정보 수정" })).not.toBeInTheDocument();
     expect(screen.getByText(/관전 중입니다/)).toBeInTheDocument();
+  });
+
+  it("혼자 연습할 수 있는 게임 방에서는 연습하기가 보이고, 게임이 시작되면 사라진다", () => {
+    renderRoom();
+    const socket = latestSocket();
+    socket.serverOpen();
+    socket.serverSend({ type: "ROOM_STATE", room: { ...baseRoom, gameType: "TETRIS", gameTypeLabel: "테트리스 대전" } });
+    expect(screen.getByRole("region", { name: "혼자 연습하기" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "테트리스 연습하기" }));
+    expect(screen.getByRole("application", { name: /테트리스 연습 영역/ })).toBeInTheDocument();
+
+    const emptyText = ".".repeat(200);
+    socket.serverSend({
+      type: "ROOM_STATE",
+      room: {
+        ...baseRoom, gameType: "TETRIS", gameTypeLabel: "테트리스 대전", status: "PLAYING", seats: ["p1", "p2"],
+        participants: [
+          { participantId: "p1", nickname: "철수", member: false, seatIndex: 0 },
+          { participantId: "p2", nickname: "영희", member: false, seatIndex: 1 },
+        ],
+        tetris: {
+          seed: 42, winnerSeat: null,
+          players: [
+            { seatIndex: 0, nickname: "철수", alive: true, score: 0, lines: 0, board: emptyText, rank: 0 },
+            { seatIndex: 1, nickname: "영희", alive: true, score: 0, lines: 0, board: emptyText, rank: 0 },
+          ],
+        },
+      },
+    });
+    expect(screen.queryByRole("region", { name: "혼자 연습하기" })).not.toBeInTheDocument();
+  });
+
+  it("뿌요뿌요 방에서도 연습하기가 보인다", () => {
+    renderRoom();
+    const socket = latestSocket();
+    socket.serverOpen();
+    socket.serverSend({ type: "ROOM_STATE", room: { ...baseRoom, gameType: "PUYO", gameTypeLabel: "뿌요뿌요 대전", gameOption: "4", gameOptionLabel: "4색" } });
+    fireEvent.click(screen.getByRole("button", { name: "뿌요뿌요 연습하기" }));
+    expect(screen.getByRole("application", { name: /뿌요뿌요 연습 영역/ })).toBeInTheDocument();
+  });
+
+  it("오목처럼 상대가 필요한 게임은 연습하기가 없다", () => {
+    renderRoom();
+    const socket = latestSocket();
+    socket.serverOpen();
+    socket.serverSend({ type: "ROOM_STATE", room: baseRoom });
+    expect(screen.queryByRole("region", { name: "혼자 연습하기" })).not.toBeInTheDocument();
   });
 });
 
@@ -855,6 +917,10 @@ describe("온라인 스도쿠", () => {
     fireEvent.click(screen.getByRole("button", { name: "숫자 4" }));
     expect(socket.sent).toHaveLength(sentBefore);
 
+    // 내가 넣은 숫자만 동그라미(sudoku-entry) 안에 그린다. 고정 숫자는 그냥 숫자다
+    expect(within(screen.getByRole("button", { name: "1행 3열, 4" })).getByText("4")).toHaveClass("sudoku-entry");
+    expect(screen.getByRole("button", { name: "1행 1열, 고정 숫자 5" }).children).toHaveLength(0);
+
     fireEvent.click(screen.getByRole("button", { name: "1행 3열, 4" }));
     fireEvent.click(screen.getByRole("button", { name: "지우기" }));
     expect(socket.sent.at(-1)).toEqual({ type: "GAME_ACTION", action: "CLEAR", numbers: [0, 2] });
@@ -1020,6 +1086,135 @@ describe("온라인 지뢰 찾기 대전", () => {
     expect(screen.getByRole("button", { name: "2행 3열, 틀린 깃발" })).toBeInTheDocument();
     expect(screen.getByText(/지뢰 위치가 공개되었습니다/)).toBeInTheDocument();
     expect(screen.getByRole("figure", { name: "영희 판, 8/8칸 · 2번, 성공, 1위" })).toBeInTheDocument();
+  });
+});
+
+describe("온라인 당구", () => {
+  const caromBalls = [{ id: 0, x: 711, y: 863, pocketed: false }, { id: 1, x: 711, y: 711, pocketed: false }, { id: 2, x: 2133, y: 711, pocketed: false }];
+  const shot = (seq: number, summary: string) => ({ seq, shooterSeat: 1, cueBall: 1, frames: [[711, 863, 711, 711, 2133, 711]], events: [], durationMs: 1000, summary });
+  const billiardsRoom = (game: Record<string, unknown>): OnlineRoom => ({
+    ...baseRoom,
+    gameType: "BILLIARDS", gameTypeLabel: "당구", status: "PLAYING", seats: ["p1", "p2"],
+    participants: [
+      { participantId: "p1", nickname: "철수", member: false, seatIndex: 0 },
+      { participantId: "p2", nickname: "영희", member: false, seatIndex: 1 },
+    ],
+    game: {
+      variant: "THREE_CUSHION", variantLabel: "3쿠션", tableLength: 2844, tableWidth: 1422, ballRadius: 30.75, pockets: false,
+      balls: caromBalls, mySeat: 0, turnSeat: 0, cueBalls: [0, 1], scores: [0, 0], target: 10, innings: [1, 0], groups: [null, null],
+      ballInHand: false, lastShot: null, winners: [], result: null, finished: false, ...game,
+    },
+  });
+  const openBilliards = async (game: Record<string, unknown>) => {
+    renderRoom();
+    const socket = latestSocket();
+    socket.serverOpen();
+    socket.serverSend({ type: "ROOM_STATE", room: billiardsRoom(game) });
+    await screen.findByTestId("billiards-3d");
+    return socket;
+  };
+
+  it("조준·힘·당점을 골라 SHOT을 보낸다", async () => {
+    const socket = await openBilliards({});
+    expect(screen.getByText("조준 가능")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "위로 조준" }));
+    expect(screen.getByLabelText(/조준 각도 90.00°/)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText(/^힘/), { target: { value: "60" } });
+    fireEvent.click(screen.getByRole("button", { name: "밀어치기" }));
+    fireEvent.click(screen.getByRole("button", { name: "치기" }));
+    expect(socket.sent.at(-1)).toEqual({ type: "GAME_ACTION", action: "SHOT", numbers: [90_000, 60, 0, 35] });
+  });
+
+  it("새 샷이 오면 궤적을 재생하는 동안 조작을 막고, 끝나면 결과를 보여 준다", async () => {
+    const socket = await openBilliards({ lastShot: shot(1, "두 공을 다 맞히지 못함") });
+    expect(screen.getByText("정지")).toBeInTheDocument(); // 들어오기 전 샷은 재생하지 않는다
+    socket.serverSend({ type: "ROOM_STATE", room: billiardsRoom({ lastShot: shot(2, "3쿠션 성공! (두 번째 공 전에 쿠션 3번)") }) });
+    expect(screen.getByText("재생 2")).toBeInTheDocument();
+    expect(screen.getByText("조준 없음")).toBeInTheDocument();
+    expect(screen.getByText(/영희 샷 재생 중/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "치기" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "재생 끝" }));
+    expect(screen.getByText("정지")).toBeInTheDocument();
+    expect(screen.getByText(/지난 샷\(영희\): 3쿠션 성공/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "치기" })).toBeEnabled();
+  });
+
+  it("8볼 파울 뒤에는 수구를 원하는 곳에 놓는다(PLACE)", async () => {
+    const poolBalls = [{ id: 0, x: 635, y: 635, pocketed: false }, { id: 8, x: 1950, y: 635, pocketed: false }];
+    const socket = await openBilliards({
+      variant: "EIGHT_BALL", variantLabel: "8볼 포켓", tableLength: 2540, tableWidth: 1270, ballRadius: 28.575, pockets: true,
+      balls: poolBalls, cueBalls: [0, 0], groups: ["SOLID", "STRIPE"], ballInHand: true,
+    });
+    expect(screen.getByText("솔리드 · 남은 공 0개")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "수구 옮기기" }));
+    fireEvent.click(screen.getByRole("button", { name: "여기에 놓기" }));
+    expect(socket.sent.at(-1)).toEqual({ type: "GAME_ACTION", action: "PLACE", numbers: [600, 300] });
+  });
+
+  it("상대 차례에는 샷 조작이 보이지 않는다", async () => {
+    await openBilliards({ turnSeat: 1 });
+    expect(screen.getByText("영희 차례")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "치기" })).not.toBeInTheDocument();
+    expect(screen.getByText("조준 없음")).toBeInTheDocument();
+  });
+});
+
+describe("온라인 올림픽", () => {
+  const player = (extra: Record<string, unknown> = {}) => ({ active: true, submitted: false, ready: false, progress: null, gold: 0, silver: 0, bronze: 0, ...extra });
+  const olympicRoom = (game: Record<string, unknown>): OnlineRoom => ({
+    ...baseRoom,
+    gameType: "OLYMPIC", gameTypeLabel: "올림픽", status: "PLAYING", seats: ["p1", "p2"],
+    participants: [
+      { participantId: "p1", nickname: "철수", member: false, seatIndex: 0 },
+      { participantId: "p2", nickname: "영희", member: false, seatIndex: 1 },
+    ],
+    game: { mySeat: 0, phase: "SELECT", events: [], eventIndex: 0, currentEvent: null, players: [player(), player()], results: [], winners: [], finished: false, ...game },
+  });
+  // jsdom에는 Canvas 그리기가 없으므로 경기장은 그리지 않는다(흐름만 확인)
+  let canvasSpy: { mockRestore: () => void } | null = null;
+  beforeEach(() => {
+    canvasSpy = vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null);
+  });
+  afterEach(() => canvasSpy?.mockRestore());
+  const openOlympic = (game: Record<string, unknown>) => {
+    renderRoom();
+    const socket = latestSocket();
+    socket.serverOpen();
+    socket.serverSend({ type: "ROOM_STATE", room: olympicRoom(game) });
+    return socket;
+  };
+
+  it("1번 선수가 종목을 골라 개막하면 SELECT를 보낸다", () => {
+    const socket = openOlympic({});
+    expect(screen.getByRole("group", { name: /종목 고르기 \(6개\)/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "달리기만" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /높이뛰기/ }));
+    fireEvent.click(screen.getByRole("button", { name: "3개 종목으로 개막" }));
+    expect(socket.sent.at(-1)).toEqual({ type: "GAME_ACTION", action: "SELECT", numbers: [0, 1, 5] });
+  });
+
+  it("경기 중에는 내 경기 화면과 조작 버튼, 기록을 낸 뒤에는 다른 선수 진행을 보여 준다", () => {
+    const socket = openOlympic({ phase: "EVENT", events: ["SPRINT_100"], currentEvent: "SPRINT_100" });
+    expect(screen.getByRole("img", { name: "100m 달리기 경기 화면" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /왼발/ })).toBeInTheDocument();
+    socket.serverSend({ type: "ROOM_STATE", room: olympicRoom({ phase: "EVENT", events: ["SPRINT_100"], currentEvent: "SPRINT_100", players: [player({ submitted: true, progress: 10_000 }), player({ progress: 4_200 })] }) });
+    const status = screen.getByRole("list", { name: "경기 상황" });
+    expect(within(status).getByText("기록 제출")).toBeInTheDocument();
+    expect(within(status).getByText("경기 중…")).toBeInTheDocument();
+  });
+
+  it("종목이 끝나면 기록·메달을 보여 주고 다음 종목으로 NEXT를 보낸다", () => {
+    const socket = openOlympic({
+      phase: "RESULT", events: ["SPRINT_100", "LONG_JUMP"], currentEvent: "SPRINT_100",
+      players: [player({ gold: 1 }), player({ silver: 1 })],
+      results: [{ event: "SPRINT_100", marks: [10_530, null], medals: ["GOLD", null] }],
+    });
+    const table = screen.getByRole("table", { name: "100m 달리기 결과" });
+    expect(within(table).getByText("10.53초")).toBeInTheDocument();
+    expect(within(table).getByText("기록 없음")).toBeInTheDocument();
+    expect(within(table).getByText("🥇 금")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "다음 종목: 멀리뛰기" }));
+    expect(socket.sent.at(-1)).toEqual({ type: "GAME_ACTION", action: "NEXT" });
   });
 });
 

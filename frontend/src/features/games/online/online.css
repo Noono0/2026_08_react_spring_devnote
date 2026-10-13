@@ -136,6 +136,17 @@
 .tetris-nameplate > span:last-child { margin-left: auto; font-weight: 700; white-space: nowrap; }
 .tetris-host-mark { flex-shrink: 0; padding: 0 6px; border-radius: 999px; color: #fff; background: #e03131; font-size: 10px; }
 .tetris-arena-stage { display: grid; grid-template-columns: 64px auto 10px 64px; align-items: start; gap: 8px; padding: 4px; border-radius: 12px; }
+.puyo-arena-stage { grid-template-columns: 64px auto 10px; }
+.tetris-arena .puyo-board { --puyo-cell: 28px; }
+.tetris-arena-stage .puyo-board-wrap { grid-area: auto; }
+.puyo-touch-controls.online { grid-area: auto; width: min(100%, 420px); }
+.puyo-opponent-board {
+  position: relative; display: grid; grid-template-columns: repeat(6, 1fr); grid-template-rows: repeat(12, 1fr);
+  aspect-ratio: 1 / 2; padding: 3px; border-radius: 6px; background: var(--tetris-board);
+}
+.puyo-opponent-board .puyo-cell { box-shadow: none; }
+.tetris-arena-slot .puyo-preview .puyo-cell { width: 12px; height: 12px; }
+.tetris-arena-slot.large .puyo-preview .puyo-cell { width: 16px; height: 16px; }
 .tetris-arena-stage:focus-visible { outline: 3px solid var(--primary-color); outline-offset: 2px; }
 .tetris-arena .tetris-board { --tetris-cell: 24px; }
 /* 혼자 하기 CSS의 grid-area(board)를 풀어 내 판 칸(HOLD | 판 | 게이지 | NEXT) 순서대로 놓는다 */
@@ -458,6 +469,8 @@ button.battleship-cell:hover { background: #3a8fd0; filter: none; }
 .sudoku-cell.conflict:not(.selected) { background: color-mix(in srgb, var(--danger-color) 12%, transparent); }
 .sudoku-cell.wrong { text-decoration: line-through; }
 .sudoku-cell.revealed { color: var(--text-muted); font-weight: 500; }
+/* 내가 넣은 숫자: 원 안에 표시해 고정 숫자와 구분한다(틀림·겹침이면 원도 빨간색) */
+.sudoku-entry { display: grid; place-items: center; width: 76%; aspect-ratio: 1; border: 2px solid currentColor; border-radius: 50%; }
 .sudoku-cell:focus-visible { z-index: 1; outline: 3px solid var(--primary-color); outline-offset: -3px; }
 .sudoku-board.read-only .sudoku-cell { cursor: default; }
 .sudoku-number-pad { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 6px; width: min(100%, 468px); }
@@ -472,6 +485,11 @@ button.battleship-cell:hover { background: #3a8fd0; filter: none; }
 .sudoku-battle-player progress { width: 100%; height: 8px; accent-color: var(--seat-color, var(--primary-color)); }
 .sudoku-battle-player.out { opacity: 0.5; }
 .sudoku-battle-player.winner { box-shadow: 0 0 0 3px var(--success-color); }
+
+.waiting-practice { display: grid; gap: 12px; margin-top: 4px; padding-top: 14px; border-top: 1px dashed var(--border-color); }
+.waiting-practice-header { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.waiting-practice-header h2 { margin: 0 0 4px; font-size: 16px; }
+.waiting-practice-header .online-hint { max-width: 52ch; }
 
 /* 테트리스 대전은 판을 넓게 쓰도록 자리·채팅 패널을 판 아래로 내린다 */
 .online-room-layout.wide { grid-template-columns: minmax(0, 1fr); }
@@ -493,3 +511,70 @@ button.battleship-cell:hover { background: #3a8fd0; filter: none; }
   .online-game-area { padding: 8px; }
   .omok-board { padding: 4px; }
 }
+
+/* 당구: 3D 당구대 + 샷 조작(조준·힘·당점) */
+.billiards { display: grid; gap: 10px; width: 100%; }
+.billiards-players { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.billiards-player { display: grid; gap: 2px; min-width: 180px; padding: 8px 12px; border: 2px solid var(--border-color); border-radius: 12px; background: var(--background-muted); }
+.billiards-player strong { display: flex; align-items: center; gap: 6px; }
+.billiards-player span { color: var(--text-muted); font-size: 13px; }
+.billiards-player.turn { border-color: var(--primary-color); box-shadow: 0 0 0 2px var(--primary-soft); }
+.billiards-player.winner { border-color: var(--success-color); }
+.billiards-ball-chip { display: inline-block; width: 14px; height: 14px; border: 1px solid rgba(0, 0, 0, 0.35); border-radius: 50%; }
+.billiards-rule, .billiards-last { margin: 0; color: var(--text-muted); font-size: 13px; }
+.billiards-stage-wrap { position: relative; width: 100%; border-radius: 14px; overflow: hidden; background: #101318; }
+.billiards-stage-wrap:focus-visible { outline: 3px solid var(--primary-color); outline-offset: 2px; }
+.billiards-stage { width: 100%; aspect-ratio: 16 / 9; min-height: 240px; max-height: 70vh; touch-action: none; }
+.billiards-stage-wrap .online-hint { margin: 0; padding: 40px 16px; color: #dfe3ea; text-align: center; }
+.billiards-canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
+.billiards-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.billiards-check { display: inline-flex; align-items: center; gap: 4px; font-size: 14px; }
+.billiards-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; align-items: start; padding: 12px; border: 1px solid var(--border-color); border-radius: 14px; background: var(--background-muted); }
+.billiards-control-row { display: grid; gap: 6px; }
+.billiards-control-row input[type="range"] { width: 100%; }
+.billiards-nudge, .billiards-presets { display: flex; flex-wrap: wrap; gap: 4px; }
+.billiards-nudge button, .billiards-presets button { padding: 4px 8px; font-size: 12px; }
+.billiards-power { accent-color: #e8590c; }
+.billiards-tip { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.billiards-tip-pad { flex: none; cursor: pointer; touch-action: none; }
+.billiards-tip-ball { fill: #f7f5ee; stroke: #868e96; stroke-width: 2; }
+.billiards-tip-limit { fill: none; stroke: #adb5bd; stroke-dasharray: 4 3; }
+.billiards-tip-axis { stroke: #ced4da; stroke-width: 1; }
+.billiards-tip-dot { fill: #2f6fd0; stroke: #fff; stroke-width: 2; }
+.billiards-tip-inputs { display: grid; flex: 1; gap: 6px; min-width: 160px; font-size: 13px; }
+.billiards-tip-inputs label { display: grid; gap: 2px; }
+.billiards-place { display: flex; flex-wrap: wrap; grid-column: 1 / -1; align-items: center; gap: 8px; font-size: 14px; }
+.billiards-shoot { grid-column: 1 / -1; min-height: 48px; font-size: 18px; font-weight: 800; }
+
+/* 올림픽: 경기장 캔버스 + 조작 버튼 + 메달판 */
+.olympic, .olympic-practice, .olympic-play { display: grid; gap: 10px; width: 100%; }
+.olympic-medals { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.olympic-medal-row { display: grid; gap: 2px; min-width: 150px; padding: 6px 12px; border: 2px solid var(--border-color); border-left-width: 6px; border-radius: 12px; background: var(--background-muted); }
+.olympic-medal-row span { font-size: 14px; }
+.olympic-medal-row.winner { box-shadow: 0 0 0 2px var(--success-color); }
+.olympic-medal-row.out { opacity: 0.5; }
+.olympic-hud { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; font-size: 14px; }
+.olympic-hud strong { font-size: 16px; }
+.olympic-wr { color: var(--text-muted); }
+.olympic-meter { display: inline-flex; align-items: center; gap: 6px; }
+.olympic-meter progress { width: 120px; height: 10px; accent-color: #f08c00; }
+.olympic-canvas { display: block; width: 100%; aspect-ratio: 5 / 2; border-radius: 12px; background: #4dabf7; }
+.olympic-message { min-height: 1.4em; margin: 0; font-weight: 800; text-align: center; }
+.olympic-attempts { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0; padding-left: 20px; font-size: 14px; }
+.olympic-pad { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.olympic-key { min-height: 56px; font-size: 16px; font-weight: 800; touch-action: manipulation; user-select: none; }
+.olympic-key.action { background: #f08c00; }
+.olympic-picker { display: grid; gap: 10px; margin: 0; padding: 12px; border: 1px solid var(--border-color); border-radius: 12px; }
+.olympic-picker legend { padding: 0 6px; font-weight: 800; }
+.olympic-picker-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+.olympic-picker-item { display: flex; gap: 8px; align-items: flex-start; padding: 8px 10px; border: 2px solid var(--border-color); border-radius: 10px; cursor: pointer; }
+.olympic-picker-item.checked { border-color: var(--primary-color); background: var(--primary-soft); }
+.olympic-picker-item span { display: grid; gap: 2px; }
+.olympic-picker-item small { color: var(--text-muted); }
+.olympic-select { display: grid; gap: 10px; }
+.olympic-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.olympic-table th, .olympic-table td { padding: 6px 8px; border-bottom: 1px solid var(--border-color); text-align: left; }
+.olympic-waiting { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.olympic-waiting li { display: grid; grid-template-columns: minmax(80px, 140px) 1fr auto; gap: 10px; align-items: center; }
+.olympic-waiting progress { width: 100%; accent-color: #e03131; }
+.olympic-table caption { padding: 4px 0; font-weight: 800; text-align: left; }

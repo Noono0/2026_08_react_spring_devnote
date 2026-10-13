@@ -200,6 +200,39 @@ class OnlineRoomServiceTest {
     }
 
     @Test
+    void 뿌요뿌요_대전은_같은_시드로_시작하고_방해_뿌요는_받는_사람에게만_간다() {
+        OnlineRoomCreatedResponse created = service.createRoom(new OnlineRoomCreateRequest("뿌요뿌요", OnlineGameType.PUYO, 2, null, false, null), new MockHttpServletRequest());
+        OnlineConnection first = new OnlineConnection("s1", null, null);
+        OnlineConnection second = new OnlineConnection("s2", null, null);
+        OnlineConnection watcher = new OnlineConnection("s3", null, null);
+        service.join(first, joinMessage(created.roomId(), "하나", null, created.hostToken()));
+        service.join(second, joinMessage(created.roomId(), "둘둘", null, null));
+        service.join(watcher, joinMessage(created.roomId(), "구경", null, null));
+        service.sit(first, 0);
+        service.sit(second, 1);
+        service.start(first);
+        var puyo = sender.lastRoomStateFor("s3").room().puyo();
+        assertThat(puyo.seed()).isEqualTo(sender.lastRoomStateFor("s1").room().puyo().seed());
+        assertThat(puyo.players()).extracting("nickname").containsExactly("하나", "둘둘");
+        assertThat(sender.lastRoomStateFor("s1").room().gameOption()).isEqualTo("4");
+
+        sender.sent.clear();
+        service.puyoAttack(first, 4);
+        assertThat(sender.sent).hasSize(1);
+        assertThat(sender.sent.get(0).sessionId()).isEqualTo("s2");
+        assertThat(sender.sent.get(0).message().type()).isEqualTo("PUYO_GARBAGE");
+        assertThat(sender.sent.get(0).message().garbage().lines()).isEqualTo(4);
+        assertThat(sender.sent.get(0).message().garbage().fromNickname()).isEqualTo("하나");
+
+        service.updatePuyoBoard(second, "N".repeat(6) + ".".repeat(66), 10, 0);
+        assertThat(sender.lastRoomStateFor("s3").room().puyo().players().get(1).board()).startsWith("NNNNNN");
+        service.puyoToppedOut(second);
+        var finished = sender.lastRoomStateFor("s3").room();
+        assertThat(finished.status()).isEqualTo("WAITING");
+        assertThat(finished.lastResult()).isEqualTo("1위 하나 · 2위 둘둘");
+    }
+
+    @Test
     void 공통_틀_게임은_GAME_ACTION으로_진행하고_사람마다_다른_화면을_받는다() {
         OnlineRoomCreatedResponse created = service.createRoom(new OnlineRoomCreateRequest("야구", OnlineGameType.NUMBER_BASEBALL, 2, null, false, null), new MockHttpServletRequest());
         OnlineConnection first = new OnlineConnection("s1", null, null);

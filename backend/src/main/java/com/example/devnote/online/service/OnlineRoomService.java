@@ -222,6 +222,32 @@ public class OnlineRoomService {
         withRoom(connection, true, (room, participantId) -> room.tetrisToppedOut(participantId, now()));
     }
 
+    public void updatePuyoBoard(OnlineConnection connection, String board, Integer score, Integer lines) {
+        int nextScore = requireValue(score);
+        int nextChains = requireValue(lines);
+        withRoom(connection, true, (room, participantId) -> room.updatePuyoBoard(participantId, board, nextScore, nextChains));
+    }
+
+    /**
+     * 뿌요뿌요 대전: 방해 뿌요 개수 알림. 받는 사람에게만 PUYO_GARBAGE를 보내고, 방 상태는 바뀌지 않으므로 모두에게 보내지 않는다.
+     */
+    public void puyoAttack(OnlineConnection connection, Integer cleared) {
+        int nuisance = requireValue(cleared);
+        OnlineRoomStore.Membership membership = requireMembership(connection);
+        OnlineRoom room = requireRoom(membership);
+        synchronized (room) {
+            OnlineRoom.PuyoAttack attack = room.puyoAttack(membership.participantId(), nuisance);
+            if (attack == null) return;
+            String fromNickname = room.requireParticipant(membership.participantId()).getNickname();
+            OnlineParticipant target = room.requireParticipant(attack.targetParticipantId());
+            messageSender.send(target.getSessionId(), OnlineServerMessage.puyoGarbage(attack.nuisance(), fromNickname));
+        }
+    }
+
+    public void puyoToppedOut(OnlineConnection connection) {
+        withRoom(connection, true, (room, participantId) -> room.puyoToppedOut(participantId, now()));
+    }
+
     public void placeOmok(OnlineConnection connection, Integer row, Integer col) {
         int targetRow = requireValue(row);
         int targetCol = requireValue(col);

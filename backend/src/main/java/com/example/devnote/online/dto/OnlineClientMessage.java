@@ -14,6 +14,9 @@ import java.util.List;
  *   { "type": "TETRIS_BOARD", "board": "....(200글자)", "score": 1200, "lines": 8 }   (블록이 굳을 때마다)
  *   { "type": "TETRIS_ATTACK", "cleared": 4 }   (2줄 이상 지웠을 때)
  *   { "type": "TETRIS_TOPPED_OUT" }   (더 쌓을 곳이 없을 때)
+ *   { "type": "PUYO_BOARD", "board": "....(72글자)", "score": 1200, "lines": 3 }   (쌍이 굳을 때마다, lines=연쇄 합)
+ *   { "type": "PUYO_ATTACK", "cleared": 4 }   (방해 뿌요 개수)
+ *   { "type": "PUYO_TOPPED_OUT" }   (더 쌓을 곳이 없을 때)
  *   { "type": "GAME_ACTION", "action": "GUESS", "text": "382" }   (숫자 야구·배틀십·카드 게임 등 공통 틀 게임의 행동)
  *   { "type": "CHAT", "text": "안녕하세요" }
  *   { "type": "PING" }                       (연결 유지용. 서버는 PONG으로 답한다)

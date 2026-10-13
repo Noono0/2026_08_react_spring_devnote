@@ -157,7 +157,7 @@ export const gameNavigationGroup: NavigationGroup = {
   collapsible: true,
   items: [
     { label: "게임 홈", description: "온라인 대전·랭킹 안내", route: "/games", symbol: "GM" },
-    { label: "온라인 대전", description: "방·관전·채팅 · 대전 14종", route: "/games/online", symbol: "ON", matchChildren: true },
+    { label: "온라인 대전", description: "방·관전·채팅 · 대전 17종", route: "/games/online", symbol: "ON", matchChildren: true },
     { label: "게임 랭킹", description: "종목별 순위 · 기간 선택", route: "/games/rankings", symbol: "RK" },
   ],
 };

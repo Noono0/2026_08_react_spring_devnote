@@ -3,12 +3,14 @@
  *
  * 모든 조작은 send(...)로 서버에 "부탁"만 하고, 결과는 서버가 보낸 ROOM_STATE로 다시 그린다.
  * 그래서 이 화면에는 게임 규칙이 없다(규칙은 서버 OnlineRoom·OmokGame에 있다).
+ * 예외: 대기 중 혼자 연습(WaitingPracticePanel)은 브라우저에서만 돌아가며 서버와 주고받지 않는다.
  */
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useId, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { OmokBoard } from "@/features/games/online/components/OmokBoard";
 import { OnlineRoomForm } from "@/features/games/online/components/OnlineRoomForm";
+import { OnlinePuyoGame } from "@/features/games/online/components/OnlinePuyoGame";
 import { OnlineTetrisGame } from "@/features/games/online/components/OnlineTetrisGame";
 import { CommonGameArea } from "@/features/games/online/games/CommonGameArea";
 import { RoomChat } from "@/features/games/online/components/RoomChat";
@@ -18,6 +20,7 @@ import { isStillRacing, RACE_GAME_TYPES, seatLabel, toRoomSettings, withGameOpti
 import { findMe } from "@/features/games/online/onlineRoomReducer";
 import type { OnlineRoom } from "@/features/games/online/onlineTypes";
 import { useOnlineRoom } from "@/features/games/online/useOnlineRoom";
+import { WaitingPracticePanel } from "@/features/games/practice/WaitingPracticePanel";
 import { ConfirmDialog } from "@/shared/ui/ConfirmDialog";
 import { ModalDialog } from "@/shared/ui/ModalDialog";
 
@@ -43,6 +46,11 @@ const describeStatus = (room: OnlineRoom, mySeat: number | null): string => {
   if (room.status === "PLAYING" && room.tetris) {
     const alive = room.tetris.players.filter((player) => player.alive).length;
     const me = mySeat === null ? undefined : room.tetris.players[mySeat];
+    return `살아남은 사람 ${alive}명${me && !me.alive ? ` — 나는 ${me.rank}위로 탈락` : ""}`;
+  }
+  if (room.status === "PLAYING" && room.puyo) {
+    const alive = room.puyo.players.filter((player) => player.alive).length;
+    const me = mySeat === null ? undefined : room.puyo.players[mySeat];
     return `살아남은 사람 ${alive}명${me && !me.alive ? ` — 나는 ${me.rank}위로 탈락` : ""}`;
   }
   if (room.status === "PLAYING" && room.omok) {
@@ -119,11 +127,14 @@ export const OnlineRoomScreen = ({ roomId, nickname, hostToken, canUseMembersOnl
   const canPlace = isOpen && playing && room.omok != null && mySeat === room.omok.turnSeat;
   const seatsFull = !room.seats.includes(null);
   const isTetris = room.gameType === "TETRIS";
-  const isCommonGame = room.gameType !== "TETRIS" && room.gameType !== "OMOK";
+  const isPuyo = room.gameType === "PUYO";
+  const isFallingPuzzle = isTetris || isPuyo;
+  const isCommonGame = room.gameType !== "TETRIS" && room.gameType !== "PUYO" && room.gameType !== "OMOK";
   const statusText = describeStatus(room, mySeat);
   // 기권: 오목은 진행 중인 플레이어, 테트리스는 아직 살아 있는 플레이어, 2048·지뢰 찾기 대전은 아직 자기 판을 하는 중인 플레이어만
   const canResign = playing && mySeat !== null
     && (!isTetris || room.tetris?.players[mySeat]?.alive === true)
+    && (!isPuyo || room.puyo?.players[mySeat]?.alive === true)
     && (!RACE_GAME_TYPES.has(room.gameType) || isStillRacing(room.game, mySeat));
   const gameOptions = gameTypesQuery.data?.find((type) => type.code === room.gameType)?.options ?? [];
 
@@ -155,16 +166,20 @@ export const OnlineRoomScreen = ({ roomId, nickname, hostToken, canUseMembersOnl
       ) : null}
       {visibleError ? <p key={visibleError.sequence} className="online-banner warning" role="alert">{visibleError.message}</p> : null}
 
-      <div className={`online-room-layout${isTetris ? " wide" : ""}`}>
+      {/* 테트리스·뿌요뿌요·당구(3D 테이블)·올림픽(경기장)은 판을 넓게 쓰도록 채팅·자리 목록을 아래로 보낸다 */}
+      <div className={`online-room-layout${isFallingPuzzle || room.gameType === "BILLIARDS" || room.gameType === "OLYMPIC" ? " wide" : ""}`}>
         <div className="online-game-area">
           {isTetris ? (
             <OnlineTetrisGame room={room} mySeat={mySeat} connected={isOpen} incomingGarbage={state.incomingGarbage} send={send} />
+          ) : isPuyo ? (
+            <OnlinePuyoGame room={room} mySeat={mySeat} connected={isOpen} incomingPuyoGarbage={state.incomingPuyoGarbage} send={send} />
           ) : isCommonGame ? (
             <CommonGameArea room={room} mySeat={mySeat} connected={isOpen} send={send} />
           ) : (
             <OmokBoard omok={room.omok} canPlace={canPlace} onPlace={(row, col) => send({ type: "OMOK_PLACE", row, col })} />
           )}
           {statusText ? <p className={`game-status${room.lastResult && !playing ? " success" : ""}`} aria-live="polite">{statusText}</p> : null}
+          {!playing ? <WaitingPracticePanel gameType={room.gameType} gameOption={room.gameOption} nickname={nickname} /> : null}
           {isHost && !playing && gameOptions.length > 0 ? (
             <div className="online-game-option">
               <label htmlFor={optionPickerId}>게임 옵션</label>
@@ -213,7 +228,7 @@ export const OnlineRoomScreen = ({ roomId, nickname, hostToken, canUseMembersOnl
       <ConfirmDialog
         isOpen={isResignOpen}
         title="기권"
-        description={isTetris || isCommonGame ? "기권하면 나만 빠지고 나머지 사람은 계속합니다(혼자 남으면 그 사람이 이깁니다). 기권할까요?" : "기권하면 상대가 이깁니다. 기권할까요?"}
+        description={isFallingPuzzle || isCommonGame ? "기권하면 나만 빠지고 나머지 사람은 계속합니다(혼자 남으면 그 사람이 이깁니다). 기권할까요?" : "기권하면 상대가 이깁니다. 기권할까요?"}
         confirmButtonLabel="기권"
         onConfirm={() => {
           send({ type: "RESIGN" });

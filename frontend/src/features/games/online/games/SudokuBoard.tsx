@@ -115,7 +115,8 @@ export const SudokuBoard = ({ givens, values, solution, selected, readOnly, labe
             aria-label={describeCell(cell)}
             onClick={() => onSelect({ row, col })}
           >
-            {value !== 0 ? value : cell.answer !== 0 ? cell.answer : ""}
+            {/* 고정 숫자는 그냥 숫자, 내가 넣은 숫자는 동그라미 안에 넣어 한눈에 구분한다 */}
+            {value === 0 ? (cell.answer !== 0 ? cell.answer : "") : cell.given ? value : <span className="sudoku-entry">{value}</span>}
           </button>
         );
       }))}

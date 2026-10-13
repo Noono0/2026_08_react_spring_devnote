@@ -42,10 +42,11 @@ const minesweeperOrder: MinesweeperDifficulty[] = ["BEGINNER", "INTERMEDIATE", "
 const memoryOrder: MemoryDifficulty[] = ["EASY", "NORMAL", "HARD"];
 const sudokuOrder: SudokuDifficulty[] = ["EASY", "NORMAL", "HARD"];
 
-// 혼자 하는 게임 화면은 없앴다. 하러 가기는 모두 온라인 대전 대기실로 안내한다
+// 혼자 하는 게임 화면은 없앴다. 하러 가기는 온라인 대전 대기실로 안내하고, 기록은 방 대기 중 연습에서 올린다.
 export const soloRankingGames: SoloRankingGame[] = [
   { kind: "SOLO", id: "solo:GAME_2048", code: "GAME_2048", label: "2048", playRoute: "/games/online", metric: "SCORE", difficulties: [] },
   { kind: "SOLO", id: "solo:TETRIS", code: "TETRIS", label: "테트리스", playRoute: "/games/online", metric: "SCORE", difficulties: [] },
+  { kind: "SOLO", id: "solo:PUYO", code: "PUYO", label: "뿌요뿌요", playRoute: "/games/online", metric: "SCORE", difficulties: [] },
   {
     kind: "SOLO", id: "solo:MINESWEEPER", code: "MINESWEEPER", label: "지뢰 찾기", playRoute: "/games/online", metric: "TIME",
     difficulties: minesweeperOrder.map((value) => ({ value, label: minesweeperDifficulties[value].label })),
@@ -68,6 +69,7 @@ const omokRankingGame = onlineGame("OMOK", "오목");
 export const onlineRankingGames: OnlineRankingGame[] = [
   omokRankingGame,
   onlineGame("TETRIS", "테트리스 대전"),
+  onlineGame("PUYO", "뿌요뿌요 대전"),
   onlineGame("CHESS", "체스"),
   onlineGame("BATTLESHIP", "배틀십"),
   onlineGame("NUMBER_BASEBALL", "숫자 야구"),
@@ -80,6 +82,8 @@ export const onlineRankingGames: OnlineRankingGame[] = [
   onlineGame("SUDOKU", "스도쿠"),
   onlineGame("GAME_2048", "2048 대전"),
   onlineGame("MINESWEEPER", "지뢰 찾기 대전"),
+  onlineGame("BILLIARDS", "당구"),
+  onlineGame("OLYMPIC", "올림픽"),
 ];
 
 export const defaultRankingGame: RankingGame = omokRankingGame;

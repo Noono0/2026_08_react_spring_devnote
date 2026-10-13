@@ -104,6 +104,16 @@ describe("테트리스 대전 메시지", () => {
   });
 });
 
+describe("뿌요뿌요 대전 메시지", () => {
+  it("방해 뿌요 메시지는 번호를 붙여 기억하고, 개수가 범위를 벗어나면 버린다", () => {
+    const garbage = { type: "PUYO_GARBAGE", garbage: { lines: 4, holeCol: 0, fromNickname: "영희" } } as const;
+    const once = receive(initialOnlineRoomState, garbage);
+    expect(once.incomingPuyoGarbage).toEqual({ count: 4, fromNickname: "영희", sequence: 1 });
+    expect(receive(once, garbage).incomingPuyoGarbage).toEqual({ count: 4, fromNickname: "영희", sequence: 2 });
+    expect(parseServerMessage(JSON.stringify({ type: "PUYO_GARBAGE", garbage: { lines: 0, holeCol: 0, fromNickname: "x" } }))).toBeNull();
+  });
+});
+
 describe("도우미", () => {
   it("WebSocket 주소: 상대 API 주소는 지금 페이지 주소 기준, https면 wss", () => {
     expect(buildOnlineSocketUrl("/api/v1", "http://localhost:5173/games/online")).toBe("ws://localhost:5173/api/v1/online/ws");

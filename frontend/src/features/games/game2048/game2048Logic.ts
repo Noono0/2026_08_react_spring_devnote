@@ -5,7 +5,7 @@
  *   4×4 판의 모든 타일을 한 방향으로 민다. 같은 숫자가 부딪치면 합쳐져 두 배가 되고, 합친 숫자만큼 점수가 오른다.
  *   한 번 합쳐진 타일은 그 이동에서 다시 합쳐지지 않는다. ([2,2,2,2] → [4,4,0,0], [8,0,0,0]이 아님)
  *   판이 실제로 바뀐 이동 뒤에만 빈칸 하나에 새 타일(90% 2, 10% 4)이 생긴다.
- *   2048 타일을 만들면 승리(계속하기 가능), 더 움직일 수 없으면 끝.
+ *   목표 타일(기본 2048, 연습에서는 방장이 고른 256~2048)을 만들면 승리(계속하기 가능), 더 움직일 수 없으면 끝.
  *
  * [핵심 아이디어: 한 줄만 제대로 만들면 된다]
  *   slideRow는 "한 줄을 왼쪽으로 밀기"만 한다. 오른쪽·위·아래는 판을 뒤집거나(reverse) 행·열을 바꿔(transpose)
@@ -132,7 +132,9 @@ export interface Game2048State {
   board: Board;
   score: number;
   status: Game2048Status;
-  /** 2048을 만든 뒤 "계속하기"를 골랐는지(그 뒤로는 다시 승리 화면을 띄우지 않는다) */
+  /** 이 타일을 만들면 승리(WON) */
+  target: number;
+  /** 목표 타일을 만든 뒤 "계속하기"를 골랐는지(그 뒤로는 다시 승리 화면을 띄우지 않는다) */
   keepPlaying: boolean;
   /** 방금 생긴 타일 위치(화면에서 나타나는 효과에 쓴다) */
   addedTile: Position | null;
@@ -143,7 +145,8 @@ export interface Game2048State {
 export type Game2048Action =
   | { type: "MOVE"; direction: Direction; randomValues: [number, number] }
   | { type: "CONTINUE" }
-  | { type: "RESTART"; board: Board };
+  /** target을 주면 그 목표로, 없으면 지금 목표 그대로 새 판 */
+  | { type: "RESTART"; board: Board; target?: number };
 
 /** 새 게임 판: 빈 판에 타일 두 개 */
 export const createInitialBoard = (random: RandomSource): Board => {
@@ -151,10 +154,11 @@ export const createInitialBoard = (random: RandomSource): Board => {
   return addTile(first.board, random(), random()).board;
 };
 
-export const createGame2048State = (board: Board): Game2048State => ({
+export const createGame2048State = (board: Board, target = WIN_VALUE): Game2048State => ({
   board,
   score: 0,
   status: canMove(board) ? "PLAYING" : "LOST",
+  target,
   keepPlaying: false,
   addedTile: null,
   moveCount: 0,
@@ -163,20 +167,20 @@ export const createGame2048State = (board: Board): Game2048State => ({
 export const game2048Reducer = (state: Game2048State, action: Game2048Action): Game2048State => {
   switch (action.type) {
     case "MOVE": {
-      // 끝났거나, 2048을 만들고 "계속하기"를 고르기 전이면 움직이지 않는다.
+      // 끝났거나, 목표 타일을 만들고 "계속하기"를 고르기 전이면 움직이지 않는다.
       if (state.status === "LOST" || state.status === "WON") return state;
       const moved = moveBoard(state.board, action.direction);
       if (!moved.moved) return state; // 판이 그대로면 새 타일도 생기지 않는다
       const [cellRandom, valueRandom] = action.randomValues;
       const withTile = addTile(moved.board, cellRandom, valueRandom);
-      const reachedGoal = !state.keepPlaying && hasTile(withTile.board, WIN_VALUE);
+      const reachedGoal = !state.keepPlaying && highestTile(withTile.board) >= state.target;
       const status: Game2048Status = reachedGoal ? "WON" : canMove(withTile.board) ? "PLAYING" : "LOST";
       return { ...state, board: withTile.board, score: state.score + moved.gained, status, addedTile: withTile.added, moveCount: state.moveCount + 1 };
     }
     case "CONTINUE":
       return state.status === "WON" ? { ...state, status: canMove(state.board) ? "PLAYING" : "LOST", keepPlaying: true } : state;
     case "RESTART":
-      return createGame2048State(action.board);
+      return createGame2048State(action.board, action.target ?? state.target);
   }
 };
 

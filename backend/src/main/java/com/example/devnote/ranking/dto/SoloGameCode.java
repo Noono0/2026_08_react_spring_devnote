@@ -8,7 +8,7 @@ import java.util.List;
 /**
  * 랭킹을 매기는 혼자 하는 게임과 "좋은 기록"의 기준입니다.
  *
- *   2048·테트리스  : 점수가 높을수록 좋다(SCORE_DESC). 난이도 없음
+ *   2048·테트리스·뿌요뿌요 : 점수가 높을수록 좋다(SCORE_DESC). 난이도 없음
  *   지뢰 찾기      : 이긴 시간이 짧을수록 좋다(TIME_ASC). 난이도마다 따로 매긴다
  *   카드 짝 맞추기 : 시도가 적을수록, 같으면 시간이 짧을수록 좋다(MOVES_THEN_TIME_ASC). 난이도마다 따로
  *   스도쿠         : 다 푼 시간이 짧을수록 좋다(TIME_ASC). 난이도마다 따로
@@ -20,6 +20,7 @@ import java.util.List;
 public enum SoloGameCode {
     GAME_2048(RankingOrder.SCORE_DESC, List.of()),
     TETRIS(RankingOrder.SCORE_DESC, List.of()),
+    PUYO(RankingOrder.SCORE_DESC, List.of()),
     MINESWEEPER(RankingOrder.TIME_ASC, List.of("BEGINNER", "INTERMEDIATE", "EXPERT")),
     MEMORY(RankingOrder.MOVES_THEN_TIME_ASC, List.of("EASY", "NORMAL", "HARD")),
     SUDOKU(RankingOrder.TIME_ASC, List.of("EASY", "NORMAL", "HARD"));

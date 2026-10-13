@@ -26,6 +26,7 @@ import java.util.List;
 public enum OnlineGameType {
     OMOK("오목", 2, 2, true),
     TETRIS("테트리스 대전", 2, 6, true),
+    PUYO("뿌요뿌요 대전", 2, 6, true),
     CHESS("체스", 2, 2, true),
     BATTLESHIP("배틀십", 2, 2, true),
     NUMBER_BASEBALL("숫자 야구", 2, 4, true),
@@ -37,7 +38,11 @@ public enum OnlineGameType {
     POKER("포커", 2, 4, true),
     SUDOKU("스도쿠", 2, 4, true),
     GAME_2048("2048 대전", 2, 4, true),
-    MINESWEEPER("지뢰 찾기 대전", 2, 4, true);
+    MINESWEEPER("지뢰 찾기 대전", 2, 4, true),
+    /** 1명이면 혼자 연습. 종목(3쿠션·4구·8볼)은 게임 옵션으로 고른다 */
+    BILLIARDS("당구", 1, 2, true),
+    /** 육상 6종목. 1명이면 혼자 대회(기준 기록으로 메달). 종목은 게임 안에서 1번 선수가 고른다 */
+    OLYMPIC("올림픽", 1, 4, true);
 
     private final String label;
     private final int minSeats;
@@ -64,6 +69,10 @@ public enum OnlineGameType {
             case MINESWEEPER -> List.of(
                 new OnlineGameOption("BEGINNER", "초급 · 9×9 · 지뢰 10"), new OnlineGameOption("INTERMEDIATE", "중급 · 16×16 · 지뢰 40"),
                 new OnlineGameOption("EXPERT", "고급 · 16×30 · 지뢰 99"));
+            case PUYO -> List.of(
+                new OnlineGameOption("3", "3색"), new OnlineGameOption("4", "4색"), new OnlineGameOption("5", "5색"));
+            case BILLIARDS -> List.of(
+                new OnlineGameOption("THREE_CUSHION", "3쿠션"), new OnlineGameOption("FOUR_BALL", "4구"), new OnlineGameOption("EIGHT_BALL", "8볼 포켓"));
             default -> List.of();
         };
     }
@@ -74,6 +83,8 @@ public enum OnlineGameType {
             case SUDOKU -> "NORMAL";
             case GAME_2048 -> "512";
             case MINESWEEPER -> "BEGINNER";
+            case PUYO -> "4";
+            case BILLIARDS -> "THREE_CUSHION";
             default -> null;
         };
     }

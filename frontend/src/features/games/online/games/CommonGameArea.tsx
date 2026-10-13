@@ -5,6 +5,7 @@
  * 각 게임 화면이 자기 zod 스키마로 확인한 뒤 그린다. 새 게임을 추가하면 여기에 한 줄을 더한다.
  */
 import { BattleshipGame } from "@/features/games/online/games/BattleshipGame";
+import { BilliardsGame } from "@/features/games/online/games/billiards/BilliardsGame";
 import { BlackjackGame } from "@/features/games/online/games/BlackjackGame";
 import { ChessGame } from "@/features/games/online/games/ChessGame";
 import { Game2048Battle } from "@/features/games/online/games/Game2048Battle";
@@ -12,6 +13,7 @@ import { MafiaGame } from "@/features/games/online/games/MafiaGame";
 import { MemoryMatchGame } from "@/features/games/online/games/MemoryMatchGame";
 import { MinesweeperBattle } from "@/features/games/online/games/MinesweeperBattle";
 import { NumberBaseballGame } from "@/features/games/online/games/NumberBaseballGame";
+import { OlympicGame } from "@/features/games/online/games/OlympicGame";
 import { OneCardGame } from "@/features/games/online/games/OneCardGame";
 import { PokerGame } from "@/features/games/online/games/PokerGame";
 import { SudokuGame } from "@/features/games/online/games/SudokuGame";
@@ -51,6 +53,10 @@ export const CommonGameArea = (properties: CommonGameProperties) => {
       return <Game2048Battle {...properties} />;
     case "MINESWEEPER":
       return <MinesweeperBattle {...properties} />;
+    case "BILLIARDS":
+      return <BilliardsGame {...properties} />;
+    case "OLYMPIC":
+      return <OlympicGame {...properties} />;
     default:
       return <p className="online-hint">아직 준비 중인 게임입니다.</p>;
   }

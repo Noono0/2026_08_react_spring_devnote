@@ -1,6 +1,7 @@
 package com.example.devnote.online.domain.game;
 
 import com.example.devnote.online.domain.OnlineGameType;
+import com.example.devnote.online.domain.game.billiards.BilliardsGame;
 
 import java.util.List;
 import java.util.Random;
@@ -13,10 +14,10 @@ import java.util.Random;
 public final class OnlineGames {
     private OnlineGames() {}
 
-    /** 이 공통 틀(OnlineGame)로 진행하는 게임인지. 오목·테트리스는 먼저 만든 전용 코드로 진행한다 */
+    /** 이 공통 틀(OnlineGame)로 진행하는 게임인지. 오목·테트리스·뿌요뿌요는 먼저 만든 전용 코드로 진행한다 */
     public static boolean usesCommonGame(OnlineGameType type) {
         return switch (type) {
-            case OMOK, TETRIS -> false;
+            case OMOK, TETRIS, PUYO -> false;
             default -> true;
         };
     }
@@ -35,6 +36,8 @@ public final class OnlineGames {
             case SUDOKU -> new SudokuGame(nicknames, random, SudokuGame.givenCountFor(option));
             case GAME_2048 -> new Game2048Game(nicknames, random, Integer.parseInt(option));
             case MINESWEEPER -> new MinesweeperGame(nicknames, random, MinesweeperGame.Difficulty.valueOf(option));
+            case BILLIARDS -> new BilliardsGame(nicknames, BilliardsGame.Variant.valueOf(option), random);
+            case OLYMPIC -> new OlympicGame(nicknames);
             default -> throw new IllegalStateException("아직 만들지 않은 게임입니다: " + type);
         };
     }

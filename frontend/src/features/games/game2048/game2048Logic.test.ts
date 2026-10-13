@@ -124,6 +124,15 @@ describe("게임 진행(리듀서)", () => {
     expect(afterMove.status).toBe("PLAYING");
   });
 
+  it("목표 타일을 정하면 그 타일에서 승리하고, 다시 시작해도 목표가 남거나 새 목표로 바뀐다", () => {
+    const toWin: Board = [[128, 128, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]];
+    expect(game2048Reducer(start(toWin), { type: "MOVE", direction: "LEFT", randomValues: [0.5, 0] }).status).toBe("PLAYING"); // 기본 목표 2048
+    const won = game2048Reducer(createGame2048State(toWin, 256), { type: "MOVE", direction: "LEFT", randomValues: [0.5, 0] });
+    expect(won).toMatchObject({ status: "WON", target: 256 });
+    expect(game2048Reducer(won, { type: "RESTART", board: toWin }).target).toBe(256);
+    expect(game2048Reducer(won, { type: "RESTART", board: toWin, target: 1024 }).target).toBe(1024);
+  });
+
   it("더 움직일 수 없게 되면 끝", () => {
     // 왼쪽으로 밀면 2,2가 합쳐지고, 새 타일(2)이 마지막 빈칸을 채워 더 움직일 수 없게 된다.
     const nearlyFull: Board = [[2, 2, 4, 8], [4, 8, 16, 32], [8, 16, 32, 64], [16, 32, 64, 128]];

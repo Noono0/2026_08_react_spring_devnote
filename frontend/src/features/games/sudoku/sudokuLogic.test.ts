@@ -4,6 +4,7 @@ import {
   countEmptyCells,
   countSolutions,
   createSolvedGrid,
+  createSudokuState,
   findConflicts,
   generateSudoku,
   isPeer,
@@ -11,6 +12,7 @@ import {
   isValidPlacement,
   setCell,
   sudokuDifficulties,
+  sudokuReducer,
   type SudokuDifficulty,
   type SudokuGrid,
 } from "./sudokuLogic";
@@ -84,5 +86,44 @@ describe("스도쿠 문제 만들기", () => {
   it("같은 시드면 같은 문제가 나온다", () => {
     expect(generateSudoku("NORMAL", createSeededRandom(7))).toEqual(generateSudoku("NORMAL", createSeededRandom(7)));
     expect(generateSudoku("NORMAL", createSeededRandom(7))).not.toEqual(generateSudoku("NORMAL", createSeededRandom(8)));
+  });
+});
+
+describe("스도쿠 혼자 연습(리듀서)", () => {
+  const start = () => createSudokuState("EASY", { givens: almostSolved, solution: solved });
+
+  it("처음에는 시간이 흐르지 않고, 숫자를 넣으면 시작한다", () => {
+    const ready = start();
+    expect(sudokuReducer(ready, { type: "TICK" })).toBe(ready);
+    const playing = sudokuReducer(ready, { type: "PLACE", row: 0, col: 2, value: 6 });
+    expect(playing).toMatchObject({ status: "PLAYING" });
+    expect(playing.values[0]?.[2]).toBe(6);
+    expect(ready.values[0]?.[2]).toBe(0); // 원래 상태는 그대로
+    expect(sudokuReducer(playing, { type: "TICK" }).elapsedSeconds).toBe(1);
+  });
+
+  it("고정 숫자 칸·1~9가 아닌 값·같은 값은 바꾸지 않고, 지우기는 내가 넣은 숫자만 지운다", () => {
+    const ready = start();
+    expect(sudokuReducer(ready, { type: "PLACE", row: 0, col: 0, value: 1 })).toBe(ready);
+    expect(sudokuReducer(ready, { type: "PLACE", row: 0, col: 2, value: 10 })).toBe(ready);
+    expect(sudokuReducer(ready, { type: "ERASE", row: 0, col: 0 })).toBe(ready);
+    const placed = sudokuReducer(ready, { type: "PLACE", row: 0, col: 2, value: 6 });
+    expect(sudokuReducer(placed, { type: "PLACE", row: 0, col: 2, value: 6 })).toBe(placed);
+    expect(sudokuReducer(placed, { type: "ERASE", row: 0, col: 2 }).values[0]?.[2]).toBe(0);
+  });
+
+  it("겹침 없이 다 채우면 완성되고, 그 뒤에는 시간도 판도 멈춘다", () => {
+    const wrongOrder = sudokuReducer(sudokuReducer(start(), { type: "PLACE", row: 0, col: 2, value: 6 }), { type: "PLACE", row: 0, col: 3, value: 4 });
+    expect(wrongOrder.status).toBe("PLAYING"); // 다 채웠지만 겹친다
+    const fixed = sudokuReducer(sudokuReducer(wrongOrder, { type: "PLACE", row: 0, col: 2, value: 4 }), { type: "PLACE", row: 0, col: 3, value: 6 });
+    expect(fixed.status).toBe("WON");
+    expect(sudokuReducer(fixed, { type: "TICK" })).toBe(fixed);
+    expect(sudokuReducer(fixed, { type: "ERASE", row: 0, col: 2 })).toBe(fixed);
+  });
+
+  it("다시 시작하면 새 난이도의 문제로 처음 상태가 된다", () => {
+    const puzzle = generateSudoku("HARD", createSeededRandom(3));
+    const restarted = sudokuReducer({ ...start(), elapsedSeconds: 30, status: "PLAYING" }, { type: "RESTART", difficulty: "HARD", puzzle });
+    expect(restarted).toEqual({ difficulty: "HARD", givens: puzzle.givens, values: puzzle.givens, status: "READY", elapsedSeconds: 0 });
   });
 });

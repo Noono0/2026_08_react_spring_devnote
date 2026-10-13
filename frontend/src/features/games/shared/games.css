@@ -23,6 +23,7 @@
   --piece-z: #fa5252; --piece-j: #3b5bdb; --piece-l: #fd7e14;
   --piece-g: #868e96; /* 온라인 대전에서 받은 방해 줄 */
   --tetris-board: #101726; --tetris-grid: rgba(255, 255, 255, 0.05);
+  --puyo-r: #e03131; --puyo-g: #2f9e44; --puyo-b: #1971c2; --puyo-y: #f59f00; --puyo-p: #9c36b5; --puyo-n: #868e96;
 }
 
 :root[data-theme="dark"] {
@@ -60,6 +61,7 @@
 .game-card-grid .utility-card-usecase { display: block; margin-top: 6px; }
 .game-home-exercises { margin: 8px 0 0; padding-left: 20px; }
 .game-home-exercises li { margin: 4px 0; }
+.practice-game { display: grid; gap: 12px; }
 
 /* ── 카드 짝 맞추기 ──────────────────────────────────── */
 .memory-board { display: grid; gap: 10px; width: 100%; margin: 0 auto; } /* 최대 너비는 열 수에 맞춰 화면에서 정한다(카드 한 장 약 100px) */
@@ -140,8 +142,8 @@
 .tetris-side { display: grid; gap: 12px; }
 .tetris-side .game-stats { display: grid; }
 .tetris-box { padding: 10px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--background-muted); }
-.tetris-box h2 { margin: 0 0 8px; color: var(--text-muted); font-size: 12px; }
-.tetris-box h2 small { margin-left: 4px; padding: 0 5px; border: 1px solid var(--border-strong); border-radius: 4px; font-size: 10px; }
+.tetris-box h3 { margin: 0 0 8px; color: var(--text-muted); font-size: 12px; }
+.tetris-box h3 small { margin-left: 4px; padding: 0 5px; border: 1px solid var(--border-strong); border-radius: 4px; font-size: 10px; }
 .tetris-next-list { display: grid; gap: 10px; }
 .tetris-board-wrap { position: relative; justify-self: center; border-radius: 10px; }
 .tetris-board {
@@ -181,11 +183,49 @@
   .tetris-side .game-stats > div { min-width: 0; padding: 6px 8px; }
   .tetris-preview-row .tetris-cell { width: 12px; height: 12px; }
   .tetris-touch-controls { display: grid; }
+  .puyo-stage { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-areas: "board board" "controls controls" "stats next"; gap: 12px; }
+  .puyo-board { --puyo-cell: min(28px, calc((100vw - 72px) / 6)); }
+  .puyo-side .game-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .puyo-touch-controls { display: grid; }
 }
 
-/* 마우스가 아닌 터치 기기(넓은 태블릿 포함)도 테트리스 터치 버튼을 보여 준다 */
+/* ── 뿌요뿌요 ───────────────────────────────────────── */
+.puyo-stage {
+  display: grid; grid-template-columns: minmax(120px, 160px) auto minmax(120px, 160px);
+  grid-template-areas: "stats board next" "stats controls next";
+  justify-content: center; align-items: start; gap: 16px;
+  padding: 8px; border-radius: 16px;
+}
+.puyo-side-stats { grid-area: stats; } .puyo-side-next { grid-area: next; }
+.puyo-board-wrap { grid-area: board; position: relative; justify-self: center; border-radius: 10px; }
+.puyo-touch-controls { grid-area: controls; display: none; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.puyo-stage:focus-visible { outline: 3px solid var(--primary-color); outline-offset: 2px; }
+.puyo-side { display: grid; gap: 12px; }
+.puyo-side .game-stats { display: grid; }
+.puyo-next-list { display: grid; gap: 10px; }
+.puyo-board {
+  --puyo-cell: min(32px, calc((100vw - 64px) / 6));
+  display: grid; grid-template-columns: repeat(6, var(--puyo-cell)); grid-auto-rows: var(--puyo-cell);
+  padding: 4px; border-radius: 10px; background: var(--tetris-board);
+}
+.puyo-cell { display: block; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--tetris-grid); }
+.puyo-cell[class*="puyo-r"], .puyo-cell[class*="puyo-g"], .puyo-cell[class*="puyo-b"], .puyo-cell[class*="puyo-y"], .puyo-cell[class*="puyo-p"], .puyo-cell.puyo-n {
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.22), inset 0 2px 0 rgba(255, 255, 255, 0.28);
+}
+.puyo-r { background: var(--puyo-r); } .puyo-g { background: var(--puyo-g); } .puyo-b { background: var(--puyo-b); }
+.puyo-y { background: var(--puyo-y); } .puyo-p { background: var(--puyo-p); } .puyo-n { background: var(--puyo-n); border-radius: 6px; }
+.puyo-cell.ghost { background: transparent; box-shadow: inset 0 0 0 2px currentColor; opacity: .55; }
+.puyo-cell.ghost.puyo-r { color: var(--puyo-r); } .puyo-cell.ghost.puyo-g { color: var(--puyo-g); }
+.puyo-cell.ghost.puyo-b { color: var(--puyo-b); } .puyo-cell.ghost.puyo-y { color: var(--puyo-y); }
+.puyo-cell.ghost.puyo-p { color: var(--puyo-p); }
+.puyo-preview { display: grid; justify-items: center; gap: 2px; }
+.puyo-preview .puyo-cell { width: 16px; height: 16px; }
+.puyo-touch-controls button { min-height: 48px; padding: 4px; font-size: 18px; }
+.puyo-touch-controls button:last-child { grid-column: 1 / -1; }
+
+/* 마우스가 아닌 터치 기기(넓은 태블릿 포함)도 테트리스·뿌요 터치 버튼을 보여 준다 */
 @media (pointer: coarse) {
-  .tetris-touch-controls { display: grid; }
+  .tetris-touch-controls, .puyo-touch-controls { display: grid; }
 }
 
 @media (prefers-reduced-motion: reduce) {

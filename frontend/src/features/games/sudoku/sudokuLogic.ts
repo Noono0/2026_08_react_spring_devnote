@@ -10,6 +10,9 @@
  *      → 답이 하나뿐인 문제. 그래서 "겹침 없이 다 채운 판 = 정답 판"이다.
  *   서버의 SudokuGenerator.java(온라인 대전)와 같은 방법이다.
  *
+ * [혼자 연습(대기 중인 방의 SudokuPractice)]
+ *   sudokuReducer가 숫자 넣기·지우기·시간을 맡는다. 답이 하나뿐인 문제라 "겹침 없이 다 채움"을 완성으로 본다.
+ *
  * ★ random을 인자로 받는다(shared/random.ts). 테스트는 createSeededRandom으로 언제나 같은 문제를 받는다.
  * ★ 판(SudokuGrid)을 바꾸지 않는다. 숫자를 넣을 때는 setCell로 새 판을 만든다(React State의 불변성).
  */
@@ -173,4 +176,56 @@ export const generateSudoku = (difficulty: SudokuDifficulty, random: RandomSourc
     if (countFilledCells(next.givens) < countFilledCells(best.givens)) best = next;
   }
   return best;
+};
+
+// ── 혼자 연습 진행(리듀서) ──────────────────────────────────
+
+/** READY: 아직 숫자를 넣지 않음(시간이 흐르지 않는다) → PLAYING → WON */
+export type SudokuStatus = "READY" | "PLAYING" | "WON";
+
+/** 시간 상한. 랭킹 서버가 받는 최대 시간(하루)과 같다 */
+export const SUDOKU_MAX_ELAPSED_SECONDS = 86_400;
+
+export interface SudokuState {
+  difficulty: SudokuDifficulty;
+  /** 처음부터 놓인 숫자(0 = 빈 칸). 이 칸은 바꿀 수 없다 */
+  givens: SudokuGrid;
+  /** 지금 판(고정 숫자 포함) */
+  values: SudokuGrid;
+  status: SudokuStatus;
+  elapsedSeconds: number;
+}
+
+export type SudokuAction =
+  | { type: "PLACE"; row: number; col: number; value: number }
+  | { type: "ERASE"; row: number; col: number }
+  | { type: "TICK" }
+  | { type: "RESTART"; difficulty: SudokuDifficulty; puzzle: SudokuPuzzle };
+
+export const createSudokuState = (difficulty: SudokuDifficulty, puzzle: SudokuPuzzle): SudokuState => ({
+  difficulty,
+  givens: puzzle.givens,
+  values: puzzle.givens,
+  status: "READY",
+  elapsedSeconds: 0,
+});
+
+/** (row, col)을 value로 바꾼다. 다 푼 판·고정 숫자 칸·바뀌지 않는 값이면 같은 상태를 그대로 돌려준다 */
+const changeCell = (state: SudokuState, row: number, col: number, value: number): SudokuState => {
+  if (state.status === "WON" || valueAt(state.givens, row, col) !== 0 || valueAt(state.values, row, col) === value) return state;
+  const values = setCell(state.values, row, col, value);
+  return { ...state, values, status: isSudokuComplete(values) ? "WON" : "PLAYING" };
+};
+
+export const sudokuReducer = (state: SudokuState, action: SudokuAction): SudokuState => {
+  switch (action.type) {
+    case "PLACE":
+      return SUDOKU_DIGITS.some((digit) => digit === action.value) ? changeCell(state, action.row, action.col, action.value) : state;
+    case "ERASE":
+      return changeCell(state, action.row, action.col, 0);
+    case "TICK":
+      return state.status === "PLAYING" ? { ...state, elapsedSeconds: Math.min(SUDOKU_MAX_ELAPSED_SECONDS, state.elapsedSeconds + 1) } : state;
+    case "RESTART":
+      return createSudokuState(action.difficulty, action.puzzle);
+  }
 };

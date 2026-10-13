@@ -25,6 +25,8 @@ export interface OnlineRoomClientState {
   closedReason: string | null;
   /** 테트리스 대전에서 받은 방해 줄. sequence가 바뀌면 화면이 내 판에 줄을 넣는다 */
   incomingGarbage: { lines: number; holeCol: number; fromNickname: string; sequence: number } | null;
+  /** 뿌요뿌요 대전에서 받은 방해 뿌요. sequence가 바뀌면 화면이 대기열에 넣는다 */
+  incomingPuyoGarbage: { count: number; fromNickname: string; sequence: number } | null;
 }
 
 export type OnlineRoomAction =
@@ -41,6 +43,7 @@ export const initialOnlineRoomState: OnlineRoomClientState = {
   passwordRequired: false,
   closedReason: null,
   incomingGarbage: null,
+  incomingPuyoGarbage: null,
 };
 
 const PASSWORD_ERROR_CODES = new Set(["ONLINE_ROOM_PASSWORD_REQUIRED", "ONLINE_ROOM_PASSWORD_INVALID"]);
@@ -79,6 +82,8 @@ const applyServerMessage = (state: OnlineRoomClientState, message: OnlineServerM
       return state;
     case "TETRIS_GARBAGE":
       return { ...state, incomingGarbage: { ...message.garbage, sequence: (state.incomingGarbage?.sequence ?? 0) + 1 } };
+    case "PUYO_GARBAGE":
+      return { ...state, incomingPuyoGarbage: { count: message.garbage.lines, fromNickname: message.garbage.fromNickname, sequence: (state.incomingPuyoGarbage?.sequence ?? 0) + 1 } };
   }
 };
 

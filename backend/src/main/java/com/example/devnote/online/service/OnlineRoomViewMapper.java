@@ -4,12 +4,14 @@ import com.example.devnote.online.domain.OmokGame;
 import com.example.devnote.online.domain.OnlineChatMessage;
 import com.example.devnote.online.domain.OnlineParticipant;
 import com.example.devnote.online.domain.OnlineRoom;
+import com.example.devnote.online.domain.PuyoBattle;
 import com.example.devnote.online.domain.TetrisBattle;
 import com.example.devnote.online.dto.OmokView;
 import com.example.devnote.online.dto.OnlineChatView;
 import com.example.devnote.online.dto.OnlineParticipantView;
 import com.example.devnote.online.dto.OnlineRoomSummaryResponse;
 import com.example.devnote.online.dto.OnlineRoomView;
+import com.example.devnote.online.dto.PuyoBattleView;
 import com.example.devnote.online.dto.TetrisBattleView;
 
 import java.util.List;
@@ -44,6 +46,7 @@ final class OnlineRoomViewMapper {
             participants,
             toOmokView(room.getOmokGame()),
             toTetrisView(room.getTetrisBattle()),
+            toPuyoView(room.getPuyoBattle()),
             room.getGame() == null ? null : room.getGame().viewFor(mySeat(room, myParticipantId)),
             room.getLastResult()
         );
@@ -87,6 +90,15 @@ final class OnlineRoomViewMapper {
     private static OnlineParticipantView toParticipantView(OnlineRoom room, OnlineParticipant participant) {
         int seat = room.seatOf(participant.getParticipantId());
         return new OnlineParticipantView(participant.getParticipantId(), participant.getNickname(), participant.isMember(), seat >= 0 ? seat : null);
+    }
+
+    private static PuyoBattleView toPuyoView(PuyoBattle battle) {
+        if (battle == null) return null;
+        List<PuyoBattleView.PuyoPlayerView> players = IntStream.range(0, battle.getPlayerCount())
+            .mapToObj(seat -> new PuyoBattleView.PuyoPlayerView(
+                seat, battle.getNicknames().get(seat), battle.isAlive(seat), battle.scoreOf(seat), battle.chainsOf(seat), battle.boardOf(seat), battle.rankOf(seat)))
+            .toList();
+        return new PuyoBattleView(battle.getSeed(), battle.getWinnerSeat(), players);
     }
 
     private static TetrisBattleView toTetrisView(TetrisBattle battle) {
