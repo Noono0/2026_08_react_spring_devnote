@@ -383,6 +383,21 @@ API Workspace는 요청 실행·응답·History·Collection 기능을 모두 사
 
 각 화면 오른쪽 위의 `?` 학습 가이드에서 사용법, 소스 흐름과 확장 과제를 확인할 수 있습니다.
 
+## 게임으로 연습하기
+
+사이드바 `게임` 메뉴(`/games`)의 네 게임은 서버 없이 브라우저에서만 동작합니다. 코드는 `frontend/src/features/games/`에 있고, 게임마다 **규칙(`*Logic.ts`, 순수 함수 + 리듀서)** 과 **화면(`*Page.tsx`)** 을 나눴습니다. 규칙은 `*Logic.test.ts`가 화면 없이 확인하고, 화면 동작은 `gamePages.test.tsx`가 확인합니다.
+
+| 게임 | 규칙에서 볼 것 | 화면에서 볼 것 | 직접 만들어 보기 |
+|---|---|---|---|
+| 카드 짝 맞추기 | 피셔–예이츠 섞기, 두 장 비교 리듀서 | 틀린 두 장 덮기(`setTimeout`)·타이머(`setInterval`) cleanup | `shuffle` |
+| 2048 | 한 줄 밀기(`slideRow`) + 뒤집기·전치로 네 방향 | 포커스된 판의 키보드, Pointer 이벤트 스와이프, `useRef` | `slideRow` |
+| 지뢰 찾기 | 첫 클릭 안전 지뢰 배치, BFS 연쇄 열기, chord | 오른쪽 클릭(`onContextMenu`), 로빙 탭인덱스 | `revealArea` |
+| 테트리스 | 행렬 회전·월 킥·충돌, 7-bag, 줄 지우기·점수·레벨 | 레벨별 중력 `setInterval`, 포커스를 잃으면 자동 일시정지 | `clearLines` |
+
+- **무작위 값과 순수 리듀서**: 리듀서 안에서 `Math.random`을 부르지 않습니다. 2048은 무작위 값을, 지뢰 찾기는 시드를 action에 담고, 테트리스는 난수 상태(`randomState`)를 게임 상태에 두고 `stepSeededRandom`으로 한 걸음씩 나아갑니다. 그래서 테스트가 매번 같은 결과를 확인합니다(`shared/random.ts`).
+- **최고 기록**: 저장된 기록은 State로 두고, "새 기록인가?"는 그릴 때 계산하며, localStorage 저장은 `useEffect`가 합니다. 이벤트 처리 함수에서 옛 state로 다음 상태를 미리 계산하면 빠른 연속 입력 때 오래된 클로저로 틀릴 수 있기 때문입니다. 읽을 때는 zod 스키마로 모양을 확인합니다(`shared/gameRecordStorage.ts`).
+- **직접 만들어 보기**: 게임 화면 맨 아래 상자는 학습 단계와 같은 Sandpack 상자(`curriculum/components/PracticeSandboxSection.tsx`)를 씁니다. 예제는 `games/sandbox/examples/*.tsx`이고 핵심 함수 하나가 `TODO`로 비어 있으며, 미리보기의 채점표가 ✅/❌로 바로 알려 줍니다. `gameSandboxes.test.ts`가 예제 형식과 react 외 import가 없는지 확인합니다.
+
 ---
 
 ## 후속 확장 실습

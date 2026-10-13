@@ -11,6 +11,8 @@ describe("createDocumentTitle", () => {
     expect(createDocumentTitle("/utilities/api-workspace/mock")).toBe("Mock API | DevNote");
     expect(createDocumentTitle("/history/12")).toBe("나의 업무 History | DevNote");
     expect(createDocumentTitle("/admin/members")).toBe("회원관리 | DevNote");
+    expect(createDocumentTitle("/games/minesweeper")).toBe("지뢰 찾기 | DevNote");
+    expect(createDocumentTitle("/games")).toBe("게임 홈 | DevNote");
   });
 
   it("메뉴에 없는 주소는 기본 제목을 쓴다", () => {

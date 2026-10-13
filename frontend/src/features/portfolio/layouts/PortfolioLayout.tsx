@@ -13,6 +13,7 @@ import { useApplicationUiStore } from "@/app/state/applicationUiStore";
 const getPageTitle = (pathname: string): string => {
   if (pathname.startsWith("/history")) return "나의 업무 History";
   if (pathname.startsWith("/utilities")) return "각종 유틸리티 게시판";
+  if (pathname.startsWith("/games")) return "게임";
   if (pathname.startsWith("/admin")) return "관리자";
   return "홈";
 };

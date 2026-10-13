@@ -1,0 +1,194 @@
+/*
+ * games.css — 게임 화면 스타일(카드 짝 맞추기·2048·지뢰 찾기·테트리스)
+ *
+ * 색은 사이트 공통 변수(--background-panel, --text-primary …)를 써서 라이트·다크 모드를 함께 따른다.
+ * 게임에만 있는 색(2048 타일·지뢰 숫자·테트리스 블록)은 아래 :root 변수로 두고 다크 모드에서 바꾼다.
+ * 움직임 줄이기(prefers-reduced-motion)를 켠 사용자에게는 뒤집기·나타나기 효과를 끈다(맨 아래).
+ */
+
+:root {
+  /* 2048 타일 */
+  --tile-empty: #e4e9f0;
+  --tile-2: #eef1f6; --tile-4: #e3e9f7; --tile-8: #ffd5a8; --tile-16: #ffbf87; --tile-32: #ff9f76;
+  --tile-64: #ff7b5e; --tile-128: #f7d774; --tile-256: #f4cf5b; --tile-512: #efc441; --tile-1024: #9fd36b; --tile-2048: #4fc3a1;
+  --tile-super: #3d4b66;
+  --tile-dark-text: #3a3f4b;
+  /* 지뢰 찾기 숫자(전통 색) */
+  --mine-1: #1f5fbf; --mine-2: #16875b; --mine-3: #d63b4c; --mine-4: #3b2a9b;
+  --mine-5: #8a2a2a; --mine-6: #0b7285; --mine-7: #172033; --mine-8: #6b7a90;
+  --mine-hidden: #c9d3e1; --mine-revealed: #f5f7fb;
+  /* 테트리스 블록 */
+  --piece-i: #22b8cf; --piece-o: #fcc419; --piece-t: #9c36b5; --piece-s: #40c057;
+  --piece-z: #fa5252; --piece-j: #3b5bdb; --piece-l: #fd7e14;
+  --tetris-board: #101726; --tetris-grid: rgba(255, 255, 255, 0.05);
+}
+
+:root[data-theme="dark"] {
+  --tile-empty: #26324a;
+  --tile-2: #3a465d; --tile-4: #45506a; --tile-8: #b8693a; --tile-16: #c4592f; --tile-32: #cc4a33;
+  --tile-64: #d23b2a; --tile-128: #c9a227; --tile-256: #cf9f1d; --tile-512: #d69a10; --tile-1024: #5f9e3a; --tile-2048: #239a7d;
+  --tile-super: #8aa4ff;
+  --tile-dark-text: #eef3fb;
+  --mine-1: #82aaff; --mine-2: #4ccf98; --mine-3: #ff7585; --mine-4: #c792ea;
+  --mine-5: #f5a66a; --mine-6: #7fdbca; --mine-7: #eef3fb; --mine-8: #b3bfd0;
+  --mine-hidden: #4d5d7a; --mine-revealed: #131a27;
+  --tetris-board: #070b14;
+}
+
+/* ── 공통 ─────────────────────────────────────────────── */
+.game-page { display: grid; gap: 22px; }
+.game-page > .page-hero { margin-bottom: 0; }
+.game-panel { display: grid; gap: 14px; padding: 22px; border: 1px solid var(--border-color); border-radius: 20px; background: var(--background-panel); box-shadow: var(--shadow-small); }
+.game-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.game-toolbar .segmented-buttons button { font-size: 13px; }
+.game-stats { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; }
+.game-stats > div { min-width: 86px; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--background-muted); }
+.game-stats dt { color: var(--text-muted); font-size: 11px; font-weight: 700; }
+.game-stats dd { margin: 2px 0 0; color: var(--text-primary); font-size: 17px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.game-status { margin: 0; color: var(--text-secondary); font-size: 14px; }
+.game-status.success { color: var(--success-color); font-weight: 700; }
+.game-status.danger { color: var(--danger-color); font-weight: 700; }
+.game-overlay {
+  position: absolute; inset: 0; z-index: 2; display: grid; place-content: center; justify-items: center; gap: 10px;
+  padding: 16px; border-radius: inherit; color: var(--text-primary); text-align: center;
+  background: color-mix(in srgb, var(--background-panel) 82%, transparent); backdrop-filter: blur(2px);
+}
+.game-overlay strong { font-size: 26px; }
+.game-learning-points { padding: 20px 22px; border: 1px solid var(--border-color); border-radius: 18px; background: var(--background-panel); }
+.game-learning-points h2 { margin: 0 0 10px; font-size: 17px; }
+.game-learning-points ul { display: grid; gap: 6px; margin: 0; padding-left: 20px; color: var(--text-secondary); font-size: 14px; line-height: 1.6; }
+.game-learning-source { margin: 12px 0 0; color: var(--text-muted); font-size: 13px; }
+.game-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.game-card-grid .utility-card > span { font-size: 20px; }
+.game-card-grid .utility-card-usecase { display: block; margin-top: 6px; }
+
+/* ── 카드 짝 맞추기 ──────────────────────────────────── */
+.memory-board { display: grid; gap: 10px; width: 100%; margin: 0 auto; } /* 최대 너비는 열 수에 맞춰 화면에서 정한다(카드 한 장 약 100px) */
+.memory-card { aspect-ratio: 3 / 4; min-height: 0; padding: 0; border: 0; color: inherit; background: transparent; perspective: 700px; }
+.memory-card:disabled { cursor: default; opacity: 1; }
+.memory-card:focus-visible { outline: 3px solid var(--primary-color); outline-offset: 3px; border-radius: 12px; }
+.memory-card-inner { position: relative; display: block; width: 100%; height: 100%; transition: transform 320ms ease; transform-style: preserve-3d; }
+.memory-card.face-up .memory-card-inner { transform: rotateY(180deg); }
+.memory-card-back, .memory-card-front {
+  position: absolute; inset: 0; display: grid; place-items: center; border-radius: 12px; backface-visibility: hidden;
+  box-shadow: var(--shadow-small);
+}
+.memory-card-back { color: white; background: linear-gradient(145deg, var(--primary-color), var(--primary-hover)); font-size: clamp(18px, 4vw, 28px); font-weight: 900; }
+.memory-card-front { border: 1px solid var(--border-color); background: var(--background-elevated); font-size: clamp(26px, 6vw, 44px); transform: rotateY(180deg); }
+.memory-card.matched .memory-card-front { border-color: var(--success-color); background: color-mix(in srgb, var(--success-color) 12%, var(--background-elevated)); }
+
+/* ── 2048 ───────────────────────────────────────────── */
+.game-2048-stage { position: relative; width: min(100%, 440px); margin: 0 auto; border-radius: 16px; }
+.game-2048-board {
+  display: grid; gap: 10px; padding: 10px; border-radius: 16px; background: var(--border-strong);
+  touch-action: none; /* 판 위에서 밀 때 페이지가 스크롤되지 않게 */
+  user-select: none;
+}
+.game-2048-board:focus-visible { outline: 3px solid var(--primary-color); outline-offset: 3px; }
+.game-2048-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.game-2048-tile {
+  display: grid; aspect-ratio: 1; place-items: center; border-radius: 10px;
+  color: var(--tile-dark-text); font-size: clamp(20px, 7vw, 34px); font-weight: 900; font-variant-numeric: tabular-nums;
+}
+.tile-empty { background: var(--tile-empty); }
+.tile-2 { background: var(--tile-2); } .tile-4 { background: var(--tile-4); }
+.tile-8 { background: var(--tile-8); } .tile-16 { background: var(--tile-16); } .tile-32 { background: var(--tile-32); color: #fff; }
+.tile-64 { background: var(--tile-64); color: #fff; } .tile-128 { background: var(--tile-128); font-size: clamp(18px, 6vw, 30px); }
+.tile-256 { background: var(--tile-256); font-size: clamp(18px, 6vw, 30px); } .tile-512 { background: var(--tile-512); font-size: clamp(18px, 6vw, 30px); }
+.tile-1024, .tile-2048, .tile-super { color: #fff; font-size: clamp(15px, 5vw, 25px); }
+.tile-1024 { background: var(--tile-1024); } .tile-2048 { background: var(--tile-2048); } .tile-super { background: var(--tile-super); }
+.tile-new { animation: game-tile-appear 180ms ease-out; }
+@keyframes game-tile-appear { from { transform: scale(0.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.game-direction-pad { display: grid; grid-template-columns: repeat(3, 52px); grid-template-areas: ". up ." "left down right"; justify-content: center; gap: 6px; }
+.game-direction-pad button { min-height: 44px; padding: 0; font-size: 20px; }
+.game-direction-pad .direction-up { grid-area: up; } .game-direction-pad .direction-left { grid-area: left; }
+.game-direction-pad .direction-down { grid-area: down; } .game-direction-pad .direction-right { grid-area: right; }
+
+/* ── 지뢰 찾기 ──────────────────────────────────────── */
+.minesweeper-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.minesweeper-face { min-width: 54px; min-height: 48px; padding: 0; border: 1px solid var(--border-strong); color: inherit; background: var(--background-muted); font-size: 26px; }
+.minesweeper-scroll { overflow-x: auto; padding-bottom: 4px; }
+.minesweeper-board {
+  --mine-cell-size: 32px;
+  display: grid; gap: 2px; width: max-content; margin: 0 auto; padding: 6px; border-radius: 10px; background: var(--border-strong);
+  user-select: none;
+}
+.mine-cell {
+  width: var(--mine-cell-size); height: var(--mine-cell-size); min-height: 0; padding: 0; border: 0; border-radius: 4px;
+  color: var(--text-primary); font-size: 16px; font-weight: 900; line-height: 1;
+}
+.mine-cell.hidden { background: var(--mine-hidden); box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.14); }
+.mine-cell.hidden:hover { filter: brightness(1.06); }
+.mine-cell.revealed { background: var(--mine-revealed); cursor: default; }
+.mine-cell.exploded { background: var(--danger-color); }
+.mine-cell:focus-visible { position: relative; z-index: 1; outline: 3px solid var(--primary-color); outline-offset: 0; }
+.minesweeper-board.finished .mine-cell { cursor: default; }
+.mine-number-1 { color: var(--mine-1); } .mine-number-2 { color: var(--mine-2); } .mine-number-3 { color: var(--mine-3); } .mine-number-4 { color: var(--mine-4); }
+.mine-number-5 { color: var(--mine-5); } .mine-number-6 { color: var(--mine-6); } .mine-number-7 { color: var(--mine-7); } .mine-number-8 { color: var(--mine-8); }
+
+/* ── 테트리스 ───────────────────────────────────────── */
+/* 넓은 화면: 보관 | 판 | 다음. 좁은 화면에서는 아래 @media에서 판 → 터치 버튼 → 보관·다음 순서로 바꾼다 */
+.tetris-stage {
+  display: grid; grid-template-columns: minmax(120px, 160px) auto minmax(120px, 160px);
+  grid-template-areas: "hold board next" "hold controls next";
+  justify-content: center; align-items: start; gap: 16px;
+  padding: 8px; border-radius: 16px;
+}
+.tetris-side-hold { grid-area: hold; } .tetris-side-next { grid-area: next; }
+.tetris-board-wrap { grid-area: board; }
+.tetris-touch-controls { grid-area: controls; }
+.tetris-stage:focus-visible { outline: 3px solid var(--primary-color); outline-offset: 2px; }
+.tetris-side { display: grid; gap: 12px; }
+.tetris-side .game-stats { display: grid; }
+.tetris-box { padding: 10px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--background-muted); }
+.tetris-box h2 { margin: 0 0 8px; color: var(--text-muted); font-size: 12px; }
+.tetris-box h2 small { margin-left: 4px; padding: 0 5px; border: 1px solid var(--border-strong); border-radius: 4px; font-size: 10px; }
+.tetris-next-list { display: grid; gap: 10px; }
+.tetris-board-wrap { position: relative; justify-self: center; border-radius: 10px; }
+.tetris-board {
+  --tetris-cell: min(26px, calc((100vw - 64px) / 10));
+  display: grid; grid-template-columns: repeat(10, var(--tetris-cell)); grid-auto-rows: var(--tetris-cell);
+  padding: 4px; border-radius: 10px; background: var(--tetris-board);
+}
+.tetris-cell { display: block; border-radius: 3px; box-shadow: inset 0 0 0 1px var(--tetris-grid); }
+.tetris-cell.blank { box-shadow: none; }
+.tetris-cell[class*="piece-"] { box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.22), inset 0 2px 0 rgba(255, 255, 255, 0.28); }
+.piece-i { background: var(--piece-i); } .piece-o { background: var(--piece-o); } .piece-t { background: var(--piece-t); } .piece-s { background: var(--piece-s); }
+.piece-z { background: var(--piece-z); } .piece-j { background: var(--piece-j); } .piece-l { background: var(--piece-l); }
+/* 고스트: 같은 색의 테두리만 보여 "여기에 떨어진다"를 알린다 */
+.tetris-cell.ghost { background: transparent; box-shadow: inset 0 0 0 2px var(--ghost-color, currentColor); opacity: .55; }
+.tetris-cell.ghost.piece-i { --ghost-color: var(--piece-i); } .tetris-cell.ghost.piece-o { --ghost-color: var(--piece-o); } .tetris-cell.ghost.piece-t { --ghost-color: var(--piece-t); }
+.tetris-cell.ghost.piece-s { --ghost-color: var(--piece-s); } .tetris-cell.ghost.piece-z { --ghost-color: var(--piece-z); } .tetris-cell.ghost.piece-j { --ghost-color: var(--piece-j); }
+.tetris-cell.ghost.piece-l { --ghost-color: var(--piece-l); }
+.tetris-preview-piece { display: grid; justify-content: center; gap: 2px; min-height: 40px; }
+.tetris-preview-piece.dimmed { opacity: .4; }
+.tetris-preview-row { display: flex; gap: 2px; }
+.tetris-preview-row .tetris-cell { width: 16px; height: 16px; }
+.tetris-touch-controls { display: none; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.tetris-touch-controls button { min-height: 48px; padding: 4px; font-size: 18px; }
+.tetris-touch-controls button:last-child { grid-column: 1 / -1; }
+
+/* ── 좁은 화면 ──────────────────────────────────────── */
+@media (max-width: 760px) {
+  .game-panel { padding: 14px; }
+  .game-card-grid { grid-template-columns: minmax(0, 1fr); }
+  .memory-board { gap: 6px; }
+  .game-toolbar .segmented-buttons button { padding: 5px 6px; }
+  /* 테트리스: 판을 위로, 보관·다음·점수를 아래 두 칸으로. 터치 버튼을 보여 준다 */
+  .tetris-stage { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-areas: "board board" "controls controls" "hold next"; gap: 12px; }
+  .tetris-board { --tetris-cell: min(24px, calc((100vw - 72px) / 10)); }
+  .tetris-side .game-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tetris-side .game-stats > div { min-width: 0; padding: 6px 8px; }
+  .tetris-preview-row .tetris-cell { width: 12px; height: 12px; }
+  .tetris-touch-controls { display: grid; }
+}
+
+/* 마우스가 아닌 터치 기기(넓은 태블릿 포함)도 테트리스 터치 버튼을 보여 준다 */
+@media (pointer: coarse) {
+  .tetris-touch-controls { display: grid; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .memory-card-inner { transition: none; }
+  .tile-new { animation: none; }
+}

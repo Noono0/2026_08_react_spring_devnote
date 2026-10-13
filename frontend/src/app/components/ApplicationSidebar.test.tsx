@@ -90,6 +90,19 @@ describe("ApplicationSidebar", () => {
     expect(within(navigation).getByRole("button", { name: "API 개발·테스트 메뉴 펼치기" })).toHaveAttribute("aria-expanded", "false");
   });
 
+  it("게임 메뉴는 유틸리티 그룹 아래에 있고, 게임 화면으로 들어오면 펼쳐져 현재 게임을 보여 준다", () => {
+    render(<MemoryRouter initialEntries={["/games/tetris"]}><ApplicationSidebar /></MemoryRouter>);
+    const navigation = screen.getByRole("navigation", { name: "전체 사이트 메뉴" });
+    const utilityToggle = within(navigation).getByRole("button", { name: /각종 유틸리티 게시판 메뉴/ });
+    const gameToggle = within(navigation).getByRole("button", { name: "게임 메뉴 접기" });
+    // DOCUMENT_POSITION_FOLLOWING: 게임 그룹 버튼이 유틸리티 그룹 버튼보다 뒤(아래)에 있다
+    expect(utilityToggle.compareDocumentPosition(gameToggle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(navigation).getByRole("link", { name: /테트리스/ })).toHaveAttribute("aria-current", "page");
+    expect(within(navigation).getByRole("link", { name: /카드 짝 맞추기/ })).toHaveAttribute("href", "/games/memory");
+    expect(within(navigation).getByRole("link", { name: /^2048/ })).toHaveAttribute("href", "/games/2048");
+    expect(within(navigation).getByRole("link", { name: /지뢰 찾기/ })).toHaveAttribute("href", "/games/minesweeper");
+  });
+
   it("그룹 버튼으로 상세 메뉴를 접고 펼치며 화살표와 접근성 상태를 함께 바꾼다", () => {
     render(<MemoryRouter initialEntries={["/react"]}><ApplicationSidebar /></MemoryRouter>);
 

@@ -135,6 +135,11 @@ const CorsHeaderInspectorPage = lazy(async () => ({ default: (await import("@/fe
 const DiagramListPage = lazy(async () => ({ default: (await import("@/features/utility/diagrams/pages/DiagramListPage")).DiagramListPage }));
 const DiagramEditorPage = lazy(async () => ({ default: (await import("@/features/utility/diagrams/pages/DiagramEditorPage")).DiagramEditorPage }));
 const DependencyAnalyzerPage = lazy(async () => ({ default: (await import("@/features/utility/pages/DependencyAnalyzerPage")).DependencyAnalyzerPage }));
+const GameHomePage = lazy(async () => ({ default: (await import("@/features/games/pages/GameHomePage")).GameHomePage }));
+const MemoryGamePage = lazy(async () => ({ default: (await import("@/features/games/memory/MemoryGamePage")).MemoryGamePage }));
+const Game2048Page = lazy(async () => ({ default: (await import("@/features/games/game2048/Game2048Page")).Game2048Page }));
+const MinesweeperPage = lazy(async () => ({ default: (await import("@/features/games/minesweeper/MinesweeperPage")).MinesweeperPage }));
+const TetrisPage = lazy(async () => ({ default: (await import("@/features/games/tetris/TetrisPage")).TetrisPage }));
 const WebCrawlerPage = lazy(async () => ({ default: (await import("@/features/crawler/pages/WebCrawlerPage")).WebCrawlerPage }));
 
 // ----------------------------------------------------------------------------
@@ -241,6 +246,14 @@ export const App = () => (
                 <Suspense fallback={<UtilityLazyFallback name="웹 크롤링 도구" />}><WebCrawlerPage /></Suspense>
               </RoleProtectedRoute>
             } />
+          </Route>
+          {/* 게임: 서버 없이 브라우저에서만 돌아간다. 게임마다 코드가 커서 각각 따로 내려받는다(lazy). */}
+          <Route path="games" element={<UtilityLayout />}>
+            <Route index element={<Suspense fallback={<UtilityLazyFallback name="게임 홈" />}><GameHomePage /></Suspense>} />
+            <Route path="memory" element={<Suspense fallback={<UtilityLazyFallback name="카드 짝 맞추기" />}><MemoryGamePage /></Suspense>} />
+            <Route path="2048" element={<Suspense fallback={<UtilityLazyFallback name="2048" />}><Game2048Page /></Suspense>} />
+            <Route path="minesweeper" element={<Suspense fallback={<UtilityLazyFallback name="지뢰 찾기" />}><MinesweeperPage /></Suspense>} />
+            <Route path="tetris" element={<Suspense fallback={<UtilityLazyFallback name="테트리스" />}><TetrisPage /></Suspense>} />
           </Route>
           {/* 관리자 화면 묶음. 전부 RoleProtectedRoute로 감싸서 비관리자는 못 들어간다. */}
           <Route path="admin" element={<RoleProtectedRoute><AdminHomePage /></RoleProtectedRoute>} />
