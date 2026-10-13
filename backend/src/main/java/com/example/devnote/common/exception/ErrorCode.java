@@ -80,7 +80,30 @@ public enum ErrorCode {
     CRAWLER_CONFIGURATION_INVALID(HttpStatus.BAD_REQUEST, "CRAWLER_CONFIGURATION_INVALID", "크롤링 설정값을 확인해 주세요."),
     CRAWLER_LOGIN_FAILED(HttpStatus.UNPROCESSABLE_ENTITY, "CRAWLER_LOGIN_FAILED", "로그인을 완료하지 못했습니다. 선택자와 계정 정보를 확인해 주세요."),
     CRAWLER_EXECUTION_FAILED(HttpStatus.BAD_GATEWAY, "CRAWLER_EXECUTION_FAILED", "브라우저로 페이지를 수집하지 못했습니다."),
-    CRAWLER_BUSY(HttpStatus.TOO_MANY_REQUESTS, "CRAWLER_BUSY", "다른 크롤링 작업이 실행 중입니다. 잠시 후 다시 시도해 주세요.");
+    CRAWLER_BUSY(HttpStatus.TOO_MANY_REQUESTS, "CRAWLER_BUSY", "다른 크롤링 작업이 실행 중입니다. 잠시 후 다시 시도해 주세요."),
+    // ── 온라인 대전(방·자리·채팅) ─────────────────────────────────────
+    ONLINE_ROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "ONLINE_ROOM_NOT_FOUND", "방을 찾을 수 없습니다. 이미 사라진 방일 수 있습니다."),
+    ONLINE_ROOM_LIMIT_REACHED(HttpStatus.TOO_MANY_REQUESTS, "ONLINE_ROOM_LIMIT_REACHED", "지금은 방이 너무 많아 새 방을 만들 수 없습니다. 잠시 후 다시 시도해 주세요."),
+    ONLINE_ROOM_FULL(HttpStatus.CONFLICT, "ONLINE_ROOM_FULL", "방 인원이 가득 찼습니다."),
+    ONLINE_ROOM_PASSWORD_REQUIRED(HttpStatus.UNAUTHORIZED, "ONLINE_ROOM_PASSWORD_REQUIRED", "비밀번호가 필요한 방입니다."),
+    ONLINE_ROOM_PASSWORD_INVALID(HttpStatus.UNAUTHORIZED, "ONLINE_ROOM_PASSWORD_INVALID", "방 비밀번호가 올바르지 않습니다."),
+    ONLINE_ROOM_MEMBERS_ONLY(HttpStatus.FORBIDDEN, "ONLINE_ROOM_MEMBERS_ONLY", "로그인한 회원만 참가할 수 있는 방입니다."),
+    ONLINE_ROOM_HOST_ONLY(HttpStatus.FORBIDDEN, "ONLINE_ROOM_HOST_ONLY", "방장만 할 수 있습니다."),
+    ONLINE_ROOM_NOT_JOINED(HttpStatus.CONFLICT, "ONLINE_ROOM_NOT_JOINED", "먼저 방에 들어가야 합니다."),
+    ONLINE_ROOM_SETTINGS_INVALID(HttpStatus.BAD_REQUEST, "ONLINE_ROOM_SETTINGS_INVALID", "방 정보를 확인해 주세요."),
+    ONLINE_NICKNAME_INVALID(HttpStatus.BAD_REQUEST, "ONLINE_NICKNAME_INVALID", "닉네임은 2~12자로 입력해 주세요."),
+    ONLINE_NICKNAME_TAKEN(HttpStatus.CONFLICT, "ONLINE_NICKNAME_TAKEN", "방에 같은 닉네임이 있습니다. 다른 닉네임을 써 주세요."),
+    ONLINE_GAME_NOT_AVAILABLE(HttpStatus.BAD_REQUEST, "ONLINE_GAME_NOT_AVAILABLE", "아직 준비 중인 게임입니다."),
+    ONLINE_SEAT_COUNT_INVALID(HttpStatus.BAD_REQUEST, "ONLINE_SEAT_COUNT_INVALID", "이 게임에서 고를 수 없는 인원 수입니다."),
+    ONLINE_SEAT_UNAVAILABLE(HttpStatus.CONFLICT, "ONLINE_SEAT_UNAVAILABLE", "앉을 수 없는 자리입니다."),
+    ONLINE_GAME_IN_PROGRESS(HttpStatus.CONFLICT, "ONLINE_GAME_IN_PROGRESS", "게임 중에는 할 수 없습니다. 게임이 끝난 뒤 다시 시도해 주세요."),
+    ONLINE_GAME_NOT_READY(HttpStatus.CONFLICT, "ONLINE_GAME_NOT_READY", "플레이어 자리가 모두 차야 시작할 수 있습니다."),
+    ONLINE_GAME_NOT_PLAYING(HttpStatus.CONFLICT, "ONLINE_GAME_NOT_PLAYING", "진행 중인 게임이 없습니다."),
+    ONLINE_NOT_YOUR_TURN(HttpStatus.CONFLICT, "ONLINE_NOT_YOUR_TURN", "지금은 내 차례가 아닙니다."),
+    ONLINE_MOVE_INVALID(HttpStatus.BAD_REQUEST, "ONLINE_MOVE_INVALID", "둘 수 없는 자리입니다."),
+    ONLINE_CHAT_INVALID(HttpStatus.BAD_REQUEST, "ONLINE_CHAT_INVALID", "채팅은 1~200자로 입력해 주세요."),
+    ONLINE_TOO_MANY_MESSAGES(HttpStatus.TOO_MANY_REQUESTS, "ONLINE_TOO_MANY_MESSAGES", "너무 빠르게 보내고 있습니다. 잠시 후 다시 보내 주세요."),
+    ONLINE_MESSAGE_INVALID(HttpStatus.BAD_REQUEST, "ONLINE_MESSAGE_INVALID", "알 수 없는 요청입니다.");
 
     // @RequiredArgsConstructor가 아래 final 필드 3개를 받는 생성자를 만들어, 위 상수들의 (괄호 안 값)이 순서대로 들어간다.
     private final HttpStatus httpStatus;

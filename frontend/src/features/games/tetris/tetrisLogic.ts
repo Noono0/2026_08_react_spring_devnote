@@ -30,7 +30,8 @@ export type TetrominoType = "I" | "O" | "T" | "S" | "Z" | "J" | "L";
 export const TETROMINO_TYPES: readonly TetrominoType[] = ["I", "O", "T", "S", "Z", "J", "L"];
 
 export type Matrix = number[][];
-export type BoardCell = TetrominoType | null;
+/** 판의 칸: 블록 종류, 온라인 대전에서 받은 방해 줄("G" = garbage), 빈칸(null) */
+export type BoardCell = TetrominoType | "G" | null;
 export type TetrisBoard = BoardCell[][];
 export type RotationDirection = "CW" | "CCW";
 export type TetrisStatus = "READY" | "PLAYING" | "PAUSED" | "GAME_OVER";
@@ -74,10 +75,14 @@ export interface TetrisState {
   lines: number;
   level: number;
   status: TetrisStatus;
+  /** 이 게임을 시작한 시드. 온라인 대전에서 "지금 판의 게임인지"를 구분하는 데 쓴다 */
+  seed: number;
   /** 다음 7-bag을 섞을 난수 상태 */
   randomState: number;
   /** 방금 굳을 때 지운 줄 수(화면 알림용) */
   lastClearedLines: number;
+  /** 지금까지 굳은 블록 수. 온라인 대전은 이 값이 바뀔 때마다 내 판을 서버에 보낸다 */
+  pieceCount: number;
 }
 
 export type TetrisAction =
@@ -89,7 +94,9 @@ export type TetrisAction =
   | { type: "HOLD" }
   | { type: "TICK" }
   | { type: "TOGGLE_PAUSE" }
-  | { type: "PAUSE" }; // 게임 중일 때만 멈춘다(포커스를 잃었을 때). 이미 멈췄으면 그대로
+  | { type: "PAUSE" } // 게임 중일 때만 멈춘다(포커스를 잃었을 때). 이미 멈췄으면 그대로
+  | { type: "ADD_GARBAGE"; lines: number; holeCol: number } // 온라인 대전: 상대가 보낸 방해 줄(구멍 위치는 서버가 정한다)
+  | { type: "END" }; // 온라인 대전: 판이 끝났으니(다른 사람이 이김) 내 게임도 멈춘다
 
 export const createEmptyTetrisBoard = (): TetrisBoard => Array.from({ length: BOARD_ROWS }, () => Array.from({ length: BOARD_COLS }, (): BoardCell => null));
 
@@ -174,8 +181,10 @@ export const createTetrisState = (seed = 0): TetrisState => ({
   lines: 0,
   level: 1,
   status: "READY",
+  seed: seed >>> 0,
   randomState: seed >>> 0,
   lastClearedLines: 0,
+  pieceCount: 0,
 });
 
 /** 대기열에서 다음 블록을 꺼내 등장시킨다. 나올 자리가 막혀 있으면 게임 끝. */
@@ -202,7 +211,7 @@ const lockPiece = (state: TetrisState): TetrisState => {
   const lines = state.lines + cleared;
   const score = state.score + (LINE_CLEAR_SCORES[cleared] ?? 0) * state.level;
   const level = 1 + Math.floor(lines / LINES_PER_LEVEL);
-  return spawnNext({ ...state, board, active: null, lines, score, level, canHold: true, lastClearedLines: cleared });
+  return spawnNext({ ...state, board, active: null, lines, score, level, canHold: true, lastClearedLines: cleared, pieceCount: state.pieceCount + 1 });
 };
 
 const moveActive = (state: TetrisState, rowOffset: number, colOffset: number): TetrisState | null => {
@@ -232,12 +241,35 @@ const holdActive = (state: TetrisState): TetrisState => {
   return { ...state, hold: active.type, active: piece, canHold: false };
 };
 
+/**
+ * 방해 줄 받기(온라인 대전): 판을 위로 lines줄 밀어 올리고, 맨 아래에 구멍 한 칸짜리 회색 줄을 채운다.
+ *   - 밀려서 판 맨 위 밖으로 나가는 줄에 블록이 있으면 끝(top out)
+ *   - 떨어지던 블록이 새 줄과 겹치면 겹치지 않을 때까지 위로 올린다. 올릴 곳이 없으면 끝
+ */
+const addGarbage = (state: TetrisState, lines: number, holeCol: number): TetrisState => {
+  if (lines <= 0 || (state.status !== "PLAYING" && state.status !== "PAUSED")) return state;
+  const count = Math.min(Math.floor(lines), BOARD_ROWS);
+  const hole = Math.min(BOARD_COLS - 1, Math.max(0, Math.floor(holeCol)));
+  const garbageRow = (): BoardCell[] => Array.from({ length: BOARD_COLS }, (_, col): BoardCell => (col === hole ? null : "G"));
+  const pushedOut = state.board.slice(0, count).some((row) => row.some(Boolean));
+  const board = [...state.board.slice(count), ...Array.from({ length: count }, garbageRow)];
+  if (pushedOut) return { ...state, board, active: null, status: "GAME_OVER" };
+  const { active } = state;
+  if (!active) return { ...state, board };
+  let row = active.row;
+  while (row >= 0 && collides(board, active.matrix, row, active.col)) row -= 1;
+  if (row < 0) return { ...state, board, active: null, status: "GAME_OVER" };
+  return { ...state, board, active: { ...active, row } };
+};
+
 export const tetrisReducer = (state: TetrisState, action: TetrisAction): TetrisState => {
   if (action.type === "START") {
     if (state.status === "PLAYING" || state.status === "PAUSED") return state;
     return spawnNext({ ...createTetrisState(action.seed), status: "PLAYING" });
   }
   if (action.type === "PAUSE") return state.status === "PLAYING" ? { ...state, status: "PAUSED" } : state;
+  if (action.type === "END") return state.status === "PLAYING" || state.status === "PAUSED" ? { ...state, status: "GAME_OVER" } : state;
+  if (action.type === "ADD_GARBAGE") return addGarbage(state, action.lines, action.holeCol);
   if (action.type === "TOGGLE_PAUSE") {
     if (state.status === "PLAYING") return { ...state, status: "PAUSED" };
     if (state.status === "PAUSED") return { ...state, status: "PLAYING" };
@@ -269,7 +301,7 @@ export const tetrisReducer = (state: TetrisState, action: TetrisAction): TetrisS
 export const gravityInterval = (level: number): number => Math.max(80, Math.round(800 * 0.85 ** (level - 1)));
 
 /** 화면용: 보이는 20줄에 지금 블록과 고스트(떨어질 자리)를 겹친 판 */
-export type DisplayCell = { type: TetrominoType; kind: "LOCKED" | "ACTIVE" } | { type: TetrominoType; kind: "GHOST" } | null;
+export type DisplayCell = { type: TetrominoType | "G"; kind: "LOCKED" } | { type: TetrominoType; kind: "ACTIVE" | "GHOST" } | null;
 
 export const createDisplayBoard = (state: TetrisState): DisplayCell[][] => {
   const display: DisplayCell[][] = state.board.map((row) => row.map((cell): DisplayCell => (cell ? { type: cell, kind: "LOCKED" } : null)));

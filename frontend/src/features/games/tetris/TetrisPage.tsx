@@ -23,56 +23,24 @@ import { z } from "zod";
 import { GamePageShell, GameStats } from "@/features/games/shared/GamePageShell";
 import { readGameRecord, writeGameRecord } from "@/features/games/shared/gameRecordStorage";
 import tetrisSandboxSource from "@/features/games/sandbox/examples/tetris-clear-lines.tsx?raw";
+import { PiecePreview } from "@/features/games/tetris/PiecePreview";
+import { tetrisKeyActions as keyActions } from "@/features/games/tetris/tetrisControls";
 import {
   createDisplayBoard,
   createTetrisSeed,
   createTetrisState,
   gravityInterval,
   PREVIEW_COUNT,
-  TETROMINO_SHAPES,
+
   tetrisReducer,
   type TetrisAction,
-  type TetrominoType,
+
 } from "./tetrisLogic";
 
 const BEST_SCORE_KEY = "tetris.best";
 const bestScoreSchema = z.number().int().nonnegative();
 
-/** 키 → action. 같은 동작에 키를 두 개씩 둔 것은 키보드 배치마다 편한 키가 달라서다. */
-const keyActions: Record<string, TetrisAction> = {
-  ArrowLeft: { type: "MOVE", offset: -1 },
-  ArrowRight: { type: "MOVE", offset: 1 },
-  ArrowDown: { type: "SOFT_DROP" },
-  ArrowUp: { type: "ROTATE", direction: "CW" },
-  x: { type: "ROTATE", direction: "CW" },
-  X: { type: "ROTATE", direction: "CW" },
-  z: { type: "ROTATE", direction: "CCW" },
-  Z: { type: "ROTATE", direction: "CCW" },
-  " ": { type: "HARD_DROP" },
-  c: { type: "HOLD" },
-  C: { type: "HOLD" },
-  Shift: { type: "HOLD" },
-  p: { type: "TOGGLE_PAUSE" },
-  P: { type: "TOGGLE_PAUSE" },
-  Escape: { type: "TOGGLE_PAUSE" },
-};
-
 const clearedLineNames = ["", "1줄", "2줄", "3줄", "테트리스!(4줄)"];
-
-/** 다음·보관 칸에 보여 줄 작은 블록. 모양 행렬에서 빈 줄을 빼고 그린다. */
-const PiecePreview = ({ type, dimmed = false }: { type: TetrominoType | null; dimmed?: boolean }) => {
-  if (!type) return <div className="tetris-preview-piece empty" aria-label="비어 있음" />;
-  const rows = TETROMINO_SHAPES[type].filter((row) => row.some(Boolean));
-  return (
-    <div className={`tetris-preview-piece${dimmed ? " dimmed" : ""}`} role="img" aria-label={`${type} 블록`}>
-      {rows.map((row, rowIndex) => (
-        <div key={rowIndex} className="tetris-preview-row">
-          {row.map((filled, colIndex) => <span key={colIndex} className={filled ? `tetris-cell piece-${type.toLowerCase()}` : "tetris-cell blank"} />)}
-        </div>
-      ))}
-    </div>
-  );
-};
 
 export const TetrisPage = () => {
   const [state, dispatch] = useReducer(tetrisReducer, undefined, () => createTetrisState());
