@@ -18,7 +18,7 @@
  *   760px 이하 좁은 화면은 위아래로 쌓이므로 손잡이를 숨긴다(global.css).
  *
  * [지연 로딩]
- *   Sandpack과 예제 25개 원문은 크다. StageSandboxSection이 lazy()로 불러와,
+ *   Sandpack과 예제 원문(학습 단계 25개 + 게임 규칙 연습)은 크다. PracticeSandboxSection이 lazy()로 불러와,
  *   편집기 영역을 펼쳤을 때만 내려받는다(첫 화면 속도에 영향 없음).
  */
 import { useEffect, useMemo, useRef, type CSSProperties } from "react";
@@ -31,10 +31,11 @@ import { stageSandboxSources } from "@/features/curriculum/sandbox/stageSandboxe
 import { SANDBOX_EDITOR_WIDTH_RANGE, SANDBOX_LAYOUT_HEIGHT_RANGE, useStageSandboxStore } from "@/features/curriculum/state/stageSandboxStore";
 
 interface StageSandboxPanelProperties {
-  /** 편집기를 구분하는 키. 학습 단계는 guideId("todo" 등), 게임은 "game-2048"처럼 쓴다. 바뀌면 편집기를 새로 만든다. */
+  /**
+   * 편집기를 구분하는 키. 학습 단계는 guideId("todo" 등), 게임 규칙 연습은 exerciseId("memory-shuffle" 등)이고,
+   * 이 키로 stageSandboxes.ts에서 App.tsx 원문을 찾는다. 바뀌면 편집기를 새로 만든다.
+   */
   sandboxId: string;
-  /** 편집기에 넣을 App.tsx 원문. 없으면 학습 단계 예제(stageSandboxes.ts)에서 sandboxId로 찾는다. */
-  source?: string;
 }
 
 /** 고친 코드를 처음 예제로 되돌리는 버튼. useSandpack은 SandpackProvider 안에서만 쓸 수 있어 따로 뺐다. */
@@ -57,13 +58,13 @@ function PreviewThemeSync({ styles }: { styles: string }) {
   return null;
 }
 
-const StageSandboxPanel = ({ sandboxId, source: providedSource }: StageSandboxPanelProperties) => {
+const StageSandboxPanel = ({ sandboxId }: StageSandboxPanelProperties) => {
   const siteTheme = useApplicationUiStore((state) => state.applicationTheme);
   const themeChoice = useStageSandboxStore((state) => state.themeChoice);
   const setThemeChoice = useStageSandboxStore((state) => state.setThemeChoice);
   const themeName = resolveSandboxTheme(themeChoice, siteTheme);
   const styles = createSandboxStyles(themeName);
-  const source = providedSource ?? stageSandboxSources[sandboxId];
+  const source = stageSandboxSources[sandboxId];
 
   // useMemo를 쓰는 이유: 위 [색 테마] 설명처럼 객체가 바뀌면 Sandpack이 고친 코드를 되돌린다.
   // 그래서 테마(styles)는 의존성에 넣지 않고, 편집기를 처음 만들 때의 테마 색만 getState()로 한 번 읽는다.

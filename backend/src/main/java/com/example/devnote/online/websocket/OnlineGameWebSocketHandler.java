@@ -2,6 +2,7 @@ package com.example.devnote.online.websocket;
 
 import com.example.devnote.common.exception.BusinessException;
 import com.example.devnote.common.exception.ErrorCode;
+import com.example.devnote.online.domain.game.GameAction;
 import com.example.devnote.online.dto.OnlineClientMessage;
 import com.example.devnote.online.dto.OnlineServerMessage;
 import com.example.devnote.online.service.OnlineConnection;
@@ -90,6 +91,10 @@ public class OnlineGameWebSocketHandler extends TextWebSocketHandler {
             case "TETRIS_BOARD" -> roomService.updateTetrisBoard(connection, message.board(), message.score(), message.lines());
             case "TETRIS_ATTACK" -> roomService.tetrisAttack(connection, message.cleared());
             case "TETRIS_TOPPED_OUT" -> roomService.tetrisToppedOut(connection);
+            case "PUYO_BOARD" -> roomService.updatePuyoBoard(connection, message.board(), message.score(), message.lines());
+            case "PUYO_ATTACK" -> roomService.puyoAttack(connection, message.cleared());
+            case "PUYO_TOPPED_OUT" -> roomService.puyoToppedOut(connection);
+            case "GAME_ACTION" -> roomService.gameAction(connection, new GameAction(message.action(), message.text(), message.number(), message.numbers()));
             default -> throw new BusinessException(ErrorCode.ONLINE_MESSAGE_INVALID);
         }
     }

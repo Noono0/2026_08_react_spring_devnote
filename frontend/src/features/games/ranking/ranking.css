@@ -1,0 +1,27 @@
+/* 게임 랭킹 화면(GameRankingPage)과 기록 등록 폼(GameRankingSubmitPanel) */
+.ranking-page { display: grid; gap: 18px; }
+.ranking-page > .page-hero, .ranking-page > .utility-home-notice { margin-bottom: 0; }
+
+.ranking-filters { display: flex; flex-wrap: wrap; align-items: end; gap: 14px; }
+.ranking-filters > label, .ranking-filter-group { display: grid; gap: 5px; }
+.ranking-filters > label > span, .ranking-filter-group > span { color: var(--text-secondary); font-size: 13px; font-weight: 700; }
+.ranking-filters select, .ranking-filters input[type="date"] { width: auto; min-height: 36px; padding: 5px 8px; }
+.ranking-filters .segmented-buttons button { font-size: 13px; }
+
+/* admin-table-wrap 표 모양을 쓰되, 첫 칸(순위)은 좁게 */
+.ranking-table-wrap td:first-child { min-width: 0; }
+.ranking-rank { width: 64px; font-weight: 800; }
+.ranking-guest-badge { margin-left: 6px; padding: 1px 7px; border-radius: 999px; color: var(--text-muted); background: var(--background-muted); font-size: 11px; font-weight: 700; }
+
+.ranking-link { justify-self: start; padding: 6px 12px; border: 1px solid var(--border-color); border-radius: 10px; color: var(--text-primary); font-size: 13px; font-weight: 700; text-decoration: none; }
+.ranking-link:hover { background: var(--background-muted); }
+
+.ranking-submit-panel { display: grid; gap: 10px; padding: 14px 16px; border: 1px solid var(--border-color); border-radius: 14px; background: var(--background-muted); }
+.ranking-submit-panel p { margin: 0; }
+.ranking-submit-panel label { display: grid; gap: 5px; max-width: 320px; font-size: 13px; font-weight: 700; }
+
+@media (max-width: 640px) {
+  .ranking-filters { align-items: stretch; flex-direction: column; }
+  .ranking-filters select, .ranking-filters input[type="date"] { width: 100%; }
+  .ranking-filters .segmented-buttons { width: 100%; }
+}

@@ -60,7 +60,7 @@ class TetrisBattleTest {
 
     @Test
     void 방에서_테트리스_대전을_시작하면_모두에게_같은_시드를_주고_공격_대상을_정한다() {
-        OnlineRoom room = new OnlineRoom("room1", new OnlineRoomSettings("테트리스", OnlineGameType.TETRIS, 3, null, false, false), "token", NOW);
+        OnlineRoom room = new OnlineRoom("room1", new OnlineRoomSettings("테트리스", OnlineGameType.TETRIS, 3, null, false, false, null), "token", NOW);
         for (String id : List.of("A", "B", "C", "D")) room.addParticipant(new OnlineParticipant(id, "s" + id, "닉" + id, null), false, NOW);
         room.sit("A", 0);
         room.sit("B", 1);
@@ -82,7 +82,7 @@ class TetrisBattleTest {
 
     @Test
     void 테트리스_기권은_나만_탈락하고_게임은_계속된다() {
-        OnlineRoom room = new OnlineRoom("room1", new OnlineRoomSettings("테트리스", OnlineGameType.TETRIS, 3, null, false, false), "token", NOW);
+        OnlineRoom room = new OnlineRoom("room1", new OnlineRoomSettings("테트리스", OnlineGameType.TETRIS, 3, null, false, false, null), "token", NOW);
         for (String id : List.of("A", "B", "C")) room.addParticipant(new OnlineParticipant(id, "s" + id, "닉" + id, null), false, NOW);
         room.sit("A", 0);
         room.sit("B", 1);

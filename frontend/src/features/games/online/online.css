@@ -136,6 +136,17 @@
 .tetris-nameplate > span:last-child { margin-left: auto; font-weight: 700; white-space: nowrap; }
 .tetris-host-mark { flex-shrink: 0; padding: 0 6px; border-radius: 999px; color: #fff; background: #e03131; font-size: 10px; }
 .tetris-arena-stage { display: grid; grid-template-columns: 64px auto 10px 64px; align-items: start; gap: 8px; padding: 4px; border-radius: 12px; }
+.puyo-arena-stage { grid-template-columns: 64px auto 10px; }
+.tetris-arena .puyo-board { --puyo-cell: 28px; }
+.tetris-arena-stage .puyo-board-wrap { grid-area: auto; }
+.puyo-touch-controls.online { grid-area: auto; width: min(100%, 420px); }
+.puyo-opponent-board {
+  position: relative; display: grid; grid-template-columns: repeat(6, 1fr); grid-template-rows: repeat(12, 1fr);
+  aspect-ratio: 1 / 2; padding: 3px; border-radius: 6px; background: var(--tetris-board);
+}
+.puyo-opponent-board .puyo-cell { box-shadow: none; }
+.tetris-arena-slot .puyo-preview .puyo-cell { width: 12px; height: 12px; }
+.tetris-arena-slot.large .puyo-preview .puyo-cell { width: 16px; height: 16px; }
 .tetris-arena-stage:focus-visible { outline: 3px solid var(--primary-color); outline-offset: 2px; }
 .tetris-arena .tetris-board { --tetris-cell: 24px; }
 /* 혼자 하기 CSS의 grid-area(board)를 풀어 내 판 칸(HOLD | 판 | 게이지 | NEXT) 순서대로 놓는다 */
@@ -181,6 +192,305 @@
   .tetris-arena-slot.large { width: 48px; height: 48px; }
 }
 
+/*
+ * 2048 대전·지뢰 찾기 대전: 테트리스 대전처럼 왼쪽 내 큰 판, 오른쪽 다른 사람의 작은 판.
+ * 판 칸(.online-game-area)이 좁으면 내 판 위, 다른 판 아래로 내린다. 판 그림은 혼자 하기 CSS(games.css)를 그대로 쓴다.
+ */
+.race-battle { display: grid; gap: 12px; justify-items: center; width: 100%; }
+.race-arena { display: grid; grid-template-columns: minmax(0, 1fr) minmax(150px, 280px); align-items: start; gap: 18px; width: 100%; }
+.race-arena.spectator { grid-template-columns: minmax(0, 1fr); }
+.race-arena-me { display: grid; justify-items: center; gap: 10px; min-width: 0; padding: 12px; border: 1px solid var(--border-color); border-radius: 18px; background: var(--background-muted); }
+.race-arena-me .game-2048-stage { width: min(100%, 400px); }
+.race-arena-me .minesweeper-scroll { max-width: 100%; }
+.race-arena .minesweeper-board { --mine-cell-size: 28px; }
+.race-arena-others { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); align-content: start; gap: 12px; min-width: 0; }
+.race-opponent { display: grid; gap: 4px; min-width: 0; margin: 0; padding: 6px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--background-muted); }
+.race-opponent .tetris-nameplate { padding: 3px 8px; font-size: 11px; }
+.race-nameplate.status-failed, .race-nameplate.status-left { color: var(--text-secondary); background: var(--border-color); }
+.race-nameplate.status-success { color: #fff; background: linear-gradient(180deg, #51cf66, #2b8a3e); }
+.race-nameplate.winner { box-shadow: 0 0 0 2px var(--primary-color); }
+.race-opponent.done .race-mini-2048, .race-opponent.done .race-mini-mines { opacity: 0.75; }
+.race-mini-2048 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3px; padding: 3px; border-radius: 8px; background: var(--border-strong); }
+.race-mini-2048 > .race-mini-tile { display: grid; aspect-ratio: 1; place-items: center; overflow: hidden; border-radius: 3px; color: var(--tile-dark-text); font-size: 10px; font-weight: 800; }
+.race-mini-mines { display: grid; gap: 1px; padding: 3px; border-radius: 6px; background: var(--border-strong); }
+.race-mini-mines > span { aspect-ratio: 1; border-radius: 1px; }
+.race-mini-mines .mini-hidden { background: var(--mine-hidden); }
+.race-mini-mines .mini-revealed { background: var(--mine-revealed); }
+.race-mini-mines .mini-flag { background: var(--warning-color); }
+.race-mini-mines .mini-mine { background: var(--text-primary); }
+.race-mini-mines .mini-exploded { background: var(--danger-color); }
+.online-game-option { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-weight: 700; }
+@container (max-width: 720px) {
+  .race-arena { grid-template-columns: minmax(0, 1fr); }
+}
+@container (max-width: 420px) {
+  .race-arena-others { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .race-arena .minesweeper-board { --mine-cell-size: 26px; }
+}
+
+/* 숫자 야구 */
+.baseball { display: grid; gap: 12px; width: 100%; }
+.baseball-players { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.baseball-player { position: relative; display: grid; gap: 2px; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--background-muted); }
+.baseball-player span { color: var(--text-muted); font-size: 13px; }
+.baseball-player.turn { border-color: var(--primary-color); box-shadow: 0 0 0 2px var(--primary-soft); }
+.baseball-player.out { opacity: 0.5; }
+.baseball-player.winner { border-color: var(--success-color); }
+.baseball-badge { position: absolute; top: 8px; right: 8px; padding: 1px 8px; border-radius: 999px; color: #fff !important; background: var(--success-color); font-size: 11px !important; font-weight: 800; }
+.baseball-secret { margin: 0; font-size: 15px; }
+.baseball-secret strong { margin-left: 6px; color: var(--primary-color); font-size: 22px; letter-spacing: 0.3em; }
+.baseball-form { display: grid; gap: 6px; }
+.baseball-form > label { color: var(--text-secondary); font-size: 13px; }
+.baseball-form-row { display: flex; gap: 8px; }
+.baseball-form-row input { max-width: 160px; font-size: 22px; font-weight: 800; letter-spacing: 0.4em; text-align: center; }
+.baseball-history { width: 100%; border-collapse: collapse; font-size: 14px; }
+.baseball-history caption { margin-bottom: 6px; font-weight: 800; text-align: left; }
+.baseball-history th, .baseball-history td { padding: 6px 8px; border-bottom: 1px solid var(--border-color); text-align: left; }
+.baseball-history .baseball-guess { font-weight: 800; letter-spacing: 0.2em; }
+.baseball-history tr.hit td { color: var(--success-color); font-weight: 800; }
+
+/* 배틀십: 내 함대 | 상대 바다. 칸 크기는 판 칸(.online-game-area) 너비에 맞춘다 */
+.battleship { display: grid; gap: 12px; justify-items: center; width: 100%; }
+.battleship-seas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; width: 100%; }
+.battleship-sea { display: grid; gap: 6px; justify-items: center; }
+.battleship-sea h3 { margin: 0; font-size: 15px; }
+.battleship-sea h3 small { margin-left: 6px; color: var(--text-muted); font-weight: 600; }
+.battleship-grid {
+  --sea-cell: min(30px, calc((50cqi - 40px) / 10));
+  display: grid; grid-template-columns: repeat(10, var(--sea-cell)); grid-auto-rows: var(--sea-cell); gap: 2px;
+  padding: 4px; border-radius: 10px; background: #0b3a5c;
+}
+.battleship-cell { display: grid; place-items: center; width: var(--sea-cell); height: var(--sea-cell); min-height: 0; padding: 0; border: 0; border-radius: 3px; background: #1c6ea4; }
+button.battleship-cell { cursor: crosshair; }
+button.battleship-cell:hover { background: #3a8fd0; filter: none; }
+.battleship-cell.mark-s { background: #7d8b99; }
+.battleship-cell.mark-o::after { content: ""; width: 30%; height: 30%; border-radius: 50%; background: rgba(255, 255, 255, 0.75); }
+.battleship-cell.mark-x { background: #e8590c; }
+.battleship-cell.mark-x::after { content: "✕"; color: #fff; font-size: calc(var(--sea-cell) * 0.6); font-weight: 900; line-height: 1; }
+.battleship-cell.mark-sunk { background: #3b2a2a; box-shadow: inset 0 0 0 2px #e03131; }
+@container (max-width: 560px) {
+  .battleship-seas { grid-template-columns: minmax(0, 1fr); }
+  .battleship-grid { --sea-cell: min(30px, calc((100cqi - 40px) / 10)); }
+}
+
+/* 카드 짝 맞추기 대전: 카드 모양은 혼자 하기(games.css .memory-card)와 같고, 맞춘 사람 색만 더한다 */
+.memory-match { display: grid; gap: 12px; justify-items: center; width: 100%; }
+.memory-match-players { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.memory-match-player { display: grid; min-width: 110px; padding: 8px 12px; border: 2px solid var(--seat-color, var(--border-color)); border-radius: 12px; background: var(--background-muted); }
+.memory-match-player span { color: var(--text-muted); font-size: 13px; }
+.memory-match-player.turn { box-shadow: 0 0 0 3px var(--seat-color, var(--primary-color)); }
+.memory-match-player.out { opacity: 0.5; }
+.memory-match .memory-board { width: 100%; }
+.memory-match .memory-card:disabled { cursor: default; opacity: 1; }
+.memory-match .memory-card.matched .memory-card-front { border: 3px solid var(--seat-color, var(--success-color)); }
+.seat-0, .by-seat-0 { --seat-color: #3461ff; }
+.seat-1, .by-seat-1 { --seat-color: #e8590c; }
+.seat-2, .by-seat-2 { --seat-color: #2f9e44; }
+.seat-3, .by-seat-3 { --seat-color: #ae3ec9; }
+
+/* 트럼프 카드(원카드·블랙잭·포커 공용) */
+.playing-card {
+  display: inline-grid; grid-template-rows: auto 1fr; justify-items: center; width: 56px; height: 80px; padding: 5px 4px;
+  border: 1px solid #c9cfd8; border-radius: 8px; color: #1d2433; background: #fff; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+  font-weight: 900; line-height: 1;
+}
+.playing-card.red { color: #d6336c; }
+.playing-card.joker { color: #7048e8; background: linear-gradient(160deg, #fff, #f3f0ff); }
+.playing-card.joker.red { color: #e8590c; background: linear-gradient(160deg, #fff, #fff4e6); }
+.playing-card-rank { font-size: 16px; }
+.playing-card-suit { align-self: center; font-size: 26px; }
+.playing-card.joker .playing-card-rank { font-size: 10px; letter-spacing: 0.04em; }
+.playing-card.back { border-color: #24398f; background: repeating-linear-gradient(45deg, #3461ff 0 6px, #2a4fd6 6px 12px); }
+.playing-card.small { width: 22px; height: 32px; padding: 0; border-radius: 4px; box-shadow: none; }
+.playing-card.small .playing-card-rank { font-size: 9px; }
+.playing-card.small .playing-card-suit { font-size: 11px; }
+
+/* 원카드 */
+.one-card { display: grid; gap: 12px; justify-items: center; width: 100%; }
+.one-card-opponents { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.one-card-opponent { display: grid; gap: 4px; justify-items: center; min-width: 120px; padding: 8px 10px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--background-muted); }
+.one-card-opponent.turn { border-color: var(--primary-color); box-shadow: 0 0 0 2px var(--primary-soft); }
+.one-card-opponent.out { opacity: 0.5; }
+.one-card-opponent > span:last-child { color: var(--text-muted); font-size: 13px; }
+.one-card-backs { display: flex; }
+.one-card-backs .playing-card + .playing-card { margin-left: -12px; }
+.one-card-table { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 22px; padding: 14px 20px; border-radius: 16px; background: #1f6f43; }
+.one-card-pile, .one-card-top { display: grid; justify-items: center; gap: 6px; }
+.one-card-pile .online-hint { color: #d3f9d8; }
+.one-card-suit { color: #fff; font-size: 14px; font-weight: 800; }
+.one-card-info { display: grid; gap: 6px; color: #fff; font-size: 13px; font-weight: 700; }
+.one-card-attack { padding: 4px 10px; border-radius: 999px; background: var(--danger-color); font-size: 16px; font-weight: 900; text-align: center; }
+.one-card-hand { display: grid; gap: 8px; justify-items: center; width: 100%; }
+.one-card-hand h3 { margin: 0; font-size: 15px; }
+.one-card-hand h3 small { color: var(--text-muted); font-weight: 600; }
+.one-card-hand-cards { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.one-card-card { min-height: 0; padding: 0; border: 0; border-radius: 8px; background: transparent; }
+.one-card-card:disabled { opacity: 0.45; }
+.one-card-card.playable { transform: translateY(-6px); box-shadow: 0 0 0 3px var(--primary-color); }
+.one-card-suit-picker { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px; }
+.one-card-suit-picker .red { color: #d6336c; }
+
+/* 블랙잭: 초록 테이블 위에 딜러, 아래에 플레이어 자리 */
+.blackjack { display: grid; gap: 12px; justify-items: center; width: 100%; padding: 14px; border-radius: 18px; background: radial-gradient(ellipse at top, #2b8a57, #1b5e3a); }
+.blackjack .game-status { color: #fff; }
+.blackjack-dealer { display: grid; justify-items: center; gap: 8px; }
+.blackjack-dealer h3, .blackjack-player h3 { margin: 0; color: #fff; font-size: 15px; }
+.blackjack-dealer h3 small { margin-left: 6px; color: #d3f9d8; }
+.blackjack-cards { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; min-height: 80px; }
+.blackjack-cards .online-hint { color: #d3f9d8; }
+.blackjack-cards.small .playing-card { width: 44px; height: 64px; }
+.blackjack-cards.small .playing-card-suit { font-size: 20px; }
+.blackjack-players { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; width: 100%; }
+.blackjack-player { display: grid; justify-items: center; gap: 6px; padding: 10px; border: 2px solid rgba(255, 255, 255, 0.2); border-radius: 14px; background: rgba(0, 0, 0, 0.18); }
+.blackjack-player.turn { border-color: #ffd43b; }
+.blackjack-player.out { opacity: 0.5; }
+.blackjack-player.winner { border-color: #69db7c; }
+.blackjack-chips { color: #ffe066; font-size: 13px; font-weight: 800; }
+.blackjack-value { color: #fff; font-weight: 900; }
+.blackjack-value.bust { color: #ff8787; }
+.blackjack-result { padding: 2px 10px; border-radius: 999px; color: #fff; background: rgba(0, 0, 0, 0.35); font-size: 13px; font-weight: 800; }
+.blackjack-result.win { background: #2f9e44; }
+.blackjack-result.lose { background: #c92a2a; }
+.blackjack-controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.blackjack-controls .ghost-button { color: #fff; border-color: rgba(255, 255, 255, 0.5); }
+
+/* 베팅 버튼(섯다·포커 공용) */
+.betting-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; }
+.betting-raise { display: inline-flex; align-items: center; gap: 6px; }
+.betting-raise label { font-size: 13px; font-weight: 700; }
+.betting-raise input { width: 90px; padding: 8px; }
+
+/* 섯다: 붉은 담요 위 화투 */
+.sutda { display: grid; gap: 12px; justify-items: center; width: 100%; }
+.sutda-players { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; width: 100%; }
+.sutda-player { display: grid; justify-items: center; gap: 4px; padding: 10px; border: 2px solid var(--border-color); border-radius: 14px; background: var(--background-muted); }
+.sutda-player h3 { margin: 0; font-size: 15px; }
+.sutda-player h3 small { padding: 0 6px; border-radius: 999px; color: #fff; background: #c92a2a; font-size: 11px; }
+.sutda-player.turn { border-color: var(--primary-color); box-shadow: 0 0 0 2px var(--primary-soft); }
+.sutda-player.folded, .sutda-player.out { opacity: 0.5; }
+.sutda-chips { color: var(--warning-color); font-weight: 800; }
+.sutda-table { display: grid; justify-items: center; gap: 2px; width: min(100%, 420px); padding: 14px; border-radius: 16px; color: #fff; background: #8b1e2d; font-size: 13px; }
+.sutda-pot { font-size: 20px; font-weight: 900; }
+.sutda-hand, .sutda-last { display: grid; justify-items: center; gap: 6px; width: 100%; }
+.sutda-hand h3, .sutda-last h3 { margin: 0; font-size: 15px; }
+.sutda-cards { display: inline-flex; gap: 6px; }
+.sutda-last-hands { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+.sutda-last-hands > div { display: grid; justify-items: center; gap: 4px; padding: 8px; border-radius: 12px; background: var(--background-muted); }
+.sutda-last-hands > div.winner { box-shadow: 0 0 0 2px var(--success-color); }
+.hwatu-card {
+  display: inline-grid; place-content: center; justify-items: center; width: 44px; height: 68px; border: 2px solid #f1f3f5; border-radius: 6px;
+  color: #fff; background: linear-gradient(160deg, #e03131, #a61e4d); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25); line-height: 1.1;
+}
+.hwatu-card strong { font-size: 22px; }
+.hwatu-card small { font-size: 11px; font-weight: 800; }
+.hwatu-card.kind-g { background: linear-gradient(160deg, #f59f00, #e8590c); }
+.hwatu-card.kind-y { background: linear-gradient(160deg, #1971c2, #3b5bdb); }
+.hwatu-card.back { background: repeating-linear-gradient(45deg, #c92a2a 0 6px, #a61e1e 6px 12px); }
+
+/* 포커: 초록 펠트 테이블 */
+.poker { display: grid; gap: 12px; justify-items: center; width: 100%; }
+.poker-players { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; width: 100%; }
+.poker-player { display: grid; justify-items: center; gap: 4px; padding: 10px; border: 2px solid var(--border-color); border-radius: 14px; background: var(--background-muted); }
+.poker-player h3 { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 15px; }
+.poker-dealer { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; color: #1d2433; background: #fff; box-shadow: 0 0 0 2px #868e96; font-size: 11px; font-weight: 900; }
+.poker-player.turn { border-color: var(--primary-color); box-shadow: 0 0 0 2px var(--primary-soft); }
+.poker-player.folded, .poker-player.out { opacity: 0.5; }
+.poker-chips { color: var(--warning-color); font-weight: 800; }
+.poker-hole { display: inline-flex; gap: 3px; }
+.poker-table { display: grid; justify-items: center; gap: 8px; width: min(100%, 520px); padding: 16px; border: 6px solid #6b4423; border-radius: 999px; color: #fff; background: radial-gradient(ellipse, #2f9e44, #1b5e3a); }
+.poker-street { font-size: 13px; font-weight: 800; }
+.poker-board { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.poker-slot { width: 56px; height: 80px; border: 2px dashed rgba(255, 255, 255, 0.35); border-radius: 8px; }
+.poker-pot { font-size: 18px; font-weight: 900; }
+.poker-mine, .poker-last { display: grid; justify-items: center; gap: 6px; width: 100%; }
+.poker-mine h3, .poker-last h3 { margin: 0; font-size: 15px; }
+.poker-last-hands { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+.poker-last-hands > div { display: grid; justify-items: center; gap: 4px; padding: 8px; border-radius: 12px; background: var(--background-muted); }
+.poker-last-hands > div.winner { box-shadow: 0 0 0 2px var(--success-color); }
+
+/* 체스: 8×8 판, 선택한 기물·갈 수 있는 칸·마지막 수 표시 */
+.chess { display: grid; gap: 10px; justify-items: center; width: 100%; }
+.chess-player { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; width: min(100%, 480px); padding: 8px 12px; border: 2px solid var(--border-color); border-radius: 12px; background: var(--background-muted); }
+.chess-player.turn { border-color: var(--primary-color); box-shadow: 0 0 0 2px var(--primary-soft); }
+.chess-player.winner { border-color: var(--success-color); }
+.chess-captured { font-size: 18px; letter-spacing: 1px; }
+.chess-board { display: grid; width: min(100%, 480px); aspect-ratio: 1; border: 4px solid #6b4423; border-radius: 6px; }
+.chess-row { display: grid; grid-template-columns: repeat(8, 1fr); }
+.chess-square { position: relative; display: grid; place-items: center; min-width: 0; padding: 0; border: 0; border-radius: 0; color: #1d2433; background: #f0d9b5; font-size: clamp(22px, 7vw, 44px); line-height: 1; cursor: pointer; }
+.chess-square.dark { background: #b58863; }
+.chess-square:disabled { cursor: default; opacity: 1; }
+.chess-square.white-piece span { color: #fff; text-shadow: 0 0 2px #000, 0 0 1px #000; }
+.chess-square.black-piece span { color: #1d2433; }
+.chess-square.last { box-shadow: inset 0 0 0 100px rgba(255, 214, 10, 0.35); }
+.chess-square.selected { box-shadow: inset 0 0 0 4px var(--primary-color); }
+.chess-square.target::after { position: absolute; width: 28%; height: 28%; border-radius: 50%; background: rgba(0, 0, 0, 0.3); content: ""; }
+.chess-square:focus-visible { outline: 3px solid var(--primary-color); outline-offset: -3px; }
+.chess-promotion { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px; }
+.chess-history { display: flex; flex-wrap: wrap; gap: 4px 12px; width: min(100%, 480px); max-height: 120px; margin: 0; padding-left: 24px; overflow-y: auto; font-family: monospace; font-size: 13px; }
+
+/* 마피아: 밤에는 어두운 배경, 탈락한 사람은 흐리게 */
+.mafia { display: grid; gap: 12px; width: 100%; padding: 12px; border-radius: 16px; transition: background 0.4s; }
+.mafia.night { color: #e9ecef; background: #1d2433; }
+.mafia.night .game-status { color: #e9ecef; }
+.mafia.day { background: var(--background-muted); }
+.mafia-role { display: grid; gap: 4px; padding: 10px 14px; border-left: 6px solid var(--primary-color); border-radius: 10px; background: rgba(127, 127, 127, 0.15); }
+.mafia-role.role-mafia { border-left-color: #e03131; }
+.mafia-role.role-police { border-left-color: #1c7ed6; }
+.mafia-role.role-doctor { border-left-color: #2f9e44; }
+.mafia-players { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; margin: 0; padding: 0; list-style: none; }
+.mafia-player { display: grid; justify-items: center; gap: 4px; padding: 10px; border: 2px solid var(--border-color); border-radius: 12px; color: var(--text-color); background: var(--background-color); text-align: center; }
+.mafia-player.chosen { border-color: var(--primary-color); box-shadow: 0 0 0 2px var(--primary-soft); }
+.mafia-player.dead { opacity: 0.45; text-decoration: line-through; }
+.mafia-secret { margin: 0; padding: 8px 12px; border: 1px dashed #e03131; border-radius: 10px; }
+.mafia-secret ul { margin: 4px 0 0; padding-left: 20px; }
+.mafia-log { display: grid; gap: 2px; max-height: 160px; margin: 0; padding-left: 24px; overflow-y: auto; font-size: 13px; }
+
+/* 스도쿠 대전: 위에 자리별 진행 막대, 가운데 9×9 판, 아래 숫자 버튼 */
+.sudoku-battle { display: grid; gap: 12px; justify-items: center; width: 100%; }
+.sudoku-play { display: grid; gap: 14px; justify-items: center; width: 100%; }
+/* 3×3 상자 경계는 굵은 선(box-right·box-bottom). 강조는 아래로 갈수록 우선: 같은 줄 → 같은 숫자 → 고른 칸 → 겹침 */
+.sudoku-board {
+  display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); width: min(100%, 468px);
+  border: 2px solid var(--text-primary); border-radius: 8px; overflow: hidden; background: var(--background-elevated);
+  user-select: none;
+}
+.sudoku-cell {
+  display: grid; place-items: center; aspect-ratio: 1; min-height: 0; padding: 0;
+  border: 0; border-right: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); border-radius: 0;
+  color: var(--primary-color); background: transparent; font-size: clamp(16px, 5cqi, 26px); font-weight: 600; line-height: 1;
+}
+.sudoku-cell.box-right { border-right: 2px solid var(--text-primary); }
+.sudoku-cell.box-bottom { border-bottom: 2px solid var(--text-primary); }
+.sudoku-cell.given { color: var(--text-primary); font-weight: 900; }
+.sudoku-cell.peer { background: color-mix(in srgb, var(--primary-color) 7%, transparent); }
+.sudoku-cell.same-digit { background: color-mix(in srgb, var(--primary-color) 22%, transparent); }
+.sudoku-cell.selected { background: color-mix(in srgb, var(--primary-color) 32%, transparent); }
+.sudoku-cell.conflict, .sudoku-cell.wrong { color: var(--danger-color); }
+.sudoku-cell.conflict:not(.selected) { background: color-mix(in srgb, var(--danger-color) 12%, transparent); }
+.sudoku-cell.wrong { text-decoration: line-through; }
+.sudoku-cell.revealed { color: var(--text-muted); font-weight: 500; }
+/* 내가 넣은 숫자: 원 안에 표시해 고정 숫자와 구분한다(틀림·겹침이면 원도 빨간색) */
+.sudoku-entry { display: grid; place-items: center; width: 76%; aspect-ratio: 1; border: 2px solid currentColor; border-radius: 50%; }
+.sudoku-cell:focus-visible { z-index: 1; outline: 3px solid var(--primary-color); outline-offset: -3px; }
+.sudoku-board.read-only .sudoku-cell { cursor: default; }
+.sudoku-number-pad { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 6px; width: min(100%, 468px); }
+.sudoku-number-pad button { min-height: 44px; padding: 0; font-size: 20px; font-weight: 800; }
+.sudoku-number-pad .sudoku-erase-button { font-size: 13px; }
+@container (max-width: 480px) {
+  .sudoku-number-pad { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+}
+.sudoku-battle-players { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.sudoku-battle-player { display: grid; gap: 4px; min-width: 130px; padding: 8px 12px; border: 2px solid var(--seat-color, var(--border-color)); border-radius: 12px; background: var(--background-muted); }
+.sudoku-battle-player span { color: var(--text-muted); font-size: 13px; }
+.sudoku-battle-player progress { width: 100%; height: 8px; accent-color: var(--seat-color, var(--primary-color)); }
+.sudoku-battle-player.out { opacity: 0.5; }
+.sudoku-battle-player.winner { box-shadow: 0 0 0 3px var(--success-color); }
+
+.waiting-practice { display: grid; gap: 12px; margin-top: 4px; padding-top: 14px; border-top: 1px dashed var(--border-color); }
+.waiting-practice-header { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.waiting-practice-header h2 { margin: 0 0 4px; font-size: 16px; }
+.waiting-practice-header .online-hint { max-width: 52ch; }
+
 /* 테트리스 대전은 판을 넓게 쓰도록 자리·채팅 패널을 판 아래로 내린다 */
 .online-room-layout.wide { grid-template-columns: minmax(0, 1fr); }
 .online-room-layout.wide .online-side { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
@@ -201,3 +511,70 @@
   .online-game-area { padding: 8px; }
   .omok-board { padding: 4px; }
 }
+
+/* 당구: 3D 당구대 + 샷 조작(조준·힘·당점) */
+.billiards { display: grid; gap: 10px; width: 100%; }
+.billiards-players { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.billiards-player { display: grid; gap: 2px; min-width: 180px; padding: 8px 12px; border: 2px solid var(--border-color); border-radius: 12px; background: var(--background-muted); }
+.billiards-player strong { display: flex; align-items: center; gap: 6px; }
+.billiards-player span { color: var(--text-muted); font-size: 13px; }
+.billiards-player.turn { border-color: var(--primary-color); box-shadow: 0 0 0 2px var(--primary-soft); }
+.billiards-player.winner { border-color: var(--success-color); }
+.billiards-ball-chip { display: inline-block; width: 14px; height: 14px; border: 1px solid rgba(0, 0, 0, 0.35); border-radius: 50%; }
+.billiards-rule, .billiards-last { margin: 0; color: var(--text-muted); font-size: 13px; }
+.billiards-stage-wrap { position: relative; width: 100%; border-radius: 14px; overflow: hidden; background: #101318; }
+.billiards-stage-wrap:focus-visible { outline: 3px solid var(--primary-color); outline-offset: 2px; }
+.billiards-stage { width: 100%; aspect-ratio: 16 / 9; min-height: 240px; max-height: 70vh; touch-action: none; }
+.billiards-stage-wrap .online-hint { margin: 0; padding: 40px 16px; color: #dfe3ea; text-align: center; }
+.billiards-canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
+.billiards-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.billiards-check { display: inline-flex; align-items: center; gap: 4px; font-size: 14px; }
+.billiards-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; align-items: start; padding: 12px; border: 1px solid var(--border-color); border-radius: 14px; background: var(--background-muted); }
+.billiards-control-row { display: grid; gap: 6px; }
+.billiards-control-row input[type="range"] { width: 100%; }
+.billiards-nudge, .billiards-presets { display: flex; flex-wrap: wrap; gap: 4px; }
+.billiards-nudge button, .billiards-presets button { padding: 4px 8px; font-size: 12px; }
+.billiards-power { accent-color: #e8590c; }
+.billiards-tip { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.billiards-tip-pad { flex: none; cursor: pointer; touch-action: none; }
+.billiards-tip-ball { fill: #f7f5ee; stroke: #868e96; stroke-width: 2; }
+.billiards-tip-limit { fill: none; stroke: #adb5bd; stroke-dasharray: 4 3; }
+.billiards-tip-axis { stroke: #ced4da; stroke-width: 1; }
+.billiards-tip-dot { fill: #2f6fd0; stroke: #fff; stroke-width: 2; }
+.billiards-tip-inputs { display: grid; flex: 1; gap: 6px; min-width: 160px; font-size: 13px; }
+.billiards-tip-inputs label { display: grid; gap: 2px; }
+.billiards-place { display: flex; flex-wrap: wrap; grid-column: 1 / -1; align-items: center; gap: 8px; font-size: 14px; }
+.billiards-shoot { grid-column: 1 / -1; min-height: 48px; font-size: 18px; font-weight: 800; }
+
+/* 올림픽: 경기장 캔버스 + 조작 버튼 + 메달판 */
+.olympic, .olympic-practice, .olympic-play { display: grid; gap: 10px; width: 100%; }
+.olympic-medals { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.olympic-medal-row { display: grid; gap: 2px; min-width: 150px; padding: 6px 12px; border: 2px solid var(--border-color); border-left-width: 6px; border-radius: 12px; background: var(--background-muted); }
+.olympic-medal-row span { font-size: 14px; }
+.olympic-medal-row.winner { box-shadow: 0 0 0 2px var(--success-color); }
+.olympic-medal-row.out { opacity: 0.5; }
+.olympic-hud { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; font-size: 14px; }
+.olympic-hud strong { font-size: 16px; }
+.olympic-wr { color: var(--text-muted); }
+.olympic-meter { display: inline-flex; align-items: center; gap: 6px; }
+.olympic-meter progress { width: 120px; height: 10px; accent-color: #f08c00; }
+.olympic-canvas { display: block; width: 100%; aspect-ratio: 5 / 2; border-radius: 12px; background: #4dabf7; }
+.olympic-message { min-height: 1.4em; margin: 0; font-weight: 800; text-align: center; }
+.olympic-attempts { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0; padding-left: 20px; font-size: 14px; }
+.olympic-pad { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.olympic-key { min-height: 56px; font-size: 16px; font-weight: 800; touch-action: manipulation; user-select: none; }
+.olympic-key.action { background: #f08c00; }
+.olympic-picker { display: grid; gap: 10px; margin: 0; padding: 12px; border: 1px solid var(--border-color); border-radius: 12px; }
+.olympic-picker legend { padding: 0 6px; font-weight: 800; }
+.olympic-picker-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+.olympic-picker-item { display: flex; gap: 8px; align-items: flex-start; padding: 8px 10px; border: 2px solid var(--border-color); border-radius: 10px; cursor: pointer; }
+.olympic-picker-item.checked { border-color: var(--primary-color); background: var(--primary-soft); }
+.olympic-picker-item span { display: grid; gap: 2px; }
+.olympic-picker-item small { color: var(--text-muted); }
+.olympic-select { display: grid; gap: 10px; }
+.olympic-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.olympic-table th, .olympic-table td { padding: 6px 8px; border-bottom: 1px solid var(--border-color); text-align: left; }
+.olympic-waiting { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.olympic-waiting li { display: grid; grid-template-columns: minmax(80px, 140px) 1fr auto; gap: 10px; align-items: center; }
+.olympic-waiting progress { width: 100%; accent-color: #e03131; }
+.olympic-table caption { padding: 4px 0; font-weight: 800; text-align: left; }

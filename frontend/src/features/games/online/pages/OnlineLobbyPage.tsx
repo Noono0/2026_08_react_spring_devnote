@@ -22,7 +22,7 @@ import "@/features/games/online/online.css";
 
 export const ROOM_LIST_REFRESH_MS = 5_000;
 
-const defaultFormValues: OnlineRoomFormValues = { title: "", gameType: "OMOK", seatCount: 2, password: "", passwordMode: "CHANGE", membersOnly: false };
+const defaultFormValues: OnlineRoomFormValues = { title: "", gameType: "OMOK", seatCount: 2, password: "", passwordMode: "CHANGE", membersOnly: false, gameOption: "" };
 
 export const OnlineLobbyPage = () => {
   const navigate = useNavigate();
@@ -36,6 +36,7 @@ export const OnlineLobbyPage = () => {
   const createMutation = useMutation({
     mutationFn: (values: OnlineRoomFormValues) => createOnlineRoom({
       title: values.title.trim(), gameType: values.gameType, seatCount: values.seatCount, password: values.password, membersOnly: values.membersOnly,
+      gameOption: values.gameOption === "" ? null : values.gameOption,
     }),
     onSuccess: (created) => void navigate(`/games/online/${created.roomId}`, { state: { hostToken: created.hostToken } }),
     onError: (requestError) => applicationNotification.apiError(convertRequestErrorToProblemDetails(requestError)),
@@ -95,7 +96,7 @@ export const OnlineLobbyPage = () => {
                   <div className="online-room-card-main">
                     <strong>{room.title}</strong>
                     <span className="online-room-meta">
-                      {room.gameTypeLabel} · 플레이어 {room.playerCount}/{room.seatCount} · 방 인원 {room.participantCount}/{room.maxParticipants}
+                      {room.gameTypeLabel}{room.gameOptionLabel ? `(${room.gameOptionLabel})` : ""} · 플레이어 {room.playerCount}/{room.seatCount} · 방 인원 {room.participantCount}/{room.maxParticipants}
                       {room.hostNickname ? ` · 방장 ${room.hostNickname}` : ""}
                     </span>
                     <span className="online-room-badges">

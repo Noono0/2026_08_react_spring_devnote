@@ -3,7 +3,7 @@
  *
  * 학습 레이아웃(ApplicationLayout)이 모든 연습 화면 아래에 이 컴포넌트를 둔다.
  * 지금 주소에 맞는 학습 단계(1~25단계)일 때만 그리고, 상자 자체(접기·크게 보기·크기 조절)는
- * 게임 화면과 함께 쓰는 PracticeSandboxSection이 그린다.
+ * 게임 규칙 연습 화면(GameExercisePage)과 함께 쓰는 PracticeSandboxSection이 그린다.
  */
 import { useLocation } from "react-router-dom";
 import { PracticeSandboxSection } from "@/features/curriculum/components/PracticeSandboxSection";

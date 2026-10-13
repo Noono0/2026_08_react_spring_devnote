@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    게임 랭킹 SQL.
+
+    [같은 사람 묶기] 회원은 member_id로, 비회원은 닉네임으로 묶는다.
+      guest_name = 비회원일 때만 닉네임, 회원이면 NULL
+      → (member_id, guest_name)으로 묶으면 회원은 (7, NULL), 비회원은 (NULL, '철수')라 서로 섞이지 않는다.
+    [보이는 이름] 회원은 지금 회원 이름(members.member_name), 비회원은 기록할 때 쓴 닉네임.
+    [기간] fromInclusive 이상 toExclusive 미만(UTC). 값이 없으면 그쪽 끝은 제한하지 않는다.
+-->
+<mapper namespace="com.example.devnote.ranking.GameRankingMapper">
+    <insert id="insertOnlineGameResult">
+        INSERT INTO online_game_results (game_type, member_id, nickname, player_count, won, played_at)
+        VALUES (#{gameType}, #{memberId}, #{nickname}, #{playerCount}, #{won}, #{playedAt})
+    </insert>
+
+    <insert id="insertSoloGameRecord" useGeneratedKeys="true" keyProperty="soloGameRecordId">
+        INSERT INTO solo_game_records (game_code, difficulty, member_id, nickname, score, elapsed_seconds, moves, played_at)
+        VALUES (#{gameCode}, #{difficulty}, #{memberId}, #{nickname}, #{score}, #{elapsedSeconds}, #{moves}, #{playedAt})
+    </insert>
+
+    <!-- 기간 조건. alias는 include할 때 정하는 테이블 별칭이다(XML에 적힌 고정값이라 ${}여도 사용자 입력이 섞이지 않는다) -->
+    <sql id="periodCondition">
+        <if test="fromInclusive != null">AND ${alias}.played_at &gt;= #{fromInclusive}</if>
+        <if test="toExclusive != null">AND ${alias}.played_at &lt; #{toExclusive}</if>
+    </sql>
+
+    <!-- 승수가 많은 순 → 승수가 같으면 판 수가 적은 순(= 승률이 높은 순) → 이름 순 -->
+    <select id="selectOnlineRanking" resultType="com.example.devnote.ranking.dao.row.OnlineRankingRow">
+        SELECT grouped.member_id,
+               COALESCE(member.member_name, grouped.guest_name) AS player_name,
+               grouped.wins,
+               grouped.plays
+        FROM (
+            SELECT game_result.member_id,
+                   CASE WHEN game_result.member_id IS NULL THEN game_result.nickname END AS guest_name,
+                   SUM(CASE WHEN game_result.won THEN 1 ELSE 0 END) AS wins,
+                   COUNT(*) AS plays
+            FROM online_game_results game_result
+            WHERE game_result.game_type = #{gameCode}
+            <include refid="periodCondition"><property name="alias" value="game_result"/></include>
+            GROUP BY game_result.member_id, guest_name
+        ) grouped
+        LEFT JOIN members member ON member.member_id = grouped.member_id
+        ORDER BY grouped.wins DESC, grouped.plays ASC, player_name ASC
+        LIMIT #{limit}
+    </select>
+
+    <!--
+        혼자 하는 게임 기록의 순서(SoloGameCode.RankingOrder). 같은 기록이면 먼저 세운 사람이 앞이다.
+        rankingOrder는 Java enum 이름(고정된 세 값)이라 사용자가 ORDER BY에 글자를 끼워 넣을 수 없다.
+    -->
+    <sql id="soloRecordOrder">
+        <choose>
+            <when test="rankingOrder == 'SCORE_DESC'">${alias}.score DESC</when>
+            <when test="rankingOrder == 'TIME_ASC'">${alias}.elapsed_seconds ASC</when>
+            <otherwise>${alias}.moves ASC, ${alias}.elapsed_seconds ASC</otherwise>
+        </choose>, ${alias}.played_at ASC
+    </sql>
+
+    <!--
+        ROW_NUMBER() OVER (PARTITION BY 사람 ORDER BY 기록 순서): 사람마다 기록에 1, 2, 3 … 번호를 붙인다.
+        번호가 1인 줄 = 그 사람의 가장 좋은 기록 → 사람마다 한 줄씩만 남겨 다시 줄 세운다.
+    -->
+    <select id="selectSoloRanking" resultType="com.example.devnote.ranking.dao.row.SoloRankingRow">
+        SELECT best.member_id,
+               COALESCE(member.member_name, best.guest_name) AS player_name,
+               best.score,
+               best.elapsed_seconds,
+               best.moves,
+               best.played_at
+        FROM (
+            SELECT solo_record.member_id,
+                   CASE WHEN solo_record.member_id IS NULL THEN solo_record.nickname END AS guest_name,
+                   solo_record.score,
+                   solo_record.elapsed_seconds,
+                   solo_record.moves,
+                   solo_record.played_at,
+                   ROW_NUMBER() OVER (
+                       PARTITION BY solo_record.member_id, CASE WHEN solo_record.member_id IS NULL THEN solo_record.nickname END
+                       ORDER BY <include refid="soloRecordOrder"><property name="alias" value="solo_record"/></include>
+                   ) AS player_order
+            FROM solo_game_records solo_record
+            WHERE solo_record.game_code = #{gameCode}
+              AND solo_record.difficulty = #{difficulty}
+            <include refid="periodCondition"><property name="alias" value="solo_record"/></include>
+        ) best
+        LEFT JOIN members member ON member.member_id = best.member_id
+        WHERE best.player_order = 1
+        ORDER BY <include refid="soloRecordOrder"><property name="alias" value="best"/></include>
+        LIMIT #{limit}
+    </select>
+
+    <!-- 비회원 기록만 지운다(회원 기록은 계속 남는다). cutoff = 지금 - 7일(UTC) -->
+    <delete id="deleteGuestOnlineResultsBefore">
+        DELETE FROM online_game_results
+        WHERE member_id IS NULL
+          AND played_at &lt; #{cutoff}
+    </delete>
+
+    <delete id="deleteGuestSoloRecordsBefore">
+        DELETE FROM solo_game_records
+        WHERE member_id IS NULL
+          AND played_at &lt; #{cutoff}
+    </delete>
+</mapper>

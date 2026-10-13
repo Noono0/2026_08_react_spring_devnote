@@ -1,11 +1,11 @@
 /**
- * stageSandboxes.ts — 학습 단계(guideId) → 사이트 안 편집기(Sandpack)에 넣을 예제 원문
+ * stageSandboxes.ts — 학습 단계(guideId)·게임 규칙 연습(exerciseId) → 사이트 안 편집기(Sandpack)에 넣을 예제 원문
  *
  * `?raw`: Vite가 파일을 실행하지 않고 "파일 내용 문자열"로 가져온다. 편집기에 그 문자열을 그대로 넣는다.
  * 예제는 진짜 .tsx 파일이라 tsc·ESLint가 함께 검사한다. 그래서 학습자에게 깨진 예제가 보이지 않는다.
  *
- * ★ 이 파일은 StageSandboxDialog에서만 import한다(편집기를 열 때 함께 불러오는 지연 로딩 묶음).
- *   다른 곳에서 import하면 25개 예제 원문이 첫 화면 번들에 섞인다.
+ * ★ 이 파일은 StageSandboxPanel에서만 import한다(편집기를 열 때 함께 불러오는 지연 로딩 묶음).
+ *   다른 곳에서 import하면 모든 예제 원문이 첫 화면 번들에 섞인다.
  */
 import fundamentals from "./examples/01-fundamentals.tsx?raw";
 import todo from "./examples/02-todo.tsx?raw";
@@ -32,8 +32,16 @@ import urlState from "./examples/22-url-state.tsx?raw";
 import refsFocus from "./examples/23-refs-focus.tsx?raw";
 import useSuspense from "./examples/24-use-suspense.tsx?raw";
 import testing from "./examples/25-testing.tsx?raw";
+import gameMemoryShuffle from "./examples/game-memory-shuffle.tsx?raw";
+import game2048SlideRow from "./examples/game-2048-slide-row.tsx?raw";
+import gameSudokuPlacement from "./examples/game-sudoku-placement.tsx?raw";
+import gameTetrisClearLines from "./examples/game-tetris-clear-lines.tsx?raw";
+import gameMinesweeperRevealArea from "./examples/game-minesweeper-reveal-area.tsx?raw";
 
-/** 키는 learningGuides.ts의 guideId와 같다. 새 단계를 추가하면 예제 파일과 이 표를 함께 늘린다. */
+/**
+ * 키는 learningGuides.ts의 guideId(학습 단계)와 gameExercises.ts의 exerciseId(게임 규칙 연습)다.
+ * 새 단계·연습을 추가하면 예제 파일과 이 표를 함께 늘린다.
+ */
 export const stageSandboxSources: Record<string, string> = {
   fundamentals,
   todo,
@@ -60,4 +68,10 @@ export const stageSandboxSources: Record<string, string> = {
   "refs-focus": refsFocus,
   "use-suspense": useSuspense,
   testing,
+  // 게임 규칙 직접 만들어 보기
+  "memory-shuffle": gameMemoryShuffle,
+  "2048-slide-row": game2048SlideRow,
+  "sudoku-placement": gameSudokuPlacement,
+  "tetris-clear-lines": gameTetrisClearLines,
+  "minesweeper-reveal-area": gameMinesweeperRevealArea,
 };

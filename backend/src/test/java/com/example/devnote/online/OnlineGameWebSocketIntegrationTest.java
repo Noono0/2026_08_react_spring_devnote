@@ -114,6 +114,7 @@ class OnlineGameWebSocketIntegrationTest {
         JsonNode error = white.await(message -> message.path("type").asText().equals("ERROR"));
         assertThat(error.path("error").path("code").asText()).isEqualTo("ONLINE_ROOM_PASSWORD_INVALID");
         white.send(Map.of("type", "JOIN", "roomId", roomId, "nickname", "백돌", "password", "4321"));
+        white.awaitRoom(room -> room.path("participants").size() == 2); // 백돌이 먼저 들어온 뒤 관전자가 들어오게(방장 넘김 순서가 정해지도록)
         watcher.send(Map.of("type", "JOIN", "roomId", roomId, "nickname", "구경꾼", "password", "4321"));
         watcher.awaitRoom(room -> room.path("participants").size() == 3);
 

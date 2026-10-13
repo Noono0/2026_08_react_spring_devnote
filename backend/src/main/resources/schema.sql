@@ -374,3 +374,36 @@ CREATE TABLE IF NOT EXISTS crawler_run_histories (
     CONSTRAINT fk_crawler_run_histories_configuration FOREIGN KEY (crawler_configuration_id)
         REFERENCES crawler_configurations(crawler_configuration_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='크롤링 실행 성공·실패 이력';
+
+-- 게임 랭킹. 온라인 대전은 서버가 판정한 결과를, 혼자 하는 게임은 브라우저가 보낸 기록을 저장한다.
+-- 비회원(member_id NULL)은 닉네임으로 묶어 보여 주고, 1주일이 지나면 GameRankingService가 지운다.
+-- played_at은 Java가 정한 UTC 시각을 넣는다(DB 시간대 설정과 상관없이 기간 조회가 맞도록).
+CREATE TABLE IF NOT EXISTS online_game_results (
+    online_game_result_id BIGINT NOT NULL AUTO_INCREMENT COMMENT '대전 결과 식별자',
+    game_type VARCHAR(30) NOT NULL COMMENT 'OnlineGameType 이름(OMOK, CHESS 등)',
+    member_id BIGINT NULL COMMENT '로그인 회원 식별자(비회원이면 NULL)',
+    nickname VARCHAR(100) NOT NULL COMMENT '그 판에서 쓴 이름',
+    player_count INT NOT NULL COMMENT '그 판의 플레이어 수',
+    won BOOLEAN NOT NULL COMMENT '승리 여부(무승부·패배·기권이면 FALSE)',
+    played_at DATETIME(6) NOT NULL COMMENT '게임이 끝난 일시(UTC)',
+    PRIMARY KEY (online_game_result_id),
+    KEY idx_online_game_results_game_period (game_type, played_at),
+    KEY idx_online_game_results_member_period (member_id, played_at),
+    CONSTRAINT fk_online_game_results_member FOREIGN KEY (member_id) REFERENCES members(member_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='온라인 대전 결과(한 판에 플레이어마다 한 줄)';
+
+CREATE TABLE IF NOT EXISTS solo_game_records (
+    solo_game_record_id BIGINT NOT NULL AUTO_INCREMENT COMMENT '혼자 하는 게임 기록 식별자',
+    game_code VARCHAR(30) NOT NULL COMMENT 'GAME_2048, TETRIS, PUYO, MINESWEEPER, MEMORY 또는 SUDOKU',
+    difficulty VARCHAR(20) NOT NULL DEFAULT '' COMMENT '난이도(난이도가 없는 게임은 빈 문자열)',
+    member_id BIGINT NULL COMMENT '로그인 회원 식별자(비회원이면 NULL)',
+    nickname VARCHAR(100) NOT NULL COMMENT '기록할 때 쓴 이름',
+    score INT NULL COMMENT '점수(2048·테트리스)',
+    elapsed_seconds INT NULL COMMENT '걸린 시간 초(지뢰 찾기·카드 짝 맞추기)',
+    moves INT NULL COMMENT '시도 횟수(카드 짝 맞추기)',
+    played_at DATETIME(6) NOT NULL COMMENT '기록한 일시(UTC)',
+    PRIMARY KEY (solo_game_record_id),
+    KEY idx_solo_game_records_game_period (game_code, difficulty, played_at),
+    KEY idx_solo_game_records_member_period (member_id, played_at),
+    CONSTRAINT fk_solo_game_records_member FOREIGN KEY (member_id) REFERENCES members(member_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='혼자 하는 게임 기록';

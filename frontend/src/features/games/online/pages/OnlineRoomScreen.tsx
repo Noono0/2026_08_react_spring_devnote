@@ -3,20 +3,24 @@
  *
  * 모든 조작은 send(...)로 서버에 "부탁"만 하고, 결과는 서버가 보낸 ROOM_STATE로 다시 그린다.
  * 그래서 이 화면에는 게임 규칙이 없다(규칙은 서버 OnlineRoom·OmokGame에 있다).
+ * 예외: 대기 중 혼자 연습(WaitingPracticePanel)은 브라우저에서만 돌아가며 서버와 주고받지 않는다.
  */
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useId, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { OmokBoard } from "@/features/games/online/components/OmokBoard";
 import { OnlineRoomForm } from "@/features/games/online/components/OnlineRoomForm";
+import { OnlinePuyoGame } from "@/features/games/online/components/OnlinePuyoGame";
 import { OnlineTetrisGame } from "@/features/games/online/components/OnlineTetrisGame";
+import { CommonGameArea } from "@/features/games/online/games/CommonGameArea";
 import { RoomChat } from "@/features/games/online/components/RoomChat";
 import { RoomSeats } from "@/features/games/online/components/RoomSeats";
 import { getOnlineGameTypes, onlineQueryKeys } from "@/features/games/online/onlineApi";
-import { seatLabel, toRoomSettings } from "@/features/games/online/onlineRoomHelpers";
+import { isStillRacing, RACE_GAME_TYPES, seatLabel, toRoomSettings, withGameOption } from "@/features/games/online/onlineRoomHelpers";
 import { findMe } from "@/features/games/online/onlineRoomReducer";
 import type { OnlineRoom } from "@/features/games/online/onlineTypes";
 import { useOnlineRoom } from "@/features/games/online/useOnlineRoom";
+import { WaitingPracticePanel } from "@/features/games/practice/WaitingPracticePanel";
 import { ConfirmDialog } from "@/shared/ui/ConfirmDialog";
 import { ModalDialog } from "@/shared/ui/ModalDialog";
 
@@ -37,9 +41,16 @@ interface OnlineRoomScreenProperties {
 /** 판 아래 한 줄 안내: 누구 차례인지, 지난 판 결과, 시작 조건 */
 const describeStatus = (room: OnlineRoom, mySeat: number | null): string => {
   const nicknameAt = (seat: number) => room.participants.find((participant) => participant.participantId === room.seats[seat])?.nickname ?? "(빈자리)";
+  // 공통 틀 게임은 게임 화면이 자기 진행 상황을 보여 준다
+  if (room.status === "PLAYING" && room.game != null) return "";
   if (room.status === "PLAYING" && room.tetris) {
     const alive = room.tetris.players.filter((player) => player.alive).length;
     const me = mySeat === null ? undefined : room.tetris.players[mySeat];
+    return `살아남은 사람 ${alive}명${me && !me.alive ? ` — 나는 ${me.rank}위로 탈락` : ""}`;
+  }
+  if (room.status === "PLAYING" && room.puyo) {
+    const alive = room.puyo.players.filter((player) => player.alive).length;
+    const me = mySeat === null ? undefined : room.puyo.players[mySeat];
     return `살아남은 사람 ${alive}명${me && !me.alive ? ` — 나는 ${me.rank}위로 탈락` : ""}`;
   }
   if (room.status === "PLAYING" && room.omok) {
@@ -56,6 +67,7 @@ export const OnlineRoomScreen = ({ roomId, nickname, hostToken, canUseMembersOnl
   const [password, setPassword] = useState("");
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isResignOpen, setIsResignOpen] = useState(false);
+  const optionPickerId = useId();
   const { room, connection, lastError } = state;
   const isOpen = connection === "OPEN";
   // 마지막으로 숨긴 오류 번호. 새 오류(sequence 증가)가 오면 다시 보이고, 4초 뒤 타이머가 숨긴다
@@ -115,8 +127,16 @@ export const OnlineRoomScreen = ({ roomId, nickname, hostToken, canUseMembersOnl
   const canPlace = isOpen && playing && room.omok != null && mySeat === room.omok.turnSeat;
   const seatsFull = !room.seats.includes(null);
   const isTetris = room.gameType === "TETRIS";
-  // 기권: 오목은 진행 중인 플레이어, 테트리스는 아직 살아 있는 플레이어만
-  const canResign = playing && mySeat !== null && (!isTetris || room.tetris?.players[mySeat]?.alive === true);
+  const isPuyo = room.gameType === "PUYO";
+  const isFallingPuzzle = isTetris || isPuyo;
+  const isCommonGame = room.gameType !== "TETRIS" && room.gameType !== "PUYO" && room.gameType !== "OMOK";
+  const statusText = describeStatus(room, mySeat);
+  // 기권: 오목은 진행 중인 플레이어, 테트리스는 아직 살아 있는 플레이어, 2048·지뢰 찾기 대전은 아직 자기 판을 하는 중인 플레이어만
+  const canResign = playing && mySeat !== null
+    && (!isTetris || room.tetris?.players[mySeat]?.alive === true)
+    && (!isPuyo || room.puyo?.players[mySeat]?.alive === true)
+    && (!RACE_GAME_TYPES.has(room.gameType) || isStillRacing(room.game, mySeat));
+  const gameOptions = gameTypesQuery.data?.find((type) => type.code === room.gameType)?.options ?? [];
 
   return (
     <section className="site-page online-page">
@@ -126,6 +146,7 @@ export const OnlineRoomScreen = ({ roomId, nickname, hostToken, canUseMembersOnl
           <h1>{room.title}</h1>
           <span className="online-room-badges">
             <span className={`online-badge ${playing ? "playing" : "waiting"}`}>{playing ? "게임 중" : "대기 중"}</span>
+            {room.gameOptionLabel ? <span className="online-badge">게임 옵션: {room.gameOptionLabel}</span> : null}
             {room.hasPassword ? <span className="online-badge">🔒 비밀번호</span> : null}
             {room.membersOnly ? <span className="online-badge member">로그인 유저만</span> : null}
             <span className={`online-badge connection-${connection.toLowerCase()}`}>{isOpen ? "연결됨" : connection === "CONNECTING" ? "연결 중" : "연결 끊김"}</span>
@@ -145,14 +166,28 @@ export const OnlineRoomScreen = ({ roomId, nickname, hostToken, canUseMembersOnl
       ) : null}
       {visibleError ? <p key={visibleError.sequence} className="online-banner warning" role="alert">{visibleError.message}</p> : null}
 
-      <div className={`online-room-layout${isTetris ? " wide" : ""}`}>
+      {/* 테트리스·뿌요뿌요·당구(3D 테이블)·올림픽(경기장)은 판을 넓게 쓰도록 채팅·자리 목록을 아래로 보낸다 */}
+      <div className={`online-room-layout${isFallingPuzzle || room.gameType === "BILLIARDS" || room.gameType === "OLYMPIC" ? " wide" : ""}`}>
         <div className="online-game-area">
           {isTetris ? (
             <OnlineTetrisGame room={room} mySeat={mySeat} connected={isOpen} incomingGarbage={state.incomingGarbage} send={send} />
+          ) : isPuyo ? (
+            <OnlinePuyoGame room={room} mySeat={mySeat} connected={isOpen} incomingPuyoGarbage={state.incomingPuyoGarbage} send={send} />
+          ) : isCommonGame ? (
+            <CommonGameArea room={room} mySeat={mySeat} connected={isOpen} send={send} />
           ) : (
             <OmokBoard omok={room.omok} canPlace={canPlace} onPlace={(row, col) => send({ type: "OMOK_PLACE", row, col })} />
           )}
-          <p className={`game-status${room.lastResult && !playing ? " success" : ""}`} aria-live="polite">{describeStatus(room, mySeat)}</p>
+          {statusText ? <p className={`game-status${room.lastResult && !playing ? " success" : ""}`} aria-live="polite">{statusText}</p> : null}
+          {!playing ? <WaitingPracticePanel gameType={room.gameType} gameOption={room.gameOption} nickname={nickname} /> : null}
+          {isHost && !playing && gameOptions.length > 0 ? (
+            <div className="online-game-option">
+              <label htmlFor={optionPickerId}>게임 옵션</label>
+              <select id={optionPickerId} value={room.gameOption ?? ""} disabled={!isOpen} onChange={(event) => send({ type: "UPDATE_ROOM", settings: withGameOption(room, event.target.value) })}>
+                {gameOptions.map((option) => <option key={option.code} value={option.code}>{option.label}</option>)}
+              </select>
+            </div>
+          ) : null}
           <div className="button-row">
             {isHost && !playing ? (
               <button type="button" disabled={!isOpen || !seatsFull} onClick={() => send({ type: "START" })}>
@@ -176,7 +211,7 @@ export const OnlineRoomScreen = ({ roomId, nickname, hostToken, canUseMembersOnl
             <OnlineRoomForm
               mode="edit"
               gameTypes={gameTypesQuery.data}
-              defaultValues={{ title: room.title, gameType: room.gameType, seatCount: room.seatCount, password: "", passwordMode: room.hasPassword ? "KEEP" : "CHANGE", membersOnly: room.membersOnly }}
+              defaultValues={{ title: room.title, gameType: room.gameType, seatCount: room.seatCount, password: "", passwordMode: room.hasPassword ? "KEEP" : "CHANGE", membersOnly: room.membersOnly, gameOption: room.gameOption ?? "" }}
               hasPassword={room.hasPassword}
               canUseMembersOnly={canUseMembersOnly}
               gameLocked={playing}
@@ -193,7 +228,7 @@ export const OnlineRoomScreen = ({ roomId, nickname, hostToken, canUseMembersOnl
       <ConfirmDialog
         isOpen={isResignOpen}
         title="기권"
-        description={isTetris ? "기권하면 나만 탈락하고 나머지 사람은 계속합니다. 기권할까요?" : "기권하면 상대가 이깁니다. 기권할까요?"}
+        description={isFallingPuzzle || isCommonGame ? "기권하면 나만 빠지고 나머지 사람은 계속합니다(혼자 남으면 그 사람이 이깁니다). 기권할까요?" : "기권하면 상대가 이깁니다. 기권할까요?"}
         confirmButtonLabel="기권"
         onConfirm={() => {
           send({ type: "RESIGN" });

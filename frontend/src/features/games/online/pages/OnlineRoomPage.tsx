@@ -13,12 +13,11 @@ import { z } from "zod";
 import { useAuthSessionQuery } from "@/features/auth/hooks/useAuthSession";
 import { OnlineRoomScreen } from "@/features/games/online/pages/OnlineRoomScreen";
 import { readGameRecord, writeGameRecord } from "@/features/games/shared/gameRecordStorage";
+import { PLAYER_NICKNAME_KEY as NICKNAME_KEY, playerNicknameSchema as nicknameSchema } from "@/features/games/shared/playerNickname";
 import "@/features/games/shared/games.css";
 import "@/features/games/online/online.css";
 
 const ROOM_ID_PATTERN = /^[a-z0-9]{8}$/;
-const NICKNAME_KEY = "online.nickname";
-const nicknameSchema = z.string().trim().min(2).max(12);
 const locationStateSchema = z.object({ hostToken: z.string().min(1) });
 
 export const OnlineRoomPage = () => {

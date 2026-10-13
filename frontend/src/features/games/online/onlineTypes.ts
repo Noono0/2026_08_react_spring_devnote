@@ -11,12 +11,21 @@ import { z } from "zod";
 
 // ── 대기실(REST) ────────────────────────────────────────────
 
+/** 방장이 고르는 게임 옵션 하나(스도쿠 난이도, 2048 목표 타일, 지뢰 찾기 난이도 등) */
+export interface OnlineGameOption {
+  code: string;
+  label: string;
+}
+
 export interface OnlineGameTypeInfo {
   code: string;
   label: string;
   minSeats: number;
   maxSeats: number;
   available: boolean;
+  /** 고를 수 있는 옵션. 옵션이 없는 게임은 빈 목록 */
+  options: OnlineGameOption[];
+  defaultOption: string | null;
 }
 
 export interface OnlineRoomSummary {
@@ -24,6 +33,7 @@ export interface OnlineRoomSummary {
   title: string;
   gameType: string;
   gameTypeLabel: string;
+  gameOptionLabel: string | null;
   seatCount: number;
   playerCount: number;
   participantCount: number;
@@ -40,6 +50,8 @@ export interface OnlineRoomCreateRequest {
   seatCount: number;
   password: string;
   membersOnly: boolean;
+  /** 비우면(null) 서버가 그 게임의 처음 옵션을 쓴다 */
+  gameOption: string | null;
 }
 
 export interface OnlineRoomCreated {
@@ -78,6 +90,24 @@ const tetrisSchema = z.object({
   players: z.array(tetrisPlayerSchema),
 });
 
+/** 뿌요뿌요 대전 판 요약: 보이는 12줄 × 6칸 = 72글자("." 빈칸, R·G·B·Y·P 색, N 방해 뿌요) */
+export const PUYO_BOARD_TEXT_LENGTH = 72;
+const puyoPlayerSchema = z.object({
+  seatIndex: z.number().int(),
+  nickname: z.string(),
+  alive: z.boolean(),
+  score: z.number().int(),
+  chains: z.number().int(),
+  board: z.string().regex(/^[.RGBYPN]{72}$/),
+  rank: z.number().int(),
+});
+
+const puyoSchema = z.object({
+  seed: z.number().int(),
+  winnerSeat: z.number().int().nullish(),
+  players: z.array(puyoPlayerSchema),
+});
+
 const participantSchema = z.object({
   participantId: z.string(),
   nickname: z.string(),
@@ -90,6 +120,9 @@ export const onlineRoomSchema = z.object({
   title: z.string(),
   gameType: z.string(),
   gameTypeLabel: z.string(),
+  /** 방장이 고른 옵션 코드와 이름. 옵션이 없는 게임이면 비어 있다 */
+  gameOption: z.string().nullish(),
+  gameOptionLabel: z.string().nullish(),
   seatCount: z.number().int(),
   maxParticipants: z.number().int(),
   hasPassword: z.boolean(),
@@ -101,6 +134,9 @@ export const onlineRoomSchema = z.object({
   participants: z.array(participantSchema),
   omok: omokSchema.nullish(),
   tetris: tetrisSchema.nullish(),
+  puyo: puyoSchema.nullish(),
+  /** 공통 틀 게임(숫자 야구 등)의 상태. 모양은 gameType마다 달라 각 게임 화면이 자기 스키마로 다시 확인한다 */
+  game: z.unknown().nullish(),
   lastResult: z.string().nullish(),
 });
 
@@ -120,6 +156,7 @@ export const onlineServerMessageSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("ERROR"), error: z.object({ code: z.string(), message: z.string() }) }),
   z.object({ type: z.literal("PONG") }),
   z.object({ type: z.literal("TETRIS_GARBAGE"), garbage: z.object({ lines: z.number().int().min(1).max(20), holeCol: z.number().int().min(0).max(9), fromNickname: z.string() }) }),
+  z.object({ type: z.literal("PUYO_GARBAGE"), garbage: z.object({ lines: z.number().int().min(1).max(30), holeCol: z.number().int().min(0).max(5), fromNickname: z.string() }) }),
 ]);
 
 export type OnlineRoom = z.infer<typeof onlineRoomSchema>;
@@ -128,6 +165,8 @@ export type OnlineChat = z.infer<typeof chatSchema>;
 export type OmokState = z.infer<typeof omokSchema>;
 export type TetrisBattleState = z.infer<typeof tetrisSchema>;
 export type TetrisBattlePlayer = z.infer<typeof tetrisPlayerSchema>;
+export type PuyoBattleState = z.infer<typeof puyoSchema>;
+export type PuyoBattlePlayer = z.infer<typeof puyoPlayerSchema>;
 export type OnlineServerMessage = z.infer<typeof onlineServerMessageSchema>;
 
 // ── 방 안(WebSocket, 화면 → 서버) ─────────────────────────────
@@ -139,6 +178,8 @@ export interface OnlineRoomSettingsInput {
   newPassword: string;
   removePassword: boolean;
   membersOnly: boolean;
+  /** 비우면(null) 같은 게임이면 지금 옵션 그대로, 다른 게임이면 그 게임의 처음 옵션 */
+  gameOption: string | null;
 }
 
 /** 화면이 보낼 수 있는 메시지. 서버 OnlineClientMessage의 type과 같다 */
@@ -154,4 +195,8 @@ export type OnlineClientMessage =
   | { type: "TETRIS_BOARD"; board: string; score: number; lines: number }
   | { type: "TETRIS_ATTACK"; cleared: number }
   | { type: "TETRIS_TOPPED_OUT" }
+  | { type: "PUYO_BOARD"; board: string; score: number; lines: number }
+  | { type: "PUYO_ATTACK"; cleared: number }
+  | { type: "PUYO_TOPPED_OUT" }
+  | { type: "GAME_ACTION"; action: string; text?: string; number?: number; numbers?: number[] }
   | { type: "PING" };

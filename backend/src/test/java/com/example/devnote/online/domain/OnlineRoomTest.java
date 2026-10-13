@@ -2,6 +2,8 @@ package com.example.devnote.online.domain;
 
 import com.example.devnote.common.exception.BusinessException;
 import com.example.devnote.common.exception.ErrorCode;
+import com.example.devnote.online.domain.game.GameAction;
+import com.example.devnote.online.domain.game.MinesweeperGame;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -14,7 +16,7 @@ class OnlineRoomTest {
     private static final long NOW = 1_000_000L;
 
     private static OnlineRoom omokRoom() {
-        return new OnlineRoom("room1", new OnlineRoomSettings("한 판 해요", OnlineGameType.OMOK, 2, null, false, false), "token", NOW);
+        return new OnlineRoom("room1", new OnlineRoomSettings("한 판 해요", OnlineGameType.OMOK, 2, null, false, false, null), "token", NOW);
     }
 
     private static OnlineParticipant join(OnlineRoom room, String id) {
@@ -96,18 +98,18 @@ class OnlineRoomTest {
         OnlineRoom room = omokRoom();
         join(room, "A");
         join(room, "B");
-        assertError(() -> room.updateSettings("B", new OnlineRoomSettings("바꿈", OnlineGameType.OMOK, 2, null, false, false), NOW),
+        assertError(() -> room.updateSettings("B", new OnlineRoomSettings("바꿈", OnlineGameType.OMOK, 2, null, false, false, null), NOW),
             ErrorCode.ONLINE_ROOM_HOST_ONLY);
 
-        room.updateSettings("A", new OnlineRoomSettings("  새 제목  ", OnlineGameType.OMOK, 2, "1234", false, false), NOW);
+        room.updateSettings("A", new OnlineRoomSettings("  새 제목  ", OnlineGameType.OMOK, 2, "1234", false, false, null), NOW);
         assertThat(room.getTitle()).isEqualTo("새 제목");
         assertThat(room.hasPassword()).isTrue();
         assertThat(room.passwordMatches("1234")).isTrue();
         assertThat(room.passwordMatches("9999")).isFalse();
 
-        room.updateSettings("A", new OnlineRoomSettings("새 제목", OnlineGameType.OMOK, 2, null, false, false), NOW);
+        room.updateSettings("A", new OnlineRoomSettings("새 제목", OnlineGameType.OMOK, 2, null, false, false, null), NOW);
         assertThat(room.passwordMatches("1234")).isTrue(); // 비워 보내면 그대로
-        room.updateSettings("A", new OnlineRoomSettings("새 제목", OnlineGameType.OMOK, 2, null, true, false), NOW);
+        room.updateSettings("A", new OnlineRoomSettings("새 제목", OnlineGameType.OMOK, 2, null, true, false, null), NOW);
         assertThat(room.hasPassword()).isFalse(); // 해제
     }
 
@@ -115,14 +117,14 @@ class OnlineRoomTest {
     void 잘못된_방_정보는_하나도_바뀌지_않는다() {
         OnlineRoom room = omokRoom();
         join(room, "A");
-        assertError(() -> room.updateSettings("A", new OnlineRoomSettings("새 제목", OnlineGameType.OMOK, 2, "12", false, false), NOW),
+        assertError(() -> room.updateSettings("A", new OnlineRoomSettings("새 제목", OnlineGameType.OMOK, 2, "12", false, false, null), NOW),
             ErrorCode.ONLINE_ROOM_SETTINGS_INVALID); // 비밀번호 4자 미만
         assertThat(room.getTitle()).isEqualTo("한 판 해요");
-        assertError(() -> room.updateSettings("A", new OnlineRoomSettings("새 제목", OnlineGameType.CHESS, 2, null, false, false), NOW),
+        assertError(() -> room.updateSettings("A", new OnlineRoomSettings("새 제목", null, 2, null, false, false, null), NOW), // 게임 종류 없음
             ErrorCode.ONLINE_GAME_NOT_AVAILABLE);
-        assertError(() -> room.updateSettings("A", new OnlineRoomSettings("새 제목", OnlineGameType.OMOK, 4, null, false, false), NOW),
+        assertError(() -> room.updateSettings("A", new OnlineRoomSettings("새 제목", OnlineGameType.OMOK, 4, null, false, false, null), NOW),
             ErrorCode.ONLINE_SEAT_COUNT_INVALID);
-        assertError(() -> room.updateSettings("A", new OnlineRoomSettings(" ", OnlineGameType.OMOK, 2, null, false, false), NOW),
+        assertError(() -> room.updateSettings("A", new OnlineRoomSettings(" ", OnlineGameType.OMOK, 2, null, false, false, null), NOW),
             ErrorCode.ONLINE_ROOM_SETTINGS_INVALID);
     }
 
@@ -130,11 +132,11 @@ class OnlineRoomTest {
     void 로그인_유저만은_회원인_방장만_켤_수_있다() {
         OnlineRoom room = omokRoom();
         join(room, "A"); // 비회원 방장
-        assertError(() -> room.updateSettings("A", new OnlineRoomSettings("제목", OnlineGameType.OMOK, 2, null, false, true), NOW),
+        assertError(() -> room.updateSettings("A", new OnlineRoomSettings("제목", OnlineGameType.OMOK, 2, null, false, true, null), NOW),
             ErrorCode.ONLINE_ROOM_SETTINGS_INVALID);
         OnlineRoom memberRoom = omokRoom();
         memberRoom.addParticipant(new OnlineParticipant("M", "s", "회원", 7L), false, NOW);
-        memberRoom.updateSettings("M", new OnlineRoomSettings("제목", OnlineGameType.OMOK, 2, null, false, true), NOW);
+        memberRoom.updateSettings("M", new OnlineRoomSettings("제목", OnlineGameType.OMOK, 2, null, false, true, null), NOW);
         assertThat(memberRoom.isMembersOnly()).isTrue();
     }
 
@@ -154,8 +156,71 @@ class OnlineRoomTest {
         assertError(() -> room.stand("A"), ErrorCode.ONLINE_GAME_IN_PROGRESS);
         assertError(() -> room.sit("C", 0), ErrorCode.ONLINE_GAME_IN_PROGRESS);
         // 제목은 게임 중에도 바뀐다
-        room.updateSettings("A", new OnlineRoomSettings("게임 중 제목", OnlineGameType.OMOK, 2, null, false, false), NOW);
+        room.updateSettings("A", new OnlineRoomSettings("게임 중 제목", OnlineGameType.OMOK, 2, null, false, false, null), NOW);
         assertThat(room.getTitle()).isEqualTo("게임 중 제목");
+    }
+
+    @Test
+    void 게임_옵션은_비우면_처음_값이고_고를_수_없는_값은_거절한다() {
+        OnlineRoom room = new OnlineRoom("r", new OnlineRoomSettings("2048", OnlineGameType.GAME_2048, 2, null, false, false, null), "token", NOW);
+        assertThat(room.getGameOption()).isEqualTo("512");
+        assertThat(omokRoom().getGameOption()).isNull();
+        assertError(() -> new OnlineRoom("r", new OnlineRoomSettings("2048", OnlineGameType.GAME_2048, 2, null, false, false, "EXPERT"), "token", NOW),
+            ErrorCode.ONLINE_GAME_OPTION_INVALID);
+
+        join(room, "A");
+        room.updateSettings("A", new OnlineRoomSettings("2048", OnlineGameType.GAME_2048, 2, null, false, false, "256"), NOW);
+        assertThat(room.getGameOption()).isEqualTo("256");
+        room.updateSettings("A", new OnlineRoomSettings("제목만", OnlineGameType.GAME_2048, 2, null, false, false, null), NOW);
+        assertThat(room.getGameOption()).isEqualTo("256"); // 비워 보내면 그대로
+        assertError(() -> room.updateSettings("A", new OnlineRoomSettings("2048", OnlineGameType.GAME_2048, 2, null, false, false, "4096"), NOW),
+            ErrorCode.ONLINE_GAME_OPTION_INVALID);
+        assertThat(room.getTitle()).isEqualTo("제목만");
+        assertError(() -> room.updateSettings("A", new OnlineRoomSettings("오목", OnlineGameType.OMOK, 2, null, false, false, "256"), NOW),
+            ErrorCode.ONLINE_GAME_OPTION_INVALID); // 오목은 옵션이 없다
+    }
+
+    @Test
+    void 게임을_바꾸면_옵션이_그_게임의_처음_값이_되고_게임_중에는_옵션을_못_바꾼다() {
+        OnlineRoom room = new OnlineRoom("r", new OnlineRoomSettings("2048", OnlineGameType.GAME_2048, 2, null, false, false, "1024"), "token", NOW);
+        join(room, "A");
+        join(room, "B");
+        room.updateSettings("A", new OnlineRoomSettings("지뢰", OnlineGameType.MINESWEEPER, 2, null, false, false, null), NOW);
+        assertThat(room.getGameOption()).isEqualTo("BEGINNER");
+        room.updateSettings("A", new OnlineRoomSettings("지뢰", OnlineGameType.MINESWEEPER, 2, null, false, false, "EXPERT"), NOW);
+        assertThat(room.getChatHistory().getLast().text()).isEqualTo("방 정보가 바뀌었습니다: 지뢰 찾기 대전 · 2인 · 고급 · 16×30 · 지뢰 99");
+
+        room.sit("A", 0);
+        room.sit("B", 1);
+        room.start("A", NOW, 3);
+        assertThat(((MinesweeperGame.View) room.getGame().viewFor(0)).rows()).isEqualTo(16);
+        assertError(() -> room.updateSettings("A", new OnlineRoomSettings("지뢰", OnlineGameType.MINESWEEPER, 2, null, false, false, "BEGINNER"), NOW),
+            ErrorCode.ONLINE_GAME_IN_PROGRESS);
+        room.updateSettings("A", new OnlineRoomSettings("게임 중 제목", OnlineGameType.MINESWEEPER, 2, null, false, false, "EXPERT"), NOW);
+        assertThat(room.getTitle()).isEqualTo("게임 중 제목"); // 같은 옵션이면 제목은 바뀐다
+    }
+
+    @Test
+    void 자기_결과가_정해진_뒤에_나가도_그_결과로_이길_수_있다() {
+        OnlineRoom room = new OnlineRoom("r", new OnlineRoomSettings("지뢰", OnlineGameType.MINESWEEPER, 3, null, false, false, null), "token", NOW);
+        List<String> ids = List.of("A", "B", "C");
+        for (int seat = 0; seat < 3; seat++) {
+            join(room, ids.get(seat));
+            room.sit(ids.get(seat), seat);
+        }
+        room.start("A", NOW, 11);
+        // A가 지뢰를 밟거나 모두 열 때까지 차례로 연다(이미 연 칸은 아무 일 없음)
+        for (int index = 0; index < 81 && !room.getGame().hasSettledResult(0); index++) {
+            room.gameAction("A", new GameAction("REVEAL", null, null, List.of(index / 9, index % 9)), NOW);
+        }
+        assertThat(room.getGame().hasSettledResult(0)).isTrue();
+
+        room.removeParticipant("A", NOW);
+        room.resign("B", NOW);
+        room.removeParticipant("C", NOW);
+        assertThat(room.getStatus()).isEqualTo(OnlineRoom.Status.WAITING);
+        OnlineMatchResult result = room.drainFinishedMatch();
+        assertThat(result.players()).extracting(OnlineMatchResult.Player::won).containsExactly(true, false, false);
     }
 
     @Test

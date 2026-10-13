@@ -23,11 +23,15 @@ const createRoomFormSchema = (gameTypes: OnlineGameTypeInfo[], requireNewPasswor
   password: z.string().max(20, "비밀번호는 4~20자로 입력해 주세요."),
   passwordMode: z.enum(["KEEP", "CHANGE", "REMOVE"]),
   membersOnly: z.boolean(),
+  gameOption: z.string(),
 }).superRefine((values, context) => {
   const gameType = gameTypes.find((type) => type.code === values.gameType);
   if (!gameType?.available) context.addIssue({ code: "custom", path: ["gameType"], message: "아직 준비 중인 게임입니다." });
   else if (values.seatCount < gameType.minSeats || values.seatCount > gameType.maxSeats) {
     context.addIssue({ code: "custom", path: ["seatCount"], message: "이 게임에서 고를 수 없는 인원 수입니다." });
+  }
+  if (gameType && values.gameOption !== "" && !gameType.options.some((option) => option.code === values.gameOption)) {
+    context.addIssue({ code: "custom", path: ["gameOption"], message: "이 게임에서 고를 수 없는 옵션입니다." });
   }
   if (values.passwordMode !== "CHANGE") return;
   if (requireNewPassword && values.password.length === 0) {
@@ -69,7 +73,8 @@ export const OnlineRoomForm = ({
   // 칸과 오류 문구를 이어 주는 id. 오류 문구를 label 안에 넣으면 칸 이름이 "방 제목 방 제목을 입력해 주세요"처럼 길어지므로
   // label 밖에 두고 aria-describedby로 "이 칸의 설명"으로 연결한다(화면 낭독기가 칸 이름 뒤에 읽어 준다).
   const fieldId = useId();
-  const ids = { title: `${fieldId}-title`, gameType: `${fieldId}-game`, seatCount: `${fieldId}-seats`, password: `${fieldId}-password` };
+  const ids = { title: `${fieldId}-title`, gameType: `${fieldId}-game`, seatCount: `${fieldId}-seats`, gameOption: `${fieldId}-option`, password: `${fieldId}-password` };
+  const gameOptions = selectedType?.options ?? [];
   const errorId = (name: keyof typeof ids) => `${ids[name]}-error`;
 
   return (
@@ -88,10 +93,13 @@ export const OnlineRoomForm = ({
             id={ids.gameType}
             aria-describedby={errors.gameType ? errorId("gameType") : undefined}
             {...register("gameType", {
-              // 게임을 바꾸면 인원 수를 새 게임 범위 안으로 맞춘다(이벤트 처리 함수에서 바로 — Effect가 필요 없다)
+              // 게임을 바꾸면 인원 수를 새 게임 범위 안으로 맞추고 옵션은 새 게임의 처음 값으로 되돌린다
+              // (이벤트 처리 함수에서 바로 — Effect가 필요 없다. 서버도 게임이 바뀌면 같은 규칙을 쓴다)
               onChange: (event: ChangeEvent<HTMLSelectElement>) => {
                 const nextType = gameTypes.find((type) => type.code === event.target.value);
-                if (nextType) setValue("seatCount", clamp(getValues("seatCount"), nextType.minSeats, nextType.maxSeats));
+                if (!nextType) return;
+                setValue("seatCount", clamp(getValues("seatCount"), nextType.minSeats, nextType.maxSeats));
+                setValue("gameOption", nextType.defaultOption ?? "");
               },
             })}
             disabled={gameLocked}
@@ -113,7 +121,17 @@ export const OnlineRoomForm = ({
           {errors.seatCount ? <small id={errorId("seatCount")} className="field-error">{errors.seatCount.message}</small> : null}
         </div>
       </div>
-      {gameLocked ? <p className="online-form-hint">게임 중에는 게임 종류와 인원 수를 바꿀 수 없습니다.</p> : null}
+      {gameOptions.length > 0 ? (
+        <div className="online-field">
+          <label htmlFor={ids.gameOption}>게임 옵션</label>
+          <select id={ids.gameOption} {...register("gameOption")} disabled={gameLocked}
+            aria-describedby={errors.gameOption ? errorId("gameOption") : undefined}>
+            {gameOptions.map((option) => <option key={option.code} value={option.code}>{option.label}</option>)}
+          </select>
+          {errors.gameOption ? <small id={errorId("gameOption")} className="field-error">{errors.gameOption.message}</small> : null}
+        </div>
+      ) : null}
+      {gameLocked ? <p className="online-form-hint">게임 중에는 게임 종류·인원 수·옵션을 바꿀 수 없습니다.</p> : null}
 
       {mode === "edit" && hasPassword ? (
         <fieldset className="online-password-mode">

@@ -2,6 +2,116 @@
 
 [문서 목록으로](../README.md) · [작업 규칙](../AGENTS.md) · [검증 명령](verification.md)
 
+## 2026-10-13 — 온라인 대전 올림픽(육상 6종목)
+
+- **경기 계산(브라우저)**: `features/games/olympic/olympicLogic.ts` — 번갈아 누르기 속도 모델(최고 속도에 가까울수록 덜 빨라짐, 같은 발 연타는 감속), 100m 부정 출발, 110m 허들(실제 위치 13.72m+9.14m×n, 걸리면 감속), 멀리뛰기(수직 이륙 속도 한계로 약 20°가 최적), 창던지기(40° 넘으면 공기 저항), 해머(회전 속도·부채꼴 34.92°), 높이뛰기(1.70m부터 5cm, 3번 실패). 그리기는 `olympicDraw.ts`(Canvas 2D, 관중석·트랙·허들·모래판·부채꼴), 경기 화면은 `OlympicEventPlay.tsx`(rAF 루프, 키보드 반복 입력 무시, 채팅 입력 중엔 무시).
+- **서버**: `OlympicGame`(OnlineGame) — SELECT(0번 자리가 종목 선택) → EVENT(RESULT 기록, PROGRESS 달린 거리) → RESULT(NEXT) → END. 종목별 기록 범위 검사, 순위 메달(공동 금이면 다음은 동), 혼자면 기준 기록 메달, 금·은·동 순 우승. 1~4인. 고를 사람이 나가면 전 종목으로 시작.
+- **화면·연습**: `online/games/OlympicGame.tsx`(종목 고르기·경기·결과·폐막, 넓은 배치), 대기 중 `OlympicPractice`(종목 고르기, 기준 메달, 종목별 개인 최고 기록 localStorage + zod).
+- **검증**: 백엔드 `gradlew.bat test` 296개 통과(1개 기본 건너뜀: 외부 크롤러, `OlympicGameTest` 4개). 프론트 `lint`·`typecheck`·`test`(646개, `olympicLogic.test.ts` 9개·화면 테스트 5개)·`build` 통과. 검증용 서버 + 헤드리스 Chrome에서 실제 키 입력으로 1인 대회(100m 11.34초 → 멀리뛰기 → 해머 → 폐막)를 끝까지 진행하며 화면을 캡처했고, 2인 WebSocket 클라이언트로 종목 선택 권한·진행 거리 중계·메달·우승을 확인했다. 사람이 직접 연타하는 손맛과 모바일 터치 조작은 확인하지 않았다.
+
+## 2026-10-13 — 온라인 대전 3D 당구(3쿠션·4구·8볼)
+
+- **물리(서버)**: `online/domain/game/billiards/BilliardsPhysics` — 1/1800초 고정 간격, 천 미끄럼 마찰(μ 0.2)→자연 회전 전환·굴림 저항·세로축 회전 감쇠, 큐 당점으로 가로축(밀어치기·끌어치기)·세로축(잉글리시) 회전과 스쿼트, 쿠션(속도별 반발 + 접점 마찰로 잉글리시 반사각 변화 + 레일 쪽 회전 감쇠), 공끼리 비탄성 충돌(0.94) + 접점 마찰(스로·회전 전달), 8볼 포켓 6개(입구에는 쿠션 없음). 난수가 없어 같은 샷은 같은 결과. 결과는 1/30초 프레임(mm 정수)과 충돌·쿠션·포켓 이벤트.
+- **규칙**: `BilliardsGame`(OnlineGame) — 방 옵션 THREE_CUSHION·FOUR_BALL·EIGHT_BALL, 1~2인(1인 = 혼자 연습). 3쿠션·4구는 목표 10점·30이닝, 8볼은 무리 배정·파울·볼 인 핸드(`PLACE`)·8번 승패·브레이크 8번 재배치. 판정은 이벤트 목록만 보고 하므로 테스트에서 이벤트를 직접 만들어 확인한다.
+- **화면**: `games/online/games/billiards/` — `BilliardsGame`(조준·힘·당점·시점·볼 인 핸드, 새 샷이면 궤적 재생 뒤 결과 표시), `BilliardsTable3D`(three.js, `React.lazy`로 당구 방에서만 로드, 공 회전·포켓에 빠지는 모습·효과음, 자원 dispose), `billiardsAim`(조준선 직선 예상). 당구 방은 테트리스처럼 넓은 배치(`online-room-layout wide`).
+- **의존성**: 사용자 승인 후 `three@0.170.0`, `@types/three@0.170.0`(dev) 추가. 빌드에서 당구 3D 묶음은 따로 나뉨(약 131KB gzip).
+- **검증**: 백엔드 `gradlew.bat test` 292개 통과(1개 기본 건너뜀: 외부 크롤러), `BilliardsPhysicsTest`(미끄럼→구름 5/7·밀어치기/끌어치기·잉글리시 쿠션 방향·결정성·포켓)·`BilliardsGameTest`. 프론트 `lint`·`typecheck`·`test`(632개)·`build` 통과. 검증용 서버 + 헤드리스 Chrome으로 3쿠션·4구·8볼 3D 화면(위·뒤·자유 시점, 재생 중, 재생 뒤)을 캡처해 확인했고, 2인 WebSocket 클라이언트로 40샷(차례 교대·3쿠션 득점 판정·오류 0건)을 확인했다. 실제 사람이 마우스로 치는 조작감과 효과음은 확인하지 않았다(헤드리스는 소리 없음).
+
+## 2026-10-12 — 뿌요뿌요 대전(테트리스와 같은 중계 구조)
+
+- **화면 규칙**: `games/puyo/puyoLogic.ts` — 6×12(+숨은 1줄), 한 쌍 이동·회전·낙하, 같은 색 4개 연결 터짐·인접 방해 뿌요, 연쇄 점수(간단한 츠 규칙), 같은 시드로 같은 쌍 순서. 방 옵션 3·4·5색(처음 값 4색).
+- **온라인**: 테트리스와 같이 브라우저가 계산하고 서버(`PuyoBattle`)는 시드·72글자 판 요약·방해 개수·탈락만 중계. 메시지 `PUYO_BOARD`·`PUYO_ATTACK`·`PUYO_TOPPED_OUT`·`PUYO_GARBAGE`. 2~6인.
+- **연습·랭킹**: 대기 중 `PuyoPractice`, `SoloGameCode.PUYO`(SCORE_DESC). 온라인 대전 15종, 혼자 하는 게임 6종.
+- **검증**: 프론트 `lint`·`typecheck`·`test`(133파일 621개)·`build` 통과. 백엔드 `gradlew.bat test` 통과(`PuyoBattleTest`, `OnlineRoomServiceTest` 뿌요 중계). 브라우저에서 두 사람이 직접 겨루는 것은 이 작업에서 확인하지 않았습니다(화면 동작은 `onlinePages.test.tsx`의 연습하기 표시로 확인).
+
+## 2026-10-12 — 온라인 대전 방 대기 중 혼자 연습하기
+
+- **사용자 결정**: 혼자 하는 게임 화면은 두지 않고, 온라인 대전 방에서 상대를 기다리는 동안(`WAITING`)만 연습합니다. 게임이 시작되면 연습을 닫습니다. 연습할 수 있는 게임은 테트리스·카드 짝 맞추기·2048·지뢰 찾기·스도쿠입니다. 오목·체스·배틀십·숫자 야구·원카드·마피아·섯다·포커는 상대가 필요해서, 블랙잭은 딜러 규칙이 서버에만 있어 빼 두었습니다.
+- **화면**: `games/practice/`에 연습 판 다섯 개와 `WaitingPracticePanel`. `OnlineRoomScreen`이 대기 중일 때만 붙입니다. 2048·지뢰 찾기·스도쿠는 방장이 고른 `gameOption`을 처음 값으로 쓰고, 카드 짝 맞추기 대전은 옵션이 없어 연습 화면에서 난이도를 고릅니다. 끝난 판은 기존 `GameRankingSubmitPanel`로 연습 기록 랭킹에 올립니다(닉네임 칸은 방 닉네임으로 채움).
+- **검증**: 프론트 `lint`·`typecheck`·`test`(132파일 607개)·`build` 통과. 새 테스트: `practiceGames.test.ts`, `waitingPractice.test.tsx`(패널 표시·카드 짝 맞추기 기록 올리기·2048 밀기·지뢰 깃발), `onlinePages.test.tsx`에 대기 중 연습 보이기/게임 시작 시 닫힘/오목은 없음. 백엔드는 바꾸지 않아 실행하지 않았습니다. 브라우저에서 테트리스 방을 만들어 `테트리스 연습하기`로 판이 펼쳐지고 시작한 뒤, 게임을 오목으로 바꾸면 연습이 사라지는 것을 확인했습니다.
+
+## 2026-10-12 — 게임 규칙 직접 만들어 보기를 React 연습으로 옮기고 혼자 하는 게임 화면 정리
+
+- **사용자 결정**: Sandpack 연습(iframe에서 따로 실행, 실제 게임에 영향 없음)은 게임 메뉴가 아니라 React 연습 과정에 둡니다. 혼자 하는 게임 화면 네 개(`/games/memory`·`/games/2048`·`/games/minesweeper`·`/games/tetris`)는 없앱니다.
+- **React 연습으로 옮김**: 예제 4개를 `games/sandbox/examples` → `curriculum/sandbox/examples/game-*.tsx`로 옮기고(git mv), 스도쿠 `isValidPlacement` 연습을 새로 만들어 5개가 됐습니다. 목록은 `curriculum/data/gameExercises.ts`(exerciseId·난이도·배우는 것·실제 코드 위치), 원문은 학습 단계와 같은 `stageSandboxes.ts`에 exerciseId 키로 등록했습니다. 그래서 `PracticeSandboxSection`·`StageSandboxPanel`의 `source` prop은 쓰는 곳이 없어 지웠습니다. 난이도는 목록 설명에 맞춰 초급(카드 섞기·2048 한 줄 밀기·스도쿠 숫자 놓기 검사), 중급(테트리스 줄 지우기·지뢰 찾기 BFS)으로 정했고, 난이도별 목록과 전체 로드맵 아래 `게임 규칙 직접 만들어 보기` 카드 묶음(`GameExerciseSection`)에서 새 연습 화면 `/react/game-exercises/:exerciseId`(`GameExercisePage`, 없는 id는 `/react`로)로 갑니다. 진도 단계 수에는 넣지 않았습니다. 탭 제목(`pageTitle.ts`)·상단 제목(`ApplicationTopBar`)도 맞췄습니다.
+- **게임 메뉴 정리**: 네 화면과 `GamePageShell`을 지우고, 옛 주소는 `App.tsx` 리다이렉트 모음에서 `/games/online`으로 `replace` 이동합니다. 게임 메뉴는 게임 홈·온라인 대전·게임 랭킹 3개, 게임 홈은 두 카드 + 게임 규칙 연습 안내(다섯 연습 링크)로 바꿨습니다. 랭킹의 혼자 하는 게임 `하러 가기`는 모두 `/games/online`입니다. 규칙 모듈(`*Logic.ts`)·`games.css`·`tetrisControls.ts`·`PiecePreview.tsx`는 온라인 대전이 쓰므로 그대로 두고, 쓰지 않게 된 CSS(`.game-page`·`.game-learning-*`)만 지웠습니다. `scripts/verify-static.py`는 게임 파일 이름을 직접 적지 않아 고칠 곳이 없었습니다.
+- **검증**: 프론트 `lint`·`typecheck`·`test`(130파일 592개)·`build` 통과. 새 테스트: `App.test.tsx`(옛 주소 4개 → `/games/online`, 기록을 남기지 않음), `GameHomePage.test.tsx`, `LearningLevelPage.test.tsx`(초급 3·중급 2·심화 없음), `GameExercisePage.test.tsx`, `LearningRoadmapPage.test.tsx`에 연습 묶음, `gameExerciseSandboxes.test.tsx`(형식·import·처음 코드의 채점표에 ❌). 스도쿠 예제는 모범 답안을 넣은 임시 사본을 그려 채점표 6개가 모두 ✅인 것을 확인하고 지웠습니다. 백엔드는 바꾸지 않아 실행하지 않았고, `scripts/verify-static.py`는 Python이 없어 실행하지 못했습니다. 실제 브라우저의 Sandpack 미리보기는 열어 보지 않았습니다.
+
+## 2026-10-12 — 온라인 2048 대전·지뢰 찾기 대전 + 방장 게임 옵션
+
+- **게임 옵션**: 방마다 `gameOption` 코드 하나를 둡니다. 고를 수 있는 값·이름·처음 값은 `OnlineGameType.getOptions()`/`getDefaultOption()`에만 적습니다(스도쿠 EASY·NORMAL·HARD = 고정 숫자 40·32·26, 2048 목표 256·512·1024·2048(처음 512), 지뢰 찾기 BEGINNER·INTERMEDIATE·EXPERT(처음 BEGINNER)). 만들기 요청·`UPDATE_ROOM` 설정에 넣고, 비우면 같은 게임은 그대로·다른 게임은 처음 값, 고를 수 없는 값은 `ONLINE_GAME_OPTION_INVALID`, 게임 중 변경은 `ONLINE_GAME_IN_PROGRESS`입니다. 방 화면 상태(`gameOption`·`gameOptionLabel`)와 방 목록(`gameOptionLabel`), 게임 종류 목록(`options`·`defaultOption`)에 실립니다. 화면: 방 만들기·수정 폼의 `게임 옵션` 칸, 대기 중 방장의 판 아래 바로 바꾸기, 모두에게 보이는 `게임 옵션: …` 표시.
+- **2048 대전(2~4인)**: `Game2048Game`이 처음 판 하나와 타일 시드 하나를 만들고 자리마다 `new Random(같은 시드)`를 줘 같은 순서로 밀면 같은 새 타일이 나옵니다. `MOVE {text: UP·DOWN·LEFT·RIGHT}`, 판이 그대로인 이동은 세지 않습니다(화면도 `moveBoard`로 걸러 보내지 않음). 목표 타일 = 성공, 더 못 밀면 실패. 판은 모두에게 공개.
+- **지뢰 찾기 대전(2~4인)**: `MinesweeperGame`이 시작 칸의 3×3을 피해 지뢰를 놓고 모든 판에 같은 빈 영역을 미리 엽니다. `REVEAL`(BFS 연쇄)·`FLAG`(토글)·`CHORD {numbers:[행,열]}`, 클릭 수는 판을 바꾼 REVEAL·CHORD만. 지뢰 = 실패, 안전한 칸 모두 = 성공. 게임이 끝나기 전에는 누구의 화면 상태에도 지뢰(`*`)·밟은 칸(`X`)·틀린 깃발(`W`)을 쓰지 않습니다.
+- **순위(`RaceStandings`)**: 성공은 비용(이동·클릭)이 적은 순 → 먼저 끝낸 순, 실패는 점수(2048 점수·연 칸 수)가 높은 순, 빠진 사람은 맨 아래이고 이길 수 없습니다. 1위 동점은 공동 승리. 모두 끝나면 게임 끝, 다른 사람이 성공·실패로 끝냈으면 혼자 남아도 계속하고, 나머지가 모두 빠졌으면 남은 사람이 바로 이깁니다. `OnlineGame.hasSettledResult`로 결과가 정해진 뒤 나간 사람은 기권 기록(`forfeitedSeats`)에서 빼 그 결과로 저장합니다. 화면은 내 판이 끝나면 `기권` 버튼을 숨깁니다.
+- **화면**: `online/games/Game2048Battle.tsx`·`MinesweeperBattle.tsx`(+ `*BattleRules.ts` zod 스키마, `raceBattleRules.ts`, `RaceNameplate.tsx`), `online.css`의 `.race-*`(왼쪽 내 판·오른쪽 작은 판, 좁으면 위아래). 혼자 하기 `games.css`·`game2048Logic.ts`는 고치지 않고 가져다 씁니다. `onlineRankingGames`에 두 게임 추가(온라인 대전 14종).
+- **검증**: 백엔드 `Game2048GameTest`(10)·`MinesweeperGameTest`(7)·`RaceStandingsTest`(4), `OnlineRoomTest`에 옵션·결과 보호 3개, `OnlineRoomServiceTest`에 옵션 목록·2048 방 1개. 화면 `onlinePages.test.tsx`에 옵션 UI 3개·2048 대전 3개·지뢰 찾기 대전 3개. 프론트 lint·typecheck·test(584)·build, 백엔드 `gradlew.bat test` 통과. `scripts/verify-static.py`는 Python이 없어 실행하지 못했습니다(DAO·Mapper·스키마 변경 없음). 실제 서버에서 여러 브라우저로 끝까지 해 보는 수동 확인과 좁은 화면 배치의 눈 확인은 하지 않았습니다.
+- **알려진 한계**: 시간제한이 없어 한 사람이 오래 끌면 방이 게임 중으로 남습니다(나머지는 기권으로 끝낼 수 있음). 2048 대전 화면은 서버 응답 전의 판으로 "그대로인 방향"을 거르므로 아주 빠른 연속 입력 중 한 번이 빠지거나 서버가 무시할 수 있습니다. 위 스도쿠 항목의 "난이도는 고정(보통)"은 이번 게임 옵션으로 고를 수 있게 바뀌었습니다.
+
+## 2026-10-12 — 온라인 대전 스도쿠
+
+- **스도쿠(2~4인)**: `SudokuGenerator`가 시작할 때 답이 하나뿐인 문제(고정 숫자 32개 = `SudokuGame.GIVEN_COUNT`)를 만들고, `SudokuGame`이 모두에게 같은 문제를 줍니다. 차례 없이 각자 자기 판에 `PLACE {numbers:[행,열], number:1~9}`·`CLEAR {numbers:[행,열]}`을 보내며, 고정 숫자는 못 바꾸고 틀린 숫자는 벌점 없이 넣을 수 있습니다. 내 판이 정답과 같아지는 순간 그 사람이 이기고 바로 끝납니다(방 잠금 안에서 하나씩 처리하므로 먼저 도착한 행동이 이김). 나가면 빠지고 혼자 남으면 승리, 모두 나가면 승자 없음.
+- **정보 공개**: 내 판은 본인에게만, 다른 사람에게는 자리마다 채운 칸 수만 보냅니다. 맞은 칸 수는 보내지 않습니다(숫자를 넣어 보며 정답을 알아낼 수 있기 때문). 정답은 끝난 뒤에만 보내고, 화면은 틀린 숫자(빨간 줄)·못 채운 칸(흐린 정답)을 표시합니다. 겹침 표시는 화면이 내 판만으로 계산합니다(`online/games/sudokuRules.ts`).
+- **연습용 스도쿠 로직**: 나중에 만들 "온라인 대전 방에서 기다리며 혼자 연습" 모드를 위해 `games/sudoku/sudokuLogic.ts`(시드 문제 만들기·답 하나 확인·난이도 EASY 40/NORMAL 32/HARD 26개·겹침·완성 검사·불변 `setCell`)를 두었습니다. 온라인 대전 화면도 겹침 표시에 이 함수를 씁니다. 혼자 하는 페이지·라우트·메뉴·홈 카드·기록 등록 화면과 직접 만들어 보기 예제는 만들지 않았습니다.
+- **랭킹**: `onlineRankingGames`에 `SUDOKU`(온라인 대전 12종), 서버 `SoloGameCode.SUDOKU`(TIME_ASC, EASY·NORMAL·HARD)와 화면 `soloRankingGames`에 스도쿠(혼자 하는 게임 5종)를 추가했습니다. 기록을 올리는 화면이 아직 없어 혼자 하기 스도쿠 순위는 비어 있고, `하러 가기`는 `/games/online`으로 안내합니다. 테이블 구조는 그대로이고 `schema.sql`의 `game_code` 설명만 고쳤습니다.
+- **검증**: `SudokuGameTest`(문제 숫자 수·답 하나·같은 시드 같은 문제·공개 범위·입력 검사·틀린 완성·처음 완성 승리·퇴장), `OnlineRoomServiceTest`에 스도쿠 방 1개, 화면 테스트 4개, `sudokuLogic.test.ts`(11개), `GameRankingServiceTest`·`GameRankingPage.test.tsx`에 스도쿠 기록·조회 확인. 프론트 lint·typecheck·test·build, 백엔드 `gradlew.bat test` 통과. `scripts/verify-static.py`는 Python이 없어 실행하지 못했습니다(DAO·Mapper 변경 없음). 실제 서버에서 여러 브라우저로 끝까지 풀어 보는 수동 확인은 하지 않았습니다.
+- **알려진 한계**: 난이도는 고정(보통)이고 시간제한·메모(후보 숫자)는 없습니다. 문제를 다 풀 때까지 오래 걸리면 방이 그만큼 게임 중으로 남습니다.
+
+## 2026-10-11 — 게임 랭킹(종목별·기간 선택)
+
+- **화면**: `게임 → 게임 랭킹`(`/games/rankings?game=…&difficulty=…`). 종목(온라인 대전 11종 + 혼자 하는 게임 4종)·난이도·기간(이번 주·이번 달·전체 버튼, 시작일·종료일 직접 선택, 기본 이번 달)을 고르고 상위 50명을 봅니다. 혼자 하는 게임 4종은 끝난 화면에 `랭킹에 올리기` 폼(`GameRankingSubmitPanel`)이 나옵니다. 비회원 닉네임은 온라인 대전과 같은 저장값(`online.nickname`, `games/shared/playerNickname.ts`)을 씁니다.
+- **백엔드**: `com.example.devnote.ranking`(Controller → Service → DAO → `GameRankingMapper.xml`)과 테이블 `online_game_results`·`solo_game_records`를 추가했습니다. 온라인 대전은 `OnlineGame.winnerSeats()`(9종) + 오목·테트리스 승자로 `OnlineRoom`이 `OnlineMatchResult`를 만들고, `OnlineRoomService`가 방 잠금 밖에서 저장합니다. 정한 규칙: 2명 이상 판만, 한 회원이 두 자리에 앉은 판은 저장 안 함, 기권·퇴장은 패배, 순위는 승수 → 승률, 혼자 하는 게임은 사람마다 기간 안의 최고 기록 하나, 같은 기록은 같은 순위. 비회원 기록은 `GameRankingCleanupService`가 1시간마다 1주일 지난 것을 지웁니다. 기간은 한국 날짜로 받아 UTC 범위로 바꿉니다. 오류 코드 `GAME_RANKING_PERIOD_INVALID`·`GAME_DIFFICULTY_INVALID`·`GAME_RECORD_INVALID`·`GAME_RANKING_NICKNAME_INVALID` 추가.
+- **운영 DB 주의**: 새 테이블 두 개는 `schema.sql`의 `CREATE TABLE IF NOT EXISTS`로 서버가 켜질 때 만들어집니다. 기존 테이블 구조는 바꾸지 않았습니다.
+- **알려진 한계**: 혼자 하는 게임 점수는 브라우저가 보내는 값이라 범위만 검사합니다. 비회원은 닉네임만 다르면 다른 사람으로 보여 탭 두 개로 승수를 쌓는 것을 막지 못합니다(회원끼리 같은 방 두 자리는 막음).
+
+## 2026-10-11 — 온라인 대전 마피아
+
+- **마피아(4~8인)**: `MafiaGame`이 직업을 섞어 나누고 밤(TARGET)·낮(VOTE, -1 = 건너뛰기)을 진행합니다. 해야 할 사람이 모두 고르면 결과를 내며, 낮 투표는 최다 득표 한 명이 건너뛰기보다 많을 때만 처형합니다. 남의 직업은 viewFor에서 빼고(마피아끼리만 공개, 끝나면 전체 공개), 경찰 조사 결과는 본인에게만 보냅니다. `OnlineGame.canChat`을 추가해 탈락자의 게임 중 채팅을 `OnlineRoom.addChat`에서 막습니다. 시간제한은 없고, 나가면 탈락 처리됩니다.
+- **정리**: 체스·마피아까지 열려 온라인 대전의 '준비 중' 게임이 없습니다. `OnlineRoomTest`의 준비 중 게임 검사는 게임 종류 없음(null) 검사로 바꿨습니다.
+- **검증**: `MafiaGameTest`(직업 수·직업 숨김·의사 보호·경찰 조사·처형·동점·승패·퇴장), 화면 테스트 3개, 프론트 lint·typecheck·test, 백엔드 온라인 테스트 통과. 검증용 서버에서 5인 WebSocket 클라이언트로 밤·낮 진행, 탈락자 채팅 거절, 끝난 뒤 직업 공개, 오류 0건을 확인했습니다.
+
+## 2026-10-11 — 온라인 대전 체스
+
+- **체스(2인)**: `ChessGame`이 기물 규칙대로 수를 만든 뒤 둔 다음 내 킹이 공격받는 수를 빼서 합법수를 정합니다. 캐슬링(지나가는 칸 공격 검사)·앙파상·프로모션·체크메이트·스테일메이트·50수·3회 반복·기물 부족 무승부를 판정합니다. 합법수 목록은 차례인 사람에게만 보내고, 화면은 그 목록으로 이동 가능 칸만 표시합니다. 흑은 판을 뒤집어 그립니다.
+- **검증**: `ChessGameTest`(처음 20수·스콜라스 메이트·핀·캐슬링·앙파상·프로모션·스테일메이트·기물 부족), 화면 테스트 3개, 프론트 lint·typecheck·test, 백엔드 온라인 테스트 통과. 검증용 서버에서 2인 WebSocket 클라이언트로 73수를 두어 체크·잡기·기물 부족 무승부 종료와 오류 0건을 확인했습니다. `OnlineRoomTest`의 준비 중 게임 예시는 마피아로 바꿨습니다.
+
+## 2026-10-11 — 온라인 대전 포커(텍사스 홀덤)
+
+- **포커(2~4인)**: `PokerGame` + 족보 계산 `PokerHands`(7장 중 최고 5장, 점수 = 등급×15⁵ + 비교 숫자, A-2-3-4-5 스트레이트·로열 플러시 포함). 블라인드는 `BettingRound.withBlinds`(빅 블라인드에게 마지막 선택 기회), 둘이면 딜러가 스몰·프리플랍 먼저. 사이드 팟 대신 한 바퀴 cap, 동점은 나눔, 6판 또는 빅 블라인드 미만이면 빠짐. 남의 카드는 끝까지 간 판만 공개.
+- **검증**: `PokerGameTest`(족보 이름·키커 비교·블라인드·스트리트·폴드 승리·6판 칩 합계), 화면 테스트 2개, 프론트 lint·typecheck·test, 백엔드 온라인 테스트 통과. 검증용 서버에서 3인 WebSocket 클라이언트로 프리플랍~리버·칩 합계 3000·쇼다운 족보·오류 0건을 확인했습니다.
+
+## 2026-10-11 — 온라인 대전 섯다 + 공용 베팅
+
+- **공용 베팅 `BettingRound`**: CHECK·CALL·RAISE·FOLD, 올리면 다른 사람이 다시 결정. 사이드 팟을 피하려고 한 바퀴의 최대 금액을 남은 사람 중 가장 적은 칩(cap)으로 제한했습니다(포커에서도 사용). 화면은 공용 `BettingControls`.
+- **섯다(2~4인, 두 장)**: `SutdaGame`. 화투 20장, 판돈 10, 6판, 족보(38광땡·광땡·땡·알리~세륙·끗)와 특수 패(암행어사·땡잡이·구사·멍텅구리구사 — 다시 하면 판돈을 그대로 걸고 재대결), 동점은 나눔. 내 패는 나에게만, 끝까지 간 판만 지난 판 결과로 공개.
+- **검증**: `BettingRoundTest` 4개·`SutdaGameTest` 8개, 화면 테스트 2개, 프론트 lint·typecheck·test, 백엔드 온라인 테스트 통과. 검증용 서버에서 3인 WebSocket 클라이언트로 6판 끝까지·칩 합계 3000 유지·족보/승자·오류 0건을 확인했습니다. 또 통합 테스트의 입장 순서 경쟁(관전자가 먼저 들어가 방장이 바뀌던 간헐 실패)을 고쳤습니다.
+
+## 2026-10-11 — 온라인 대전 블랙잭
+
+- **블랙잭(1~4인 vs 딜러)**: `BlackjackGame`(공통 틀). 가상 칩 1000, 5판, 베팅(최소 10) → 2장씩 → HIT·STAND·DOUBLE → 딜러 17까지 → 정산(블랙잭 1.5배·버스트·딜러 블랙잭·무승부), 칩 10 미만이면 빠짐. 딜러의 두 번째 카드는 딜러 차례 전까지 보내지 않습니다. 카드가 떨어지면 새 한 벌을 섞어 씁니다. 스플릿·보험은 단순화를 위해 넣지 않았습니다.
+- **검증**: `BlackjackGameTest` 7개, 화면 테스트 2개, 프론트 lint·typecheck·test, 백엔드 온라인 테스트 통과. 검증용 서버에서 2인 WebSocket 클라이언트로 5판 끝까지·딜러 카드 숨김·칩 정산·오류 0건을 확인했습니다.
+
+## 2026-10-11 — 온라인 대전 원카드
+
+- **원카드(2~4인)**: `OneCardGame`(공통 틀) + 공용 `PlayingCard`(블랙잭·포커에도 사용). 54장(조커 2), 7장씩, 첫 카드는 특수 카드가 아닐 때까지 뒤집음. 공격(A3·2 2·BJ5·CJ7) 누적·막기, 7 무늬 선택, J 건너뛰기, Q 방향 전환, K 한 번 더, 더미가 떨어지면 버린 카드 재사용, 20장 이상 파산. 남의 패는 장수만 보냅니다.
+- **화면**: 공용 `CardFace`(카드 그림)·`playingCards.ts`, 낼 수 있는 카드 미리 계산(`oneCardRules.canPlayCard`, 서버와 같은 규칙 — 최종 판단은 서버), 7은 무늬 고르기.
+- **검증**: `OneCardGameTest` 8개, 화면 테스트 2개, 프론트 lint·typecheck·test, 백엔드 온라인 테스트 통과. 검증용 서버에서 3인 WebSocket 클라이언트로 63수(내기 40·받기 23) 끝까지 진행·규칙 거절 0건(도배 제한 거절 4건은 클라이언트가 너무 빨리 보낸 것)·순위 결정을 확인했습니다.
+
+## 2026-10-11 — 온라인 대전 카드 짝 맞추기 대전
+
+- **카드 짝 맞추기 대전(2~4인)**: `MemoryMatchGame`(공통 틀). 인원별 8·10·12쌍, 맞히면 한 번 더, 틀린 두 장은 다음 사람의 첫 뒤집기 때 덮음(서버 타이머 없음), 최다 득점 승리(동점 공동). 뒷면 카드의 그림은 서버가 보내지 않습니다. 화면은 혼자 하기의 카드 모양(memory-card)을 재사용하고 맞춘 사람 색 테두리를 붙입니다.
+- **검증**: `MemoryMatchGameTest`, 화면 테스트 2개, 프론트 lint·typecheck·test, 백엔드 온라인 테스트 통과. 검증용 서버에서 3인 WebSocket 클라이언트(본 카드를 기억하는 방식)로 20장·시작 시 그림 비공개·끝까지 진행·승자 결정을 확인했습니다.
+
+## 2026-10-11 — 온라인 대전 배틀십
+
+- **배틀십(2인)**: `BattleshipGame`(공통 틀). 배치(무작위·다시 배치·준비 완료) → 번갈아 쏘기 → 모두 격침하면 승리, 기권·퇴장 시 상대 승리. 내 배 위치는 나에게만(상대·관전자에게는 o·X와 격침된 배만), 끝나면 모두 공개.
+- **검증**: `BattleshipGameTest`(무작위 배치 겹침 없음·숨김·차례·같은 칸 금지·격침/승리·기권), 화면 테스트 2개, 프론트 lint·typecheck·test, 백엔드 온라인 테스트 통과. 검증용 서버(18080)에서 WebSocket 클라이언트로 상대·관전자에게 배가 숨겨지고 33발 만에 승리·격침 안내 5번·끝난 뒤 공개를 확인했습니다.
+
+## 2026-10-11 — 온라인 대전 공통 게임 틀 + 숫자 야구
+
+- **공통 틀**: 새 게임은 `online/domain/game/OnlineGame`(행동 `act`·기권/퇴장 `leave`·결과·사람마다 다른 화면 `viewFor`·안내 문구)을 구현하고 `OnlineGames`에 등록합니다. 화면은 `GAME_ACTION`(action·text·number·numbers) 하나로 행동을 보내고, 서버는 `ROOM_STATE.room.game`에 받는 사람마다 다른 상태(남의 비밀 제외)를 담습니다. 화면 쪽은 `online/games/CommonGameArea.tsx`가 gameType별 화면을 고르고, 각 화면이 자기 zod 스키마로 확인합니다. 오목·테트리스는 기존 전용 코드 그대로입니다.
+- **숫자 야구(2~4인)**: 각자 서로 다른 숫자 3개를 정하고 자리 순서대로 다음 사람의 숫자를 맞힙니다(S·B·OUT). 3S가 나오면 그 바퀴 끝까지 진행해 같은 바퀴에 맞힌 사람이 공동 승리, 30바퀴 넘으면 무승부. 비밀 숫자는 본인에게만, 끝나면 모두 공개.
+- **검증**: `NumberBaseballGameTest`·서비스 테스트(사람마다 다른 화면), 화면 테스트 3개 추가, 프론트 lint·typecheck·test, 백엔드 온라인 테스트 통과. 검증용 서버(18080)에 WebSocket 클라이언트로 비밀 숫자 숨김·기록·잘못된 입력 오류·결과 공개를 확인했습니다.
+
 ## 2026-10-11 — 테트리스 대전 "다시 시작"이 반응 없던 문제 수정
 
 - **증상**: 판이 끝난 뒤 방장이 `다시 시작`을 눌러도 새 판이 바로 끝나 아무 반응이 없는 것처럼 보였습니다(서버는 새 판을 정상 시작).

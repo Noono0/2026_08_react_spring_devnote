@@ -563,6 +563,14 @@ export const learningStageRoutes: Record<string, string> = {
   testing: "/react/testing",
 };
 
+/** 난이도 이름 → 난이도별 학습 목록 주소(LearningLevelPage). 사이드바 React 연습 메뉴와 같은 주소다. */
+export const learningLevelRoutes: Record<LearningLevel, string> = {
+  왕초보: "/react/level/beginner",
+  초급: "/react/level/basic",
+  중급: "/react/level/intermediate",
+  고급: "/react/level/advanced",
+};
+
 /** 로드맵 화면에 카드로 보여 줄 단계(1~25). */
 export const roadmapLearningGuides = learningGuideList.filter(
   (learningGuide) => learningGuide.stageNumber > 0 && learningGuide.stageNumber <= ROADMAP_LAST_STAGE_NUMBER,

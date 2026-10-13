@@ -5,10 +5,12 @@ import com.example.devnote.common.exception.ErrorCode;
 import com.example.devnote.member.service.AuthenticationService;
 import com.example.devnote.online.domain.OnlineChatMessage;
 import com.example.devnote.online.domain.OnlineGameType;
+import com.example.devnote.online.domain.OnlineMatchResult;
 import com.example.devnote.online.domain.OnlineParticipant;
 import com.example.devnote.online.domain.OnlineRoom;
 import com.example.devnote.online.domain.OnlineRoomSettings;
 import com.example.devnote.online.domain.TetrisBattle;
+import com.example.devnote.online.domain.game.GameAction;
 import com.example.devnote.online.dto.OnlineChatView;
 import com.example.devnote.online.dto.OnlineClientMessage;
 import com.example.devnote.online.dto.OnlineGameTypeResponse;
@@ -18,8 +20,11 @@ import com.example.devnote.online.dto.OnlineRoomSettingsMessage;
 import com.example.devnote.online.dto.OnlineRoomSummaryResponse;
 import com.example.devnote.online.dto.OnlineServerMessage;
 import com.example.devnote.online.store.OnlineRoomStore;
+import com.example.devnote.ranking.service.GameRankingService;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -40,7 +45,12 @@ import java.util.function.BiConsumer;
  * [바뀐 뒤에는 방 사람 모두에게 알린다]
  *   상태가 바뀌면 broadcast가 방 사람마다 ROOM_STATE(각자 "나"만 다름)와 새 채팅을 보낸다.
  *   잠금 안에서 보내므로 모든 사람이 같은 순서로 상태를 받는다.
+ *
+ * [게임이 끝나면 랭킹에 저장]
+ *   방이 남긴 결과(drainFinishedMatch)를 잠금 안에서 꺼내고, DB 저장은 잠금을 푼 뒤에 한다.
+ *   DB가 느려도 같은 방의 다른 요청이 기다리지 않게 하기 위해서다.
  */
+@Slf4j
 @Service
 public class OnlineRoomService {
     public static final int NICKNAME_MIN_LENGTH = 2;
@@ -50,19 +60,23 @@ public class OnlineRoomService {
     private final OnlineRoomStore roomStore;
     private final OnlineMessageSender messageSender;
     private final AuthenticationService authenticationService;
+    private final GameRankingService gameRankingService;
     private final Clock clock;
     private final SecureRandom secureRandom = new SecureRandom();
 
     @Autowired
-    public OnlineRoomService(OnlineRoomStore roomStore, OnlineMessageSender messageSender, AuthenticationService authenticationService) {
-        this(roomStore, messageSender, authenticationService, Clock.systemUTC());
+    public OnlineRoomService(OnlineRoomStore roomStore, OnlineMessageSender messageSender, AuthenticationService authenticationService,
+                             GameRankingService gameRankingService) {
+        this(roomStore, messageSender, authenticationService, gameRankingService, Clock.systemUTC());
     }
 
     /** 테스트에서 시간을 고정할 때 쓰는 생성자 */
-    OnlineRoomService(OnlineRoomStore roomStore, OnlineMessageSender messageSender, AuthenticationService authenticationService, Clock clock) {
+    OnlineRoomService(OnlineRoomStore roomStore, OnlineMessageSender messageSender, AuthenticationService authenticationService,
+                      GameRankingService gameRankingService, Clock clock) {
         this.roomStore = roomStore;
         this.messageSender = messageSender;
         this.authenticationService = authenticationService;
+        this.gameRankingService = gameRankingService;
         this.clock = clock;
     }
 
@@ -70,7 +84,8 @@ public class OnlineRoomService {
 
     public List<OnlineGameTypeResponse> getGameTypes() {
         return Arrays.stream(OnlineGameType.values())
-            .map(type -> new OnlineGameTypeResponse(type.name(), type.getLabel(), type.getMinSeats(), type.getMaxSeats(), type.isAvailable()))
+            .map(type -> new OnlineGameTypeResponse(type.name(), type.getLabel(), type.getMinSeats(), type.getMaxSeats(), type.isAvailable(),
+                type.getOptions(), type.getDefaultOption()))
             .toList();
     }
 
@@ -93,7 +108,8 @@ public class OnlineRoomService {
         long now = now();
         roomStore.removeExpiredEmptyRooms(now);
         String hostToken = randomText(24);
-        OnlineRoomSettings settings = new OnlineRoomSettings(request.title(), request.gameType(), request.seatCount(), request.password(), false, request.membersOnly());
+        OnlineRoomSettings settings = new OnlineRoomSettings(
+            request.title(), request.gameType(), request.seatCount(), request.password(), false, request.membersOnly(), request.gameOption());
         OnlineRoom room = new OnlineRoom(newRoomId(), settings, hostToken, now);
         roomStore.save(room);
         return new OnlineRoomCreatedResponse(room.getRoomId(), hostToken);
@@ -134,10 +150,13 @@ public class OnlineRoomService {
     /** 연결이 끊기거나 나가기를 누르면: 자리를 비우고(게임 중이면 상대 승리) 방장을 넘긴다 */
     public void leave(String sessionId) {
         roomStore.unbindSession(sessionId).ifPresent(membership -> roomStore.findById(membership.roomId()).ifPresent(room -> {
+            OnlineMatchResult finishedMatch;
             synchronized (room) {
                 room.removeParticipant(membership.participantId(), now());
                 broadcast(room, true);
+                finishedMatch = room.drainFinishedMatch();
             }
+            saveFinishedMatch(finishedMatch);
         }));
     }
 
@@ -158,7 +177,8 @@ public class OnlineRoomService {
             settings.seatCount() == null ? room.getSeatCount() : settings.seatCount(),
             settings.newPassword(),
             settings.removePassword(),
-            settings.membersOnly()
+            settings.membersOnly(),
+            settings.gameOption()
         ), now()));
     }
 
@@ -193,8 +213,39 @@ public class OnlineRoomService {
         }
     }
 
+    /** 공통 틀 게임(숫자 야구 등)의 행동. 규칙 판단은 게임 클래스가, 결과는 모두에게 ROOM_STATE로 */
+    public void gameAction(OnlineConnection connection, GameAction action) {
+        withRoom(connection, true, (room, participantId) -> room.gameAction(participantId, action, now()));
+    }
+
     public void tetrisToppedOut(OnlineConnection connection) {
         withRoom(connection, true, (room, participantId) -> room.tetrisToppedOut(participantId, now()));
+    }
+
+    public void updatePuyoBoard(OnlineConnection connection, String board, Integer score, Integer lines) {
+        int nextScore = requireValue(score);
+        int nextChains = requireValue(lines);
+        withRoom(connection, true, (room, participantId) -> room.updatePuyoBoard(participantId, board, nextScore, nextChains));
+    }
+
+    /**
+     * 뿌요뿌요 대전: 방해 뿌요 개수 알림. 받는 사람에게만 PUYO_GARBAGE를 보내고, 방 상태는 바뀌지 않으므로 모두에게 보내지 않는다.
+     */
+    public void puyoAttack(OnlineConnection connection, Integer cleared) {
+        int nuisance = requireValue(cleared);
+        OnlineRoomStore.Membership membership = requireMembership(connection);
+        OnlineRoom room = requireRoom(membership);
+        synchronized (room) {
+            OnlineRoom.PuyoAttack attack = room.puyoAttack(membership.participantId(), nuisance);
+            if (attack == null) return;
+            String fromNickname = room.requireParticipant(membership.participantId()).getNickname();
+            OnlineParticipant target = room.requireParticipant(attack.targetParticipantId());
+            messageSender.send(target.getSessionId(), OnlineServerMessage.puyoGarbage(attack.nuisance(), fromNickname));
+        }
+    }
+
+    public void puyoToppedOut(OnlineConnection connection) {
+        withRoom(connection, true, (room, participantId) -> room.puyoToppedOut(participantId, now()));
     }
 
     public void placeOmok(OnlineConnection connection, Integer row, Integer col) {
@@ -224,9 +275,22 @@ public class OnlineRoomService {
     private void withRoom(OnlineConnection connection, boolean sendRoomState, BiConsumer<OnlineRoom, String> action) {
         OnlineRoomStore.Membership membership = requireMembership(connection);
         OnlineRoom room = requireRoom(membership);
+        OnlineMatchResult finishedMatch;
         synchronized (room) {
             action.accept(room, membership.participantId());
             broadcast(room, sendRoomState);
+            finishedMatch = room.drainFinishedMatch();
+        }
+        saveFinishedMatch(finishedMatch);
+    }
+
+    /** 끝난 판을 랭킹에 저장한다. DB 오류 때문에 게임 진행까지 멈추면 안 되므로 실패는 오류 로그로 남기고 넘어간다 */
+    private void saveFinishedMatch(OnlineMatchResult finishedMatch) {
+        if (finishedMatch == null) return;
+        try {
+            gameRankingService.recordOnlineMatch(finishedMatch);
+        } catch (DataAccessException exception) {
+            log.error("온라인 대전 결과를 랭킹에 저장하지 못했습니다 gameType={}", finishedMatch.gameType(), exception);
         }
     }
 

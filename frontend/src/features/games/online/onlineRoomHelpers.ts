@@ -1,5 +1,6 @@
 // onlineRoomHelpers.ts — 방 화면 여러 곳에서 쓰는 작은 계산 함수(컴포넌트 파일에는 컴포넌트만 두기 위해 따로 뺐다)
-import type { OnlineRoomSettingsInput } from "@/features/games/online/onlineTypes";
+import { z } from "zod";
+import type { OnlineRoom, OnlineRoomSettingsInput } from "@/features/games/online/onlineTypes";
 import { HIDDEN_ROWS, type TetrisBoard } from "@/features/games/tetris/tetrisLogic";
 
 /** 테트리스 대전: 내 판(숨은 줄 제외) → 서버에 보낼 200글자 요약("." 빈칸, 블록 글자, G 방해 줄) */
@@ -15,6 +16,8 @@ export interface OnlineRoomFormValues {
   password: string;
   passwordMode: PasswordMode;
   membersOnly: boolean;
+  /** 옵션이 없는 게임이면 빈 문자열 */
+  gameOption: string;
 }
 
 /** 오목은 0번 흑·1번 백, 다른 게임은 "N번 자리" */
@@ -33,4 +36,25 @@ export const toRoomSettings = (values: OnlineRoomFormValues, hasPassword: boolea
   newPassword: !hasPassword || values.passwordMode === "CHANGE" ? values.password : "",
   removePassword: hasPassword && values.passwordMode === "REMOVE",
   membersOnly: values.membersOnly,
+  gameOption: values.gameOption === "" ? null : values.gameOption,
 });
+
+/** 지금 방 설정은 그대로 두고 게임 옵션만 바꾸는 UPDATE_ROOM 설정(대기 중 방장이 옵션만 고를 때) */
+export const withGameOption = (room: OnlineRoom, gameOption: string): OnlineRoomSettingsInput => ({
+  title: room.title,
+  gameType: room.gameType,
+  seatCount: room.seatCount,
+  newPassword: "",
+  removePassword: false,
+  membersOnly: room.membersOnly,
+  gameOption,
+});
+
+/** 각자 자기 판으로 겨루는 대전: 먼저 성공·실패한 사람은 결과가 정해져 기권할 것이 없다 */
+export const RACE_GAME_TYPES: ReadonlySet<string> = new Set(["GAME_2048", "MINESWEEPER"]);
+const raceProgressSchema = z.object({ players: z.array(z.object({ status: z.string() })) });
+
+export const isStillRacing = (game: unknown, seat: number): boolean => {
+  const parsed = raceProgressSchema.safeParse(game);
+  return parsed.success && parsed.data.players[seat]?.status === "PLAYING";
+};

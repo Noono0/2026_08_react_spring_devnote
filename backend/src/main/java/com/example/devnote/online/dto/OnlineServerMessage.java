@@ -12,6 +12,7 @@ import java.util.List;
  *   ERROR        : 요청을 처리하지 못한 이유(보낸 사람에게만)
  *   PONG         : PING에 대한 답
  *   TETRIS_GARBAGE : 테트리스 대전에서 상대가 보낸 방해 줄(받는 사람에게만)
+ *   PUYO_GARBAGE   : 뿌요뿌요 대전에서 상대가 보낸 방해 뿌요(받는 사람에게만). garbage.lines가 개수, holeCol은 쓰지 않아 0
  *
  * [판 전체를 매번 보내는 이유]
  *   "바뀐 부분만" 보내면 데이터는 줄지만, 하나라도 놓치면 화면이 서버와 어긋난다.
@@ -45,5 +46,9 @@ public record OnlineServerMessage(
 
     public static OnlineServerMessage garbage(int lines, int holeCol, String fromNickname) {
         return new OnlineServerMessage("TETRIS_GARBAGE", null, null, null, new OnlineGarbageView(lines, holeCol, fromNickname));
+    }
+
+    public static OnlineServerMessage puyoGarbage(int count, String fromNickname) {
+        return new OnlineServerMessage("PUYO_GARBAGE", null, null, null, new OnlineGarbageView(count, 0, fromNickname));
     }
 }

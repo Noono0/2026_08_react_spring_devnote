@@ -2,6 +2,9 @@ package com.example.devnote.online.domain;
 
 import com.example.devnote.common.exception.BusinessException;
 import com.example.devnote.common.exception.ErrorCode;
+import com.example.devnote.online.domain.game.GameAction;
+import com.example.devnote.online.domain.game.OnlineGame;
+import com.example.devnote.online.domain.game.OnlineGames;
 import lombok.AccessLevel;
 import lombok.Getter;
 
@@ -11,9 +14,13 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Random;
+import java.util.Set;
 
 /**
  * 온라인 대전 방 하나의 상태와 규칙입니다. (서버 메모리에만 있고 DB에는 저장하지 않는다)
@@ -25,7 +32,7 @@ import java.util.Map;
  *
  * [함께 정한 규칙]
  *   1. 인원 수를 줄이면 앞 번호 자리에 앉은 사람이 남고, 뒷자리 사람은 빈 앞자리로 옮긴다. 자리가 모자라면 관전자가 된다.
- *   2. 게임 종류·인원 수는 방장만, 게임 중이 아닐 때만 바꾼다. 제목·비밀번호·로그인 유저만은 게임 중에도 바꿀 수 있다.
+ *   2. 게임 종류·인원 수·게임 옵션은 방장만, 게임 중이 아닐 때만 바꾼다. 게임 종류를 바꾸면 옵션은 새 게임의 처음 값이 된다. 제목·비밀번호·로그인 유저만은 게임 중에도 바꿀 수 있다.
  *   3. 방 최대 인원은 관전자 포함 10명.
  *   4. 게임 중에는 자리에 앉거나 일어날 수 없다(다음 판부터).
  *   5. 방장이 나가면 남은 사람 중 먼저 들어온 사람이 방장이 된다.
@@ -46,6 +53,8 @@ public class OnlineRoom {
     private final long createdAt;
     private String title;
     private OnlineGameType gameType;
+    /** 방장이 고른 게임 옵션 code(OnlineGameType.getOptions() 중 하나). 옵션이 없는 게임은 null */
+    private String gameOption;
     @Getter(AccessLevel.NONE) // 해시도 밖으로 내보내지 않는다. 확인은 passwordMatches로만
     private RoomPassword password;
     private boolean membersOnly;
@@ -62,8 +71,21 @@ public class OnlineRoom {
     private OmokGame omokGame;
     /** 테트리스 대전 판(시작 전이면 null) */
     private TetrisBattle tetrisBattle;
+    /** 뿌요뿌요 대전 판(시작 전이면 null) */
+    private PuyoBattle puyoBattle;
+    /** 공통 틀(OnlineGame)로 진행하는 게임(숫자 야구 등). 시작 전이면 null */
+    private OnlineGame game;
     /** 지난 판 결과 문구(예: "흑 철수 승리") */
     private String lastResult;
+    /** 이번 판을 시작할 때 자리에 앉아 있던 사람(자리 순서). 중간에 나가도 남겨 두어 패배로 기록한다 */
+    @Getter(AccessLevel.NONE)
+    private List<OnlineParticipant> matchPlayers = List.of();
+    /** 이번 판에서 기권하거나 나간 자리. 이긴 팀(마피아 등)이어도 승리로 기록하지 않는다 */
+    @Getter(AccessLevel.NONE)
+    private final Set<Integer> forfeitedSeats = new HashSet<>();
+    /** 끝났지만 아직 저장하지 않은 판. Service가 꺼내(drain) 랭킹에 저장한다 */
+    @Getter(AccessLevel.NONE)
+    private OnlineMatchResult finishedMatch;
 
     @Getter(AccessLevel.NONE)
     private final Map<String, OnlineParticipant> participants = new LinkedHashMap<>();
@@ -82,6 +104,7 @@ public class OnlineRoom {
         this.title = normalizeTitle(settings.title());
         requireAvailable(settings.gameType(), settings.seatCount());
         this.gameType = settings.gameType();
+        this.gameOption = resolveGameOption(settings.gameType(), settings.gameOption(), settings.gameType().getDefaultOption());
         this.seats = new ArrayList<>(Collections.nCopies(settings.seatCount(), null));
         this.password = settings.newPassword() == null || settings.newPassword().isBlank() ? null : createPassword(settings.newPassword());
         this.membersOnly = settings.membersOnly();
@@ -213,6 +236,11 @@ public class OnlineRoom {
             requireNotPlaying(); // 규칙 2
             requireAvailable(settings.gameType(), settings.seatCount());
         }
+        // 옵션을 비워 보내면: 같은 게임이면 지금 옵션 그대로, 다른 게임이면 그 게임의 처음 옵션
+        String keptOption = settings.gameType() == gameType ? gameOption : settings.gameType().getDefaultOption();
+        String nextOption = resolveGameOption(settings.gameType(), settings.gameOption(), keptOption);
+        boolean optionChanged = !Objects.equals(nextOption, gameOption);
+        if (optionChanged) requireNotPlaying();
         if (settings.membersOnly() && !participants.get(requesterId).isMember()) {
             throw new BusinessException(ErrorCode.ONLINE_ROOM_SETTINGS_INVALID, "로그인한 방장만 '로그인 유저만 참가'를 켤 수 있습니다.");
         }
@@ -228,12 +256,23 @@ public class OnlineRoom {
             if (settings.gameType() != gameType) {
                 omokGame = null;
                 tetrisBattle = null;
+                puyoBattle = null;
+                game = null;
                 lastResult = null;
             }
             gameType = settings.gameType();
             resizeSeats(settings.seatCount());
         }
-        addSystemMessage("방 정보가 바뀌었습니다: " + gameType.getLabel() + " · " + seats.size() + "인", now);
+        gameOption = nextOption;
+        String optionText = gameOption == null ? "" : " · " + gameType.optionLabel(gameOption);
+        addSystemMessage("방 정보가 바뀌었습니다: " + gameType.getLabel() + " · " + seats.size() + "인" + optionText, now);
+    }
+
+    /** 방장이 보낸 옵션을 검사한다. 비어 있으면 keptOption, 이 게임에서 고를 수 없는 값이면 오류 */
+    private static String resolveGameOption(OnlineGameType type, String requested, String keptOption) {
+        if (requested == null || requested.isBlank()) return keptOption;
+        if (!type.allowsOption(requested)) throw new BusinessException(ErrorCode.ONLINE_GAME_OPTION_INVALID);
+        return requested;
     }
 
     // ── 게임 진행 ────────────────────────────────────────────────────
@@ -249,10 +288,28 @@ public class OnlineRoom {
         requireAvailable(gameType, seats.size());
         lastResult = null;
         status = Status.PLAYING;
+        tetrisBattle = null;
+        puyoBattle = null;
+        omokGame = null;
+        game = null;
+        matchPlayers = seats.stream().map(participants::get).toList();
+        forfeitedSeats.clear();
+        List<String> nicknames = new ArrayList<>();
+        for (int seat = 0; seat < seats.size(); seat++) nicknames.add(nicknameAt(seat));
+        if (OnlineGames.usesCommonGame(gameType)) {
+            game = OnlineGames.create(gameType, nicknames, new Random(seed), gameOption);
+            String optionText = gameOption == null ? "" : "(" + gameType.optionLabel(gameOption) + ")";
+            addSystemMessage(gameType.getLabel() + optionText + " 시작! " + String.join(" · ", nicknames), now);
+            afterGameChange(now);
+            return;
+        }
         if (gameType == OnlineGameType.TETRIS) {
-            List<String> nicknames = new ArrayList<>();
-            for (int seat = 0; seat < seats.size(); seat++) nicknames.add(nicknameAt(seat));
             tetrisBattle = new TetrisBattle(seed, nicknames);
+            addSystemMessage("게임 시작! " + String.join(" · ", nicknames) + " — 마지막까지 살아남으면 1위", now);
+            return;
+        }
+        if (gameType == OnlineGameType.PUYO) {
+            puyoBattle = new PuyoBattle(seed, nicknames);
             addSystemMessage("게임 시작! " + String.join(" · ", nicknames) + " — 마지막까지 살아남으면 1위", now);
             return;
         }
@@ -271,12 +328,39 @@ public class OnlineRoom {
         }
     }
 
-    /** 기권: 오목은 상대가 이기고, 테트리스는 나만 탈락한다 */
+    /** 공통 틀 게임의 행동(GAME_ACTION). 관전자는 할 수 없다 */
+    public void gameAction(String participantId, GameAction action, long now) {
+        requireParticipant(participantId);
+        if (status != Status.PLAYING || game == null) throw new BusinessException(ErrorCode.ONLINE_GAME_NOT_PLAYING);
+        int seat = seatOf(participantId);
+        if (seat < 0) throw new BusinessException(ErrorCode.ONLINE_NOT_YOUR_TURN, "관전자는 게임에 참여할 수 없습니다.");
+        game.act(seat, action);
+        afterGameChange(now);
+    }
+
+    /** 게임이 남긴 안내를 채팅으로 옮기고, 끝났으면 방을 대기 상태로 돌린다 */
+    private void afterGameChange(long now) {
+        for (String announcement : game.drainAnnouncements()) addSystemMessage(announcement, now);
+        if (status == Status.PLAYING && game.isFinished()) finishGame(game.resultText(), now);
+    }
+
+    /** 기권: 오목은 상대가 이기고, 테트리스·공통 틀 게임은 나만 빠진다 */
     public void resign(String participantId, long now) {
         requireParticipant(participantId);
         int seat = seatOf(participantId);
+        if (status == Status.PLAYING && seat >= 0) forfeit(seat);
+        if (status == Status.PLAYING && game != null && seat >= 0) {
+            addSystemMessage(nicknameAt(seat) + " 기권", now);
+            game.leave(seat);
+            afterGameChange(now);
+            return;
+        }
         if (status == Status.PLAYING && tetrisBattle != null && seat >= 0) {
             eliminateFromTetris(seat, nicknameAt(seat) + " 기권", now);
+            return;
+        }
+        if (status == Status.PLAYING && puyoBattle != null && seat >= 0) {
+            eliminateFromPuyo(seat, nicknameAt(seat) + " 기권", now);
             return;
         }
         if (status != Status.PLAYING || omokGame == null || seat < 0) throw new BusinessException(ErrorCode.ONLINE_GAME_NOT_PLAYING);
@@ -285,9 +369,28 @@ public class OnlineRoom {
         finishGame(nicknameAt(seat) + " 기권 · " + stoneName(winnerSeat) + " " + nicknameAt(winnerSeat) + " 승리", now);
     }
 
+    /**
+     * 기권·나감을 기록한다(이긴 쪽이어도 승리로 저장하지 않는다).
+     * 단, 2048·지뢰 찾기 대전처럼 이미 자기 결과(성공·실패)가 정해진 자리는 그 결과를 지킨다 — 먼저 끝내고 나가도 손해가 없게.
+     */
+    private void forfeit(int seat) {
+        if (game != null && game.hasSettledResult(seat)) return;
+        forfeitedSeats.add(seat);
+    }
+
     private void finishByLeaving(int leftSeat, String leftNickname, long now) {
+        forfeit(leftSeat);
+        if (game != null) {
+            game.leave(leftSeat);
+            afterGameChange(now);
+            return;
+        }
         if (tetrisBattle != null) {
             eliminateFromTetris(leftSeat, leftNickname + "님이 나가 탈락", now);
+            return;
+        }
+        if (puyoBattle != null) {
+            eliminateFromPuyo(leftSeat, leftNickname + "님이 나가 탈락", now);
             return;
         }
         if (omokGame == null) return;
@@ -347,10 +450,84 @@ public class OnlineRoom {
         return seat;
     }
 
+    // ── 뿌요뿌요 대전 ────────────────────────────────────────────────
+
+    public record PuyoAttack(String targetParticipantId, int nuisance) {}
+
+    public void updatePuyoBoard(String participantId, String board, int score, int chains) {
+        puyoBattle().updateBoard(requirePuyoSeat(participantId), board, score, chains);
+    }
+
+    public PuyoAttack puyoAttack(String participantId, int nuisance) {
+        PuyoBattle battle = puyoBattle();
+        int seat = requirePuyoSeat(participantId);
+        int garbage = PuyoBattle.garbageFor(nuisance);
+        if (garbage == 0) return null;
+        var target = battle.attackTarget(seat);
+        if (target.isEmpty()) return null;
+        String targetParticipantId = seats.get(target.getAsInt());
+        return targetParticipantId == null ? null : new PuyoAttack(targetParticipantId, garbage);
+    }
+
+    public void puyoToppedOut(String participantId, long now) {
+        int seat = requirePuyoSeat(participantId);
+        eliminateFromPuyo(seat, nicknameAt(seat) + " 탈락", now);
+    }
+
+    private void eliminateFromPuyo(int seat, String message, long now) {
+        if (!puyoBattle.isAlive(seat)) return;
+        puyoBattle.eliminate(seat);
+        addSystemMessage(message + " (남은 사람 " + puyoBattle.countAlive() + "명)", now);
+        if (puyoBattle.isFinished()) finishGame(puyoBattle.describeResult(), now);
+    }
+
+    private PuyoBattle puyoBattle() {
+        if (status != Status.PLAYING || puyoBattle == null) throw new BusinessException(ErrorCode.ONLINE_GAME_NOT_PLAYING);
+        return puyoBattle;
+    }
+
+    private int requirePuyoSeat(String participantId) {
+        requireParticipant(participantId);
+        int seat = seatOf(participantId);
+        if (seat < 0) throw new BusinessException(ErrorCode.ONLINE_NOT_YOUR_TURN, "관전자는 게임에 참여할 수 없습니다.");
+        if (!puyoBattle().isAlive(seat)) throw new BusinessException(ErrorCode.ONLINE_GAME_NOT_PLAYING, "이미 탈락했습니다.");
+        return seat;
+    }
+
     private void finishGame(String result, long now) {
         status = Status.WAITING;
         lastResult = result;
+        finishedMatch = buildMatchResult(now);
         addSystemMessage("게임 끝: " + result, now);
+    }
+
+    /** 끝났지만 아직 저장하지 않은 판을 꺼내고 비운다(없으면 null) */
+    public OnlineMatchResult drainFinishedMatch() {
+        OnlineMatchResult drained = finishedMatch;
+        finishedMatch = null;
+        return drained;
+    }
+
+    private OnlineMatchResult buildMatchResult(long now) {
+        List<Integer> winners = winnerSeats();
+        List<OnlineMatchResult.Player> players = new ArrayList<>();
+        for (int seat = 0; seat < matchPlayers.size(); seat++) {
+            OnlineParticipant player = matchPlayers.get(seat);
+            boolean won = winners.contains(seat) && !forfeitedSeats.contains(seat);
+            players.add(new OnlineMatchResult.Player(player.getMemberId(), player.getNickname(), won));
+        }
+        return new OnlineMatchResult(gameType, List.copyOf(players), now);
+    }
+
+    /** 게임마다 다른 승자 표현(공통 틀·테트리스·오목)을 이긴 자리 번호 목록 하나로 모은다. 무승부면 빈 목록 */
+    private List<Integer> winnerSeats() {
+        if (OnlineGames.usesCommonGame(gameType)) return game == null ? List.of() : game.winnerSeats();
+        Integer winnerSeat = switch (gameType) {
+            case TETRIS -> tetrisBattle == null ? null : tetrisBattle.getWinnerSeat();
+            case PUYO -> puyoBattle == null ? null : puyoBattle.getWinnerSeat();
+            default -> omokGame == null ? null : omokGame.getWinnerSeat();
+        };
+        return winnerSeat == null ? List.of() : List.of(winnerSeat);
     }
 
     private static String stoneName(int seat) {
@@ -370,6 +547,10 @@ public class OnlineRoom {
         OnlineParticipant participant = requireParticipant(participantId);
         String normalized = text == null ? "" : text.replaceAll("[\\r\\n\\t]+", " ").strip();
         if (normalized.isEmpty() || normalized.length() > CHAT_MAX_LENGTH) throw new BusinessException(ErrorCode.ONLINE_CHAT_INVALID);
+        int seat = seatOf(participantId);
+        if (status == Status.PLAYING && game != null && seat >= 0 && !game.canChat(seat)) {
+            throw new BusinessException(ErrorCode.ONLINE_CHAT_INVALID, "탈락한 플레이어는 게임이 끝날 때까지 채팅할 수 없습니다.");
+        }
         if (!participant.tryRecordChat(now)) throw new BusinessException(ErrorCode.ONLINE_TOO_MANY_MESSAGES);
         appendChat(new OnlineChatMessage(++chatSequence, participant.getNickname(), normalized, now, false, seatOf(participantId) < 0));
     }

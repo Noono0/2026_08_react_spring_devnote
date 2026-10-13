@@ -53,6 +53,12 @@ export const apiErrorMessageMap: Record<string, string> = {
   POLL_EDIT_NOT_ALLOWED: "참여자가 있는 투표의 문항은 변경할 수 없습니다.",
   POLL_STATUS_INVALID: "현재 투표 상태에서는 요청한 상태로 변경할 수 없습니다.",
 
+  // ── 게임 랭킹 ─────────────────────────────────────────────
+  GAME_RANKING_PERIOD_INVALID: "시작일은 종료일보다 늦을 수 없습니다.",
+  GAME_DIFFICULTY_INVALID: "이 게임에서 고를 수 없는 난이도입니다.",
+  GAME_RECORD_INVALID: "게임 기록 값을 확인해 주세요.",
+  GAME_RANKING_NICKNAME_INVALID: "랭킹에 쓸 닉네임은 2~12자로 입력해 주세요.",
+
   // ── 문서 기능 ─────────────────────────────────────────────
   DOCUMENT_NOT_FOUND: "삭제되었거나 존재하지 않는 문서입니다.",
   DOCUMENT_EDIT_FORBIDDEN: "이 문서를 수정할 권한이 없습니다.",

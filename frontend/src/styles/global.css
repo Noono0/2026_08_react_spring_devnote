@@ -318,7 +318,7 @@ textarea { resize: vertical; }
   border: 1px solid var(--border-color); border-radius: 18px; background: var(--background-panel); box-shadow: var(--shadow-small);
 }
 .roadmap-card { display: flex; min-height: 320px; flex-direction: column; padding: 22px; }
-.roadmap-card h2 { margin: 16px 0 8px; font-size: 21px; }
+.roadmap-card h2, .roadmap-card h3 { margin: 16px 0 8px; font-size: 21px; }
 .roadmap-card .primary-link { align-self: flex-start; margin-top: auto; }
 /* 학습 진도: 카드 아래쪽 버튼 줄, 완료한 카드 강조, 로드맵 상단 진행률 막대 */
 .roadmap-card-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: auto; }
