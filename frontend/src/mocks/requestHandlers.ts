@@ -33,7 +33,9 @@
  */
 
 import { delay, http, HttpResponse } from "msw";
+import type { JSONContent } from "@tiptap/core";
 import type { DocumentAttachment } from "@/features/file/types/fileTypes";
+import type { DocumentDetail, DocumentListItem, DocumentStatus } from "@/features/practice/14-documents/types/documentTypes";
 import { createMockDocumentDetail, createMockThumbnailDataUrl, mockDocuments } from "./documentMockData";
 
 interface MockUploadedFile extends DocumentAttachment {
@@ -54,6 +56,18 @@ interface MockUploadedFile extends DocumentAttachment {
 //   숫자 키를 그대로 쓸 수 있고 .get()/.set()/.has()가 명확해서 이런 용도에 좋다.
 let nextMockFileId = 10_000;
 const mockUploadedFileById = new Map<number, MockUploadedFile>();
+
+// ★ 문서도 같은 방식으로 메모리에 기억한다. 이 배열이 가짜 서버의 "문서 테이블"이다.
+//   예전에는 생성 응답이 매번 documentId 999를 지어내서 돌려주기만 하고 아무것도 저장하지 않았다.
+//   그래서 등록 직후 상세 화면(GET /documents/999)이 "없는 문서"로 404가 되었다.
+//   ❌ 응답만 그럴듯하게 꾸미기 → 다음 요청과 이야기가 맞지 않는다
+//   ✓ 저장한 것을 조회가 그대로 보게 하기 → 진짜 서버처럼 흐름이 이어진다
+//
+//   처음 57건은 documentMockData.ts의 더미 문서로 채운다.
+//   새 문서는 맨 앞에 넣어 목록 첫 페이지에서 바로 보이게 한다(최신 글이 위에 오는 게시판처럼).
+const mockDocumentStore: DocumentDetail[] = mockDocuments.map((document) => createMockDocumentDetail(document.documentId));
+// 진짜 DB의 AUTO_INCREMENT 역할. 지운 번호는 다시 쓰지 않는다.
+let nextMockDocumentId = mockDocuments.length + 1;
 
 const getScenario = (): string =>
   localStorage.getItem("mockScenario") ?? import.meta.env.VITE_MOCK_SCENARIO;
@@ -129,12 +143,90 @@ const getMockAttachmentFiles = (requestBody: Record<string, unknown>): DocumentA
   });
 };
 
-const getMockThumbnailImageUrl = (requestBody: Record<string, unknown>): string | undefined => {
-  const thumbnailFileId = requestBody.thumbnailFileId;
-  return typeof thumbnailFileId === "number"
-    ? mockUploadedFileById.get(thumbnailFileId)?.contentUrl
-    : undefined;
+/**
+ * 대표 이미지 정보를 정한다.
+ * ★ 대표 이미지를 바꾸지 않고 저장하면 요청에는 기존 번호가 그대로 온다.
+ *   더미 문서의 이미지(501번 등)는 업로드 Map에 없으므로,
+ *   번호가 같으면 기존 주소를 유지해야 수정 후에도 썸네일이 사라지지 않는다.
+ */
+const getMockThumbnail = (
+  requestBody: Record<string, unknown>,
+  previousDocument: Pick<DocumentDetail, "thumbnailFileId" | "thumbnailImageUrl">,
+): Pick<DocumentDetail, "thumbnailFileId" | "thumbnailImageUrl"> => {
+  const thumbnailFileId = typeof requestBody.thumbnailFileId === "number" ? requestBody.thumbnailFileId : undefined;
+  if (thumbnailFileId === undefined) {
+    return { thumbnailFileId: undefined, thumbnailImageUrl: undefined };
+  }
+  if (thumbnailFileId === previousDocument.thumbnailFileId) {
+    return { thumbnailFileId, thumbnailImageUrl: previousDocument.thumbnailImageUrl };
+  }
+  return { thumbnailFileId, thumbnailImageUrl: mockUploadedFileById.get(thumbnailFileId)?.contentUrl };
 };
+
+// ── 요청 본문 읽기 도우미 ─────────────────────────────────────────
+// ★ request.json()의 결과는 "무엇이든 될 수 있는 값"이다. 가짜 서버라도 그대로 믿지 않는다.
+//   타입이 맞을 때만 쓰고, 아니면 기존 값(fallback)을 유지한다.
+const documentStatusValues: DocumentStatus[] = ["DRAFT", "PUBLISHED", "ARCHIVED"];
+const isDocumentStatus = (value: unknown): value is DocumentStatus =>
+  documentStatusValues.some((documentStatus) => documentStatus === value);
+const isJsonContent = (value: unknown): value is JSONContent =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+const readString = (value: unknown, fallback: string): string => (typeof value === "string" ? value : fallback);
+const readTags = (value: unknown, fallback: string[]): string[] =>
+  Array.isArray(value) ? value.filter((tagName): tagName is string => typeof tagName === "string") : fallback;
+
+/**
+ * 저장 요청(생성·수정 공통)을 기존 문서 위에 덮어써 새 문서 객체를 만든다.
+ * 원본 객체는 바꾸지 않고 새 객체를 돌려준다. (React 상태 갱신과 같은 불변 업데이트 습관)
+ */
+const applyDocumentSaveRequest = (previousDocument: DocumentDetail, requestBody: Record<string, unknown>): DocumentDetail => ({
+  ...previousDocument,
+  documentTitle: readString(requestBody.documentTitle, previousDocument.documentTitle),
+  contentJson: isJsonContent(requestBody.contentJson) ? requestBody.contentJson : previousDocument.contentJson,
+  contentHtml: readString(requestBody.contentHtml, previousDocument.contentHtml),
+  contentText: readString(requestBody.contentText, previousDocument.contentText),
+  documentStatus: isDocumentStatus(requestBody.documentStatus) ? requestBody.documentStatus : previousDocument.documentStatus,
+  tags: readTags(requestBody.tags, previousDocument.tags),
+  attachmentFiles: getMockAttachmentFiles(requestBody),
+  ...getMockThumbnail(requestBody, previousDocument),
+  updatedAt: new Date().toISOString(),
+});
+
+/**
+ * 상세 정보에서 목록에 필요한 칸만 골라 낸다.
+ * ★ 진짜 서버도 목록 SQL에서는 본문(content_html 등)을 SELECT하지 않는다.
+ *   본문까지 보내면 목록 응답이 쓸데없이 무거워진다.
+ */
+const toDocumentListItem = (document: DocumentDetail): DocumentListItem => ({
+  documentId: document.documentId,
+  documentTitle: document.documentTitle,
+  documentStatus: document.documentStatus,
+  thumbnailFileId: document.thumbnailFileId,
+  thumbnailImageUrl: document.thumbnailImageUrl,
+  versionNumber: document.versionNumber,
+  viewCount: document.viewCount,
+  authorId: document.authorId,
+  authorName: document.authorName,
+  createdAt: document.createdAt,
+  updatedAt: document.updatedAt,
+  tags: document.tags,
+});
+
+const findMockDocumentIndex = (documentIdParameter: unknown): number =>
+  mockDocumentStore.findIndex((document) => document.documentId === Number(documentIdParameter));
+
+// 없는 문서 응답. 상세 조회·수정·삭제가 모두 같은 모양으로 돌려준다(백엔드 DOCUMENT_NOT_FOUND와 같은 형태).
+const createDocumentNotFoundResponse = (): Response =>
+  HttpResponse.json(
+    {
+      status: 404,
+      errorCode: "DOCUMENT_NOT_FOUND",
+      detail: "더미 문서를 찾을 수 없습니다.",
+      fieldErrors: [],
+      traceId: "mock-document-not-found",
+    },
+    { status: 404 },
+  );
 
 /**
  * 실제로 가로챌 요청 목록. startMockServerWhenEnabled가 이 배열을 받아 간다.
@@ -164,13 +256,13 @@ export const requestHandlers = [
     const scenario = getScenario();
     const filteredDocuments = scenario === "empty-data"
       ? []
-      : mockDocuments.filter((document) => document.documentTitle.toLowerCase().includes(searchKeyword)
+      : mockDocumentStore.filter((document) => document.documentTitle.toLowerCase().includes(searchKeyword)
         && (!tag || document.tags.includes(tag)));
     // ★ slice로 "이번 페이지 몫"만 잘라 낸다. 서버 페이징의 핵심이다.
     //   0페이지·10개면 slice(0,10), 1페이지면 slice(10,20).
     //   프론트가 전체를 받아 자르는 게 아니라 서버가 잘라서 보내야
     //   문서가 10만 건이어도 응답이 가볍다.
-    const content = filteredDocuments.slice(pageNumber * pageSize, pageNumber * pageSize + pageSize);
+    const content = filteredDocuments.slice(pageNumber * pageSize, pageNumber * pageSize + pageSize).map(toDocumentListItem);
     const totalPages = filteredDocuments.length === 0 ? 0 : Math.ceil(filteredDocuments.length / pageSize);
 
     // ★ 응답 모양을 진짜 백엔드와 똑같이 맞춘다.
@@ -199,45 +291,48 @@ export const requestHandlers = [
   http.get("/api/v1/documents/:documentId", async ({ params }) => {
     const scenarioResponse = await applyScenario();
     if (scenarioResponse) return scenarioResponse;
-    const documentId = Number(params.documentId);
-    const documentExists = mockDocuments.some((document) => document.documentId === documentId);
-    if (!documentExists) {
-      return HttpResponse.json(
-        {
-          status: 404,
-          errorCode: "DOCUMENT_NOT_FOUND",
-          detail: "더미 문서를 찾을 수 없습니다.",
-          fieldErrors: [],
-          traceId: "mock-document-not-found",
-        },
-        { status: 404 },
-      );
-    }
+    const document = mockDocumentStore[findMockDocumentIndex(params.documentId)];
+    if (!document) return createDocumentNotFoundResponse();
     return HttpResponse.json({
       success: true,
       code: "SUCCESS",
       message: "더미 문서 조회 성공",
       traceId: "mock-detail-trace",
-      data: createMockDocumentDetail(documentId),
+      data: document,
     });
   }),
   http.post("/api/v1/documents", async ({ request }) => {
     const scenarioResponse = await applyScenario();
     if (scenarioResponse) return scenarioResponse;
     const requestBody = (await request.json()) as Record<string, unknown>;
+    const createdAt = new Date().toISOString();
+    // 빈 문서를 하나 만들고, 그 위에 요청 내용을 덮어쓴다. 번호·작성자·버전은 서버가 정한다.
+    const emptyDocument: DocumentDetail = {
+      documentId: nextMockDocumentId++,
+      authorId: 1,
+      authorName: "사용자 1",
+      documentTitle: "",
+      contentJson: { type: "doc", content: [] },
+      contentHtml: "",
+      contentText: "",
+      attachmentFiles: [],
+      tags: [],
+      documentStatus: "DRAFT",
+      versionNumber: 1,
+      viewCount: 0,
+      createdAt,
+      updatedAt: createdAt,
+    };
+    const createdDocument = applyDocumentSaveRequest(emptyDocument, requestBody);
+    // ★ 저장! 이 한 줄이 있어야 바로 다음 상세 조회·목록 조회에서 이 문서가 보인다.
+    mockDocumentStore.unshift(createdDocument);
     return HttpResponse.json(
       {
         success: true,
         code: "CREATED",
         message: "더미 문서 생성 성공",
         traceId: "mock-create-trace",
-        data: {
-          ...createMockDocumentDetail(1),
-          ...requestBody,
-          documentId: 999,
-          attachmentFiles: getMockAttachmentFiles(requestBody),
-          thumbnailImageUrl: getMockThumbnailImageUrl(requestBody),
-        },
+        data: createdDocument,
       },
       { status: 201 },
     );
@@ -257,24 +352,32 @@ export const requestHandlers = [
         { status: 409 },
       );
     }
+    const documentIndex = findMockDocumentIndex(params.documentId);
+    const previousDocument = mockDocumentStore[documentIndex];
+    if (!previousDocument) return createDocumentNotFoundResponse();
     const requestBody = (await request.json()) as Record<string, unknown>;
+    // 버전은 요청 값이 아니라 저장된 값에서 1 올린다. 버전을 정하는 것은 서버의 일이다.
+    const updatedDocument: DocumentDetail = {
+      ...applyDocumentSaveRequest(previousDocument, requestBody),
+      versionNumber: previousDocument.versionNumber + 1,
+    };
+    mockDocumentStore[documentIndex] = updatedDocument;
     return HttpResponse.json({
       success: true,
       code: "SUCCESS",
       message: "더미 문서 수정 성공",
       traceId: "mock-update-trace",
-      data: {
-        ...createMockDocumentDetail(Number(params.documentId)),
-        ...requestBody,
-        attachmentFiles: getMockAttachmentFiles(requestBody),
-        thumbnailImageUrl: getMockThumbnailImageUrl(requestBody),
-        versionNumber: Number(requestBody.versionNumber ?? 1) + 1,
-      },
+      data: updatedDocument,
     });
   }),
-  http.delete("/api/v1/documents/:documentId", async () => {
+  http.delete("/api/v1/documents/:documentId", async ({ params }) => {
     const scenarioResponse = await applyScenario();
-    return scenarioResponse ?? new HttpResponse(null, { status: 204 });
+    if (scenarioResponse) return scenarioResponse;
+    const documentIndex = findMockDocumentIndex(params.documentId);
+    if (documentIndex < 0) return createDocumentNotFoundResponse();
+    // splice(위치, 1) = 그 자리의 한 건을 지운다. 가짜 서버의 "DB"라 직접 바꿔도 된다(React 상태가 아니다).
+    mockDocumentStore.splice(documentIndex, 1);
+    return new HttpResponse(null, { status: 204 });
   }),
   /**
    * 【파일 업로드】 fileApi.ts의 uploadAttachmentFile / uploadEditorImage가 여기로 온다.

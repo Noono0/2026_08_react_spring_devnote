@@ -27,6 +27,8 @@ import { ModalDialog } from "@/shared/ui/ModalDialog";
 /** 들어가기 전에 나는 오류 중 "다시 시도해도 안 되는" 것 → 대기실로 안내 */
 const FATAL_JOIN_ERRORS = new Set(["ONLINE_ROOM_NOT_FOUND", "ONLINE_ROOM_FULL", "ONLINE_ROOM_MEMBERS_ONLY"]);
 const NICKNAME_ERRORS = new Set(["ONLINE_NICKNAME_INVALID", "ONLINE_NICKNAME_TAKEN"]);
+/** 판이 커서 채팅·자리 목록을 아래로 내려 넓게 쓰는 게임(테트리스·뿌요뿌요는 isFallingPuzzle로 따로 본다) */
+const wideGameTypes = new Set(["BILLIARDS", "OLYMPIC", "CATCH_MIND", "SUTDA", "ALKKAGI"]);
 /** 방 안에서 받은 오류 알림은 잠깐 보여 주고 지운다 */
 export const ERROR_VISIBLE_MS = 4_000;
 
@@ -166,8 +168,8 @@ export const OnlineRoomScreen = ({ roomId, nickname, hostToken, canUseMembersOnl
       ) : null}
       {visibleError ? <p key={visibleError.sequence} className="online-banner warning" role="alert">{visibleError.message}</p> : null}
 
-      {/* 테트리스·뿌요뿌요·당구(3D 테이블)·올림픽(경기장)은 판을 넓게 쓰도록 채팅·자리 목록을 아래로 보낸다 */}
-      <div className={`online-room-layout${isFallingPuzzle || room.gameType === "BILLIARDS" || room.gameType === "OLYMPIC" ? " wide" : ""}`}>
+      {/* 테트리스·뿌요뿌요·당구(3D 테이블)·올림픽(경기장)·캐치마인드(그림판)·섯다(족보표)·알까기(판)는 넓게 쓰도록 채팅·자리 목록을 아래로 보낸다 */}
+      <div className={`online-room-layout${isFallingPuzzle || wideGameTypes.has(room.gameType) ? " wide" : ""}`}>
         <div className="online-game-area">
           {isTetris ? (
             <OnlineTetrisGame room={room} mySeat={mySeat} connected={isOpen} incomingGarbage={state.incomingGarbage} send={send} />

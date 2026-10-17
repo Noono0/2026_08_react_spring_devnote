@@ -84,6 +84,10 @@ export const onlineRankingGames: OnlineRankingGame[] = [
   onlineGame("MINESWEEPER", "지뢰 찾기 대전"),
   onlineGame("BILLIARDS", "당구"),
   onlineGame("OLYMPIC", "올림픽"),
+  onlineGame("YUTNORI", "윷놀이"),
+  onlineGame("CATCH_MIND", "캐치마인드"),
+  onlineGame("JANGGI", "장기"),
+  onlineGame("ALKKAGI", "알까기"),
 ];
 
 export const defaultRankingGame: RankingGame = omokRankingGame;

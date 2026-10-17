@@ -4,11 +4,14 @@
  * 서버는 room.game에 "받는 사람에게 맞춘" 상태를 담아 보낸다. 모양은 gameType마다 다르므로,
  * 각 게임 화면이 자기 zod 스키마로 확인한 뒤 그린다. 새 게임을 추가하면 여기에 한 줄을 더한다.
  */
+import { AlkkagiGame } from "@/features/games/online/games/AlkkagiGame";
 import { BattleshipGame } from "@/features/games/online/games/BattleshipGame";
 import { BilliardsGame } from "@/features/games/online/games/billiards/BilliardsGame";
 import { BlackjackGame } from "@/features/games/online/games/BlackjackGame";
+import { CatchMindGame } from "@/features/games/online/games/CatchMindGame";
 import { ChessGame } from "@/features/games/online/games/ChessGame";
 import { Game2048Battle } from "@/features/games/online/games/Game2048Battle";
+import { JanggiGame } from "@/features/games/online/games/JanggiGame";
 import { MafiaGame } from "@/features/games/online/games/MafiaGame";
 import { MemoryMatchGame } from "@/features/games/online/games/MemoryMatchGame";
 import { MinesweeperBattle } from "@/features/games/online/games/MinesweeperBattle";
@@ -18,6 +21,7 @@ import { OneCardGame } from "@/features/games/online/games/OneCardGame";
 import { PokerGame } from "@/features/games/online/games/PokerGame";
 import { SudokuGame } from "@/features/games/online/games/SudokuGame";
 import { SutdaGame } from "@/features/games/online/games/SutdaGame";
+import { YutnoriGame } from "@/features/games/online/games/YutnoriGame";
 import type { OnlineClientMessage, OnlineRoom } from "@/features/games/online/onlineTypes";
 
 export interface CommonGameProperties {
@@ -57,6 +61,14 @@ export const CommonGameArea = (properties: CommonGameProperties) => {
       return <BilliardsGame {...properties} />;
     case "OLYMPIC":
       return <OlympicGame {...properties} />;
+    case "YUTNORI":
+      return <YutnoriGame {...properties} />;
+    case "CATCH_MIND":
+      return <CatchMindGame {...properties} />;
+    case "JANGGI":
+      return <JanggiGame {...properties} />;
+    case "ALKKAGI":
+      return <AlkkagiGame {...properties} />;
     default:
       return <p className="online-hint">아직 준비 중인 게임입니다.</p>;
   }

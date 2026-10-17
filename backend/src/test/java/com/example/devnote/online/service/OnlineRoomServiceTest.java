@@ -6,10 +6,12 @@ import com.example.devnote.member.dao.row.MemberRow;
 import com.example.devnote.member.service.AuthenticationService;
 import com.example.devnote.online.domain.OnlineGameType;
 import com.example.devnote.online.domain.OnlineMatchResult;
+import com.example.devnote.online.domain.game.CatchMindGame;
 import com.example.devnote.online.domain.game.Game2048Game;
 import com.example.devnote.online.domain.game.GameAction;
 import com.example.devnote.online.domain.game.NumberBaseballGame;
 import com.example.devnote.online.domain.game.SudokuGame;
+import com.example.devnote.online.domain.game.YutnoriGame;
 import com.example.devnote.online.dto.OnlineClientMessage;
 import com.example.devnote.online.dto.OnlineRoomCreateRequest;
 import com.example.devnote.online.dto.OnlineRoomCreatedResponse;
@@ -267,6 +269,59 @@ class OnlineRoomServiceTest {
         assertThat(match.players()).containsExactly(
             new OnlineMatchResult.Player(null, "하나", true),
             new OnlineMatchResult.Player(null, "둘둘", false));
+    }
+
+    @Test
+    void 윷놀이는_차례인_사람만_던지고_이동_목록도_그_사람만_받는다() {
+        OnlineRoomCreatedResponse created = service.createRoom(new OnlineRoomCreateRequest("윷", OnlineGameType.YUTNORI, 2, null, false, "2"), new MockHttpServletRequest());
+        OnlineConnection first = new OnlineConnection("s1", null, null);
+        OnlineConnection second = new OnlineConnection("s2", null, null);
+        service.join(first, joinMessage(created.roomId(), "하나", null, created.hostToken()));
+        service.join(second, joinMessage(created.roomId(), "둘둘", null, null));
+        service.sit(first, 0);
+        service.sit(second, 1);
+        service.start(first);
+
+        assertError(() -> service.gameAction(second, new GameAction("THROW", null, null, null)), ErrorCode.ONLINE_NOT_YOUR_TURN);
+        // 윷·모가 나오면 한 번 더 던지므로, 말을 옮길 차례(MOVE)가 될 때까지 던진다
+        YutnoriGame.View mine;
+        do {
+            service.gameAction(first, new GameAction("THROW", null, null, null));
+            mine = (YutnoriGame.View) sender.lastRoomStateFor("s1").room().game();
+        } while (mine.phase() == YutnoriGame.Phase.THROW);
+        var theirs = (YutnoriGame.View) sender.lastRoomStateFor("s2").room().game();
+        assertThat(mine.pieces().get(0)).hasSize(2); // 방 옵션 "2" = 말 2개
+        assertThat(mine.moves()).isNotEmpty();
+        assertThat(theirs.moves()).isEmpty();
+        assertThat(theirs.pendingThrows()).isEqualTo(mine.pendingThrows()); // 던진 결과는 모두에게 보인다
+    }
+
+    @Test
+    void 캐치마인드는_제시어를_출제자에게만_보내고_출제자의_채팅을_막는다() {
+        OnlineRoomCreatedResponse created = service.createRoom(new OnlineRoomCreateRequest("그림", OnlineGameType.CATCH_MIND, 2, null, false, null), new MockHttpServletRequest());
+        OnlineConnection first = new OnlineConnection("s1", null, null);
+        OnlineConnection second = new OnlineConnection("s2", null, null);
+        service.join(first, joinMessage(created.roomId(), "하나", null, created.hostToken()));
+        service.join(second, joinMessage(created.roomId(), "둘둘", null, null));
+        service.sit(first, 0);
+        service.sit(second, 1);
+        service.start(first);
+
+        var drawer = (CatchMindGame.View) sender.lastRoomStateFor("s1").room().game();
+        var guesser = (CatchMindGame.View) sender.lastRoomStateFor("s2").room().game();
+        assertThat(drawer.word()).isNotBlank();
+        assertThat(guesser.word()).isNull();
+        assertThat(drawer.totalTurns()).isEqualTo(4); // 옵션을 비우면 기본값: 한 사람당 2번
+        assertError(() -> service.chat(first, "힌트!"), ErrorCode.ONLINE_CHAT_INVALID);
+        service.chat(second, "어렵다");
+
+        service.gameAction(first, new GameAction("DRAW", null, null, List.of(0, 8, 100, 100, 300, 200)));
+        assertThat(((CatchMindGame.View) sender.lastRoomStateFor("s2").room().game()).strokes()).hasSize(1);
+        service.gameAction(second, new GameAction("GUESS", drawer.word(), null, null));
+        var next = (CatchMindGame.View) sender.lastRoomStateFor("s2").room().game();
+        assertThat(next.scores()).containsExactly(5, 10);
+        assertThat(next.drawerSeat()).isEqualTo(1);
+        assertThat(next.word()).isNotBlank(); // 이번엔 둘둘이 출제자
     }
 
     @Test

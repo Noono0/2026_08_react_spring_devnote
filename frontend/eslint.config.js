@@ -5,7 +5,7 @@ import reactRefresh from "eslint-plugin-react-refresh";
 import typescriptEslint from "typescript-eslint";
 
 export default typescriptEslint.config(
-  { ignores: ["dist", "node_modules", "public/mockServiceWorker.js"] },
+  { ignores: ["dist", "node_modules", "public/mockServiceWorker.js", "test-results", "playwright-report"] },
   {
     extends: [javascript.configs.recommended, ...typescriptEslint.configs.recommendedTypeChecked],
     files: ["**/*.{ts,tsx}"],
@@ -13,7 +13,7 @@ export default typescriptEslint.config(
       ecmaVersion: 2022,
       globals: globals.browser,
       parserOptions: {
-        project: ["./tsconfig.app.json", "./tsconfig.node.json"],
+        project: ["./tsconfig.app.json", "./tsconfig.node.json", "./tsconfig.e2e.json"],
         tsconfigRootDir: import.meta.dirname,
       },
     },
