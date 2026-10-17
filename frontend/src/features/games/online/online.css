@@ -445,6 +445,45 @@ button.battleship-cell:hover { background: #3a8fd0; filter: none; }
 .mafia-secret ul { margin: 4px 0 0; padding-left: 20px; }
 .mafia-log { display: grid; gap: 2px; max-height: 160px; margin: 0; padding-left: 24px; overflow-y: auto; font-size: 13px; }
 
+/* 윷놀이: 위에 플레이어(차례 강조), 가운데 SVG 윷판, 아래 윷 결과·이동 버튼 */
+.yutnori { display: grid; gap: 12px; justify-items: center; width: 100%; }
+.yutnori-players { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.yutnori-players li { display: flex; align-items: center; gap: 6px; padding: 6px 12px; border: 2px solid var(--border-color); border-radius: 999px; font-size: 13px; }
+.yutnori-players li.turn { border-color: var(--primary-color); box-shadow: 0 0 0 2px var(--primary-soft); }
+.yutnori-players li.left { opacity: 0.45; }
+.yutnori-token { width: 14px; height: 14px; border-radius: 50%; }
+.yutnori-board { width: min(100%, 420px); aspect-ratio: 1; border-radius: 16px; background: var(--omok-board); }
+.yutnori-line { stroke: var(--omok-line); stroke-width: 0.7; }
+.yutnori-node { fill: var(--omok-white); stroke: var(--omok-line); stroke-width: 0.6; }
+.yutnori-node.highlighted { fill: #ffe066; stroke: #e67700; stroke-width: 1.2; }
+.yutnori-piece { stroke: #fff; stroke-width: 0.8; }
+.yutnori-piece-count { fill: #fff; font-size: 4px; font-weight: 800; pointer-events: none; }
+.yutnori-start-label { fill: var(--omok-black); font-size: 3.2px; font-weight: 800; }
+.yutnori-throws { display: flex; gap: 6px; margin: 0; }
+.yutnori-throw { padding: 4px 12px; border-radius: 8px; color: #fff; background: #5f3dc4; font-weight: 800; }
+.yutnori-moves { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 6px; width: 100%; margin: 0; padding: 0; list-style: none; }
+.yutnori-moves button { width: 100%; }
+.yutnori-log { display: grid; gap: 2px; width: 100%; max-height: 140px; margin: 0; padding-left: 24px; overflow-y: auto; font-size: 13px; }
+
+/* 캐치마인드: 그림판은 실제 크기 1000×750을 화면 너비에 맞춰 줄여 보여 준다(좌표는 catchMindRules.ts가 비율로 바꾼다) */
+.catch-mind { display: grid; gap: 10px; width: 100%; }
+.catch-mind-word { margin: 0; padding: 8px 14px; border-left: 6px solid var(--warning-color); border-radius: 10px; background: var(--background-muted); font-size: 18px; }
+.catch-mind-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.catch-mind-tools [role="group"] { display: flex; flex-wrap: wrap; gap: 4px; }
+.catch-mind-color { width: 30px; min-width: 30px; height: 30px; padding: 0; border: 2px solid var(--border-strong); border-radius: 50%; }
+.catch-mind-color[aria-pressed="true"] { outline: 3px solid var(--primary-color); outline-offset: 2px; }
+.catch-mind-canvas { width: 100%; max-width: 900px; height: auto; aspect-ratio: 4 / 3; justify-self: center; border: 2px solid var(--border-strong); border-radius: 12px; background: #fff; touch-action: none; }
+.catch-mind-canvas.drawable { cursor: crosshair; }
+.catch-mind-guess { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.catch-mind-guess input { flex: 1 1 200px; min-width: 0; }
+.catch-mind-side { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.catch-mind-scores, .catch-mind-guesses, .catch-mind-log { display: grid; align-content: start; gap: 4px; max-height: 180px; margin: 0; overflow-y: auto; font-size: 13px; }
+.catch-mind-scores { padding: 0; list-style: none; }
+.catch-mind-scores li { display: flex; justify-content: space-between; gap: 8px; padding: 4px 8px; border-radius: 8px; background: var(--background-muted); }
+.catch-mind-scores li.drawer { outline: 2px solid var(--primary-color); }
+.catch-mind-scores li.left { opacity: 0.45; }
+.catch-mind-guesses, .catch-mind-log { padding-left: 20px; }
+
 /* 스도쿠 대전: 위에 자리별 진행 막대, 가운데 9×9 판, 아래 숫자 버튼 */
 .sudoku-battle { display: grid; gap: 12px; justify-items: center; width: 100%; }
 .sudoku-play { display: grid; gap: 14px; justify-items: center; width: 100%; }

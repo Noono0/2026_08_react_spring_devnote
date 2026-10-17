@@ -42,7 +42,11 @@ public enum OnlineGameType {
     /** 1명이면 혼자 연습. 종목(3쿠션·4구·8볼)은 게임 옵션으로 고른다 */
     BILLIARDS("당구", 1, 2, true),
     /** 육상 6종목. 1명이면 혼자 대회(기준 기록으로 메달). 종목은 게임 안에서 1번 선수가 고른다 */
-    OLYMPIC("올림픽", 1, 4, true);
+    OLYMPIC("올림픽", 1, 4, true),
+    /** 말 개수(4개·2개)는 게임 옵션으로 고른다 */
+    YUTNORI("윷놀이", 2, 4, true),
+    /** 그림 맞히기. 한 사람당 그리는 횟수(1~3번)는 게임 옵션으로 고른다 */
+    CATCH_MIND("캐치마인드", 2, 8, true);
 
     private final String label;
     private final int minSeats;
@@ -73,6 +77,9 @@ public enum OnlineGameType {
                 new OnlineGameOption("3", "3색"), new OnlineGameOption("4", "4색"), new OnlineGameOption("5", "5색"));
             case BILLIARDS -> List.of(
                 new OnlineGameOption("THREE_CUSHION", "3쿠션"), new OnlineGameOption("FOUR_BALL", "4구"), new OnlineGameOption("EIGHT_BALL", "8볼 포켓"));
+            case YUTNORI -> List.of(new OnlineGameOption("4", "말 4개"), new OnlineGameOption("2", "말 2개 · 빠른 판"));
+            case CATCH_MIND -> List.of(
+                new OnlineGameOption("1", "한 사람당 1번"), new OnlineGameOption("2", "한 사람당 2번"), new OnlineGameOption("3", "한 사람당 3번"));
             default -> List.of();
         };
     }
@@ -85,6 +92,8 @@ public enum OnlineGameType {
             case MINESWEEPER -> "BEGINNER";
             case PUYO -> "4";
             case BILLIARDS -> "THREE_CUSHION";
+            case YUTNORI -> "4";
+            case CATCH_MIND -> "2";
             default -> null;
         };
     }

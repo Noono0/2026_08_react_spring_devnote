@@ -166,8 +166,8 @@ export const OnlineRoomScreen = ({ roomId, nickname, hostToken, canUseMembersOnl
       ) : null}
       {visibleError ? <p key={visibleError.sequence} className="online-banner warning" role="alert">{visibleError.message}</p> : null}
 
-      {/* 테트리스·뿌요뿌요·당구(3D 테이블)·올림픽(경기장)은 판을 넓게 쓰도록 채팅·자리 목록을 아래로 보낸다 */}
-      <div className={`online-room-layout${isFallingPuzzle || room.gameType === "BILLIARDS" || room.gameType === "OLYMPIC" ? " wide" : ""}`}>
+      {/* 테트리스·뿌요뿌요·당구(3D 테이블)·올림픽(경기장)·캐치마인드(그림판)는 판을 넓게 쓰도록 채팅·자리 목록을 아래로 보낸다 */}
+      <div className={`online-room-layout${isFallingPuzzle || room.gameType === "BILLIARDS" || room.gameType === "OLYMPIC" || room.gameType === "CATCH_MIND" ? " wide" : ""}`}>
         <div className="online-game-area">
           {isTetris ? (
             <OnlineTetrisGame room={room} mySeat={mySeat} connected={isOpen} incomingGarbage={state.incomingGarbage} send={send} />

@@ -2,6 +2,23 @@
 
 [문서 목록으로](../README.md) · [작업 규칙](../AGENTS.md) · [검증 명령](verification.md)
 
+## 2026-10-17 — 온라인 대전 윷놀이·캐치마인드
+
+- **윷놀이(2~4인, 옵션: 말 4개·2개)**: `online/domain/game/YutnoriGame.java` — 윷가락 4개로 도·개·걸·윷·모(빽도 없음), 윷·모·잡기는 한 번 더, 결과를 모아 두었다가 `MOVE [말, 결과 번호]`로 하나씩 씀, 모서리(5·10)·가운데(23)에 멈추면 지름길, 참먹이(20)에 딱 멈추면 다음 이동에 남, 업기·잡기, 먼저 모두 낸 1명이 승리. 길 계산은 서버만 하고 차례인 사람에게 `moves`(도착 칸)를 보낸다. 화면은 `online/games/YutnoriGame.tsx`(SVG 윷판, 이동 버튼에 올리면 출발·도착 강조)·`yutnoriRules.ts`(칸 위치·말 묶음).
+- **캐치마인드(2~8인, 옵션: 한 사람당 1~3번)**: `CatchMindGame.java` — 제시어 80개를 섞어 출제자에게만 보냄(나머지는 글자 수), 출제자만 `DRAW`·`UNDO`·`CLEAR`·`PASS`, 출제자 채팅 차단, 띄어쓰기를 무시한 정답 비교, 먼저 맞힌 사람 +10·출제자 +5, 선 하나 400개·그림 하나 점 좌표 12,000개 제한, 남은 사람 중 최고 점수 승리(모두 0점이면 무승부). 화면은 `CatchMindGame.tsx`(Canvas·Pointer Events, 0.12초마다 조각 전송, 그리는 중인 선은 `useRef`로 바로 그림)·`catchMindRules.ts`(1000×750 비율 좌표·펜 색 8가지·굵기 4단계).
+- **연결**: `OnlineGameType`(옵션·처음 값)·`OnlineGames`, `CommonGameArea`, 캐치마인드는 넓은 방 배치, 랭킹 종목 목록, 사이드바·게임 홈·사용설명서의 종목 수(17 → 19종), 사용설명서 규칙, 학습 가이드 표.
+- **검증**: 백엔드 `gradlew.bat test` 전체 308개 통과(1개 기본 건너뜀: 외부 크롤러). 이후 추가한 `OnlineRoomServiceTest` 2개를 포함해 `YutnoriGameTest` 5·`CatchMindGameTest` 7·`OnlineRoomServiceTest` 17개를 다시 통과. 프론트 `lint`·`typecheck`·`test`(138개 파일, 661개)·`build`·`e2e` 8개 통과. 별도 MySQL 컨테이너 + 새 코드 백엔드(8090) + Vite(3000)에서 Playwright 두 브라우저로 캐치마인드(그리기 → 상대 화면에 같은 픽셀 9083개 → 오답·정답 → 점수 5/10·출제자 교대·그림판 비움)와 윷놀이(던지기·이동·지름길 5→23→29→남·잡기)를 끝까지 진행했고 페이지 오류는 0건이었다. 검증 중 "말가 났습니다" 조사 오류를 고쳤다. 사람이 직접 그리는 손맛, 모바일 터치, 3~8인 방은 확인하지 않았다.
+- **E2E 포트 변경**: 사용자 개발 서버가 5173을 쓰고 있으면 Vite가 두 번째 서버를 5174에 켜서 E2E 서버와 충돌했다(로컬에서는 엉뚱한 서버를 재사용할 위험). E2E 포트를 5191로 바꿨다.
+
+## 2026-10-17 — Playwright E2E 스모크 테스트와 CI 연결
+
+- **추가**: `@playwright/test@1.55.0`(dev 의존성), `frontend/playwright.config.ts`, `frontend/e2e/`(로드맵 3개, 할 일 1개, 문서 4개, 총 8개 테스트), `tsconfig.e2e.json`, `pnpm run e2e`. 테스트 서버는 `vite --mode online`(MSW)으로 5191 포트(처음에는 5174, 위 윷놀이·캐치마인드 항목 참고)에서 켜지며 백엔드가 필요 없습니다. 공통 fixture가 `pageerror`를 모아 하나라도 있으면 실패시킵니다.
+- **설정 변경**: Vitest가 `src/**`만 수집하도록 `include`를 명시했습니다(e2e의 `*.spec.ts` 제외). ESLint 타입 검사 프로젝트에 `tsconfig.e2e.json`을 추가하고, 보고서 폴더(`test-results`, `playwright-report`)는 `.gitignore`·ESLint·`.dockerignore`에서 제외했습니다. `tsc -b`가 `tsconfig.e2e.json`도 검사하므로 Docker 빌드 문맥에서 `e2e/`는 제외하지 않습니다.
+- **CI**: `continuous-integration.yml`에 `frontend-e2e` job을 추가했습니다(Chromium `--with-deps` 설치 → `pnpm run e2e` → 실패 시 보고서 artifact 업로드).
+- **MSW 문서 저장 수정**: 기존 `POST /api/v1/documents`는 아무것도 저장하지 않고 항상 `documentId: 999`를 돌려줬습니다. 그런데 `GET /api/v1/documents/:id`는 999번을 몰라서, 더미 데이터 모드에서 새 문서를 등록하면 상세 화면이 404였습니다. 이제 `requestHandlers.ts`의 `mockDocumentStore`가 생성(58번부터, 목록 맨 앞)·수정(저장된 버전 +1, 기존 대표 이미지 유지)·삭제를 기억합니다. 없는 문서의 상세·수정·삭제는 404를 돌려주고, 목록 응답에는 본문 없이 목록 칸만 담습니다. 요청 본문은 타입을 확인한 값만 반영합니다. 새로고침하면 처음 57건으로 돌아갑니다.
+- **남은 접근성 문제(수정하지 않음)**: Tiptap 본문 편집 영역(`RichTextEditor`)에 접근 가능한 이름이 없습니다. 그래서 E2E가 `.ProseMirror` 클래스로 찾습니다.
+- **검증**: Windows에서 `pnpm run e2e` 8개 통과(`CI=1` 새 서버). MSW 수정 전 7개 버전도 재사용 서버와 새 서버에서 각각 통과했습니다. `lint`·`typecheck`·`test`(136개 파일, 646개 테스트)·`build` 통과. 이 PC의 `python`은 Microsoft Store 별칭뿐이라 Python 정적 검사를 로컬에서 실행하지 못했습니다. Docker 이미지 빌드와 GitHub Actions 원격 실행 결과도 아직 없습니다.
+
 ## 2026-10-13 — 온라인 대전 올림픽(육상 6종목)
 
 - **경기 계산(브라우저)**: `features/games/olympic/olympicLogic.ts` — 번갈아 누르기 속도 모델(최고 속도에 가까울수록 덜 빨라짐, 같은 발 연타는 감속), 100m 부정 출발, 110m 허들(실제 위치 13.72m+9.14m×n, 걸리면 감속), 멀리뛰기(수직 이륙 속도 한계로 약 20°가 최적), 창던지기(40° 넘으면 공기 저항), 해머(회전 속도·부채꼴 34.92°), 높이뛰기(1.70m부터 5cm, 3번 실패). 그리기는 `olympicDraw.ts`(Canvas 2D, 관중석·트랙·허들·모래판·부채꼴), 경기 화면은 `OlympicEventPlay.tsx`(rAF 루프, 키보드 반복 입력 무시, 채팅 입력 중엔 무시).

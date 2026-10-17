@@ -129,6 +129,8 @@ frontend/src/app/components/ApplicationTopBar.tsx
 
 선택 상태는 `localStorage`에 저장되며 전환 시 MSW 초기화를 위해 화면이 새로고침됩니다.
 
+더미 데이터 ON에서 등록·수정·삭제한 문서는 MSW가 페이지 메모리(`src/mocks/requestHandlers.ts`의 `mockDocumentStore`)에 기억하므로, 등록 직후 상세·목록에서 바로 확인할 수 있습니다. 새로고침하면 처음 57건으로 돌아갑니다.
+
 할 일·연락처·상품·검색·일반 게시판·갤러리·댓글·예약·문의·카테고리·관리자 화면은 **React 상태와 사용자 상호작용 패턴 자체를 학습하기 위한 독립 실습 화면**입니다. 실제 REST·MyBatis·MySQL 연결은 14단계 문서 CRUD에서 학습합니다.
 
 ### 14단계 문서 CRUD와 업무 History의 코드 위치
@@ -435,8 +437,10 @@ API Workspace는 요청 실행·응답·History·Collection 기능을 모두 사
 | `online/domain/game/Game2048Game.java` | 같은 처음 판 + 자리마다 같은 시드의 `Random` → 같은 순서로 이동하면 같은 새 타일. 실력(이동 수)만 겨루는 공정한 무작위 |
 | `online/domain/game/MinesweeperGame.java` | 지뢰 배치는 서버만 알고 `viewFor`는 게임이 끝나기 전엔 지뢰 글자를 아예 쓰지 않음(숨긴 정보는 보내지 않는 것이 가장 안전). BFS 연쇄 열기·CHORD·클릭 수 |
 | `online/games/Game2048Battle.tsx`, `MinesweeperBattle.tsx` | 테트리스 대전 같은 배치(내 큰 판 + 남의 작은 판), 혼자 하기 CSS·`moveBoard` 재사용, 바뀌지 않을 행동은 보내지 않기, 로빙 탭인덱스·오른쪽 클릭·깃발 모드 |
+| `online/domain/game/YutnoriGame.java`, `online/games/YutnoriGame.tsx`·`yutnoriRules.ts` | 윷 던지기(난수)·지름길 길 계산·잡기·업기는 서버가 하고, 차례인 사람에게만 "옮길 수 있는 이동" 목록(`moves`)을 보냄. 화면은 길 계산을 다시 만들지 않고 칸 위치(SVG 비율 좌표)만 알며, 이동 버튼에 올리면 `useState` 미리 보기로 출발·도착 칸을 강조 |
+| `online/domain/game/CatchMindGame.java`, `online/games/CatchMindGame.tsx`·`catchMindRules.ts` | 제시어는 출제자에게만(`viewFor`), 출제자 채팅 차단(`canChat`). 그림은 1000×750 비율 좌표로 주고받고, 그리는 중인 점은 `useRef`에 모았다가 0.12초마다 `DRAW`로 보냄(메시지 1초 20개 제한 안). 서버 그림이 바뀔 때만 `useEffect`로 Canvas를 다시 그리고, `useMemo`로 답을 타이핑할 때 다시 검사·그리지 않음 |
 
-- **서버 부담**: 방은 DB 대신 메모리(`OnlineRoomStore`)에 두고, 방 50개·방당 10명·메시지 1초 20개·채팅 1초 2개로 제한합니다. 오목은 수마다 판(1KB)을 보내고, 테트리스는 블록이 굳을 때만 200글자, 뿌요뿌요는 72글자 요약을 보냅니다.
+- **서버 부담**: 방은 DB 대신 메모리(`OnlineRoomStore`)에 두고, 방 50개·방당 10명·메시지 1초 20개·채팅 1초 2개로 제한합니다. 오목은 수마다 판(1KB)을 보내고, 테트리스는 블록이 굳을 때만 200글자, 뿌요뿌요는 72글자 요약을 보냅니다. 캐치마인드는 선이 추가될 때마다 그림 전체를 보내므로 한 그림의 점 좌표를 숫자 12,000개(약 60KB)까지로 막습니다.
 - **학습용 한계**: 테트리스·뿌요뿌요 판·점수는 서버가 다시 계산해 검증하지 않습니다(조작을 막으려면 서버가 같은 규칙으로 다시 계산해야 합니다).
 - **테스트**: `OnlineRoomTest`·`OmokGameTest`·`TetrisBattleTest`·`PuyoBattleTest`·`Game2048GameTest`·`MinesweeperGameTest`·`RaceStandingsTest`·`OnlineRoomServiceTest`(가짜 전송기), `OnlineGameWebSocketIntegrationTest`(실제 서버 + WebSocket 3개, Docker 필요), 화면은 `onlinePages.test.tsx`(가짜 WebSocket)입니다.
 

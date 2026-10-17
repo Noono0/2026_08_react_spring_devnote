@@ -7,6 +7,7 @@
 import { BattleshipGame } from "@/features/games/online/games/BattleshipGame";
 import { BilliardsGame } from "@/features/games/online/games/billiards/BilliardsGame";
 import { BlackjackGame } from "@/features/games/online/games/BlackjackGame";
+import { CatchMindGame } from "@/features/games/online/games/CatchMindGame";
 import { ChessGame } from "@/features/games/online/games/ChessGame";
 import { Game2048Battle } from "@/features/games/online/games/Game2048Battle";
 import { MafiaGame } from "@/features/games/online/games/MafiaGame";
@@ -18,6 +19,7 @@ import { OneCardGame } from "@/features/games/online/games/OneCardGame";
 import { PokerGame } from "@/features/games/online/games/PokerGame";
 import { SudokuGame } from "@/features/games/online/games/SudokuGame";
 import { SutdaGame } from "@/features/games/online/games/SutdaGame";
+import { YutnoriGame } from "@/features/games/online/games/YutnoriGame";
 import type { OnlineClientMessage, OnlineRoom } from "@/features/games/online/onlineTypes";
 
 export interface CommonGameProperties {
@@ -57,6 +59,10 @@ export const CommonGameArea = (properties: CommonGameProperties) => {
       return <BilliardsGame {...properties} />;
     case "OLYMPIC":
       return <OlympicGame {...properties} />;
+    case "YUTNORI":
+      return <YutnoriGame {...properties} />;
+    case "CATCH_MIND":
+      return <CatchMindGame {...properties} />;
     default:
       return <p className="online-hint">아직 준비 중인 게임입니다.</p>;
   }

@@ -38,6 +38,8 @@ public final class OnlineGames {
             case MINESWEEPER -> new MinesweeperGame(nicknames, random, MinesweeperGame.Difficulty.valueOf(option));
             case BILLIARDS -> new BilliardsGame(nicknames, BilliardsGame.Variant.valueOf(option), random);
             case OLYMPIC -> new OlympicGame(nicknames);
+            case YUTNORI -> new YutnoriGame(nicknames, random, YutnoriGame.pieceCountFor(option));
+            case CATCH_MIND -> new CatchMindGame(nicknames, random, CatchMindGame.roundsFor(option));
             default -> throw new IllegalStateException("아직 만들지 않은 게임입니다: " + type);
         };
     }

@@ -23,6 +23,21 @@ npm run build
 
 린트·타입 검사·Vitest와 운영 번들 빌드는 서로 다른 오류를 확인하므로 모두 실행합니다. 첫 화면 용량은 `dist/index.html`이 참조하는 초기 JS와 그 정적 import를 기준으로 비교합니다. 편집기처럼 지연 로딩되는 파일의 크기만으로 첫 화면 용량을 판단하지 않습니다.
 
+### 브라우저 E2E 스모크 테스트
+
+```sh
+cd frontend
+pnpm exec playwright install chromium   # 처음 한 번만
+pnpm run e2e
+```
+
+`frontend/e2e/`의 Playwright 테스트는 실제 Chromium으로 학습 로드맵, 2단계 할 일 CRUD, 14단계 문서 등록·조회·검색·수정·삭제를 확인합니다. 설정(`playwright.config.ts`)이 `vite --mode online`을 5191 포트로 직접 켜므로 백엔드나 Docker는 필요하지 않습니다. 문서 API는 MSW 가짜 서버가 응답합니다. 모든 테스트는 화면에서 잡히지 않은 오류(`pageerror`)가 발생하면 실패합니다(`e2e/fixtures.ts`).
+
+- 통과해도 실제 Spring Boot API와의 연결까지 검증된 것은 아닙니다.
+- MSW의 문서 저장소는 페이지 메모리에 있어 `page.goto`·`reload`를 하면 처음 57건으로 돌아갑니다. 저장 결과는 화면 안의 링크로 이동해 확인합니다.
+- 로컬에서는 이미 5191 포트에 떠 있는 서버를 재사용합니다. 다른 프로그램이 이 포트를 쓰고 있으면 먼저 종료합니다. 5174는 Vite가 두 번째 개발 서버에 자동으로 주는 포트라서 일부러 피했습니다.
+- CI에서는 `frontend-e2e` job이 실행됩니다. 실패하면 Actions 실행 화면의 `playwright-report` artifact에서 HTML 보고서와 스크린샷을 내려받을 수 있습니다.
+
 ## 백엔드
 
 ```powershell

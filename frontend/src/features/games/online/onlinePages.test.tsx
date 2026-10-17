@@ -1159,8 +1159,128 @@ describe("온라인 당구", () => {
   });
 });
 
+describe("온라인 윷놀이", () => {
+  const yutnoriRoom = (game: Record<string, unknown>): OnlineRoom => ({
+    ...baseRoom,
+    ...twoPlayers,
+    gameType: "YUTNORI", gameTypeLabel: "윷놀이",
+    game: {
+      mySeat: 0, turnSeat: 0, phase: "THROW", pendingThrows: [], pieces: [[0, 0, 0, 0], [3, 0, 0, 0]], active: [true, true],
+      moves: [], log: ["윷놀이 시작!"], winnerSeat: null, finished: false, ...game,
+    },
+  });
+  const openYutnori = (game: Record<string, unknown>) => {
+    renderRoom();
+    const socket = latestSocket();
+    socket.serverOpen();
+    socket.serverSend({ type: "ROOM_STATE", room: yutnoriRoom(game) });
+    return socket;
+  };
+
+  it("내 차례에는 윷 던지기 버튼으로 THROW를 보낸다", () => {
+    const socket = openYutnori({});
+    expect(screen.getByText("내 차례입니다. 윷을 던지세요.")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "윷판" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "윷 던지기" }));
+    expect(socket.sent.at(-1)).toEqual({ type: "GAME_ACTION", action: "THROW" });
+  });
+
+  it("모아 둔 결과로 옮길 말을 고르면 MOVE를 보낸다", () => {
+    const socket = openYutnori({
+      phase: "MOVE", pendingThrows: ["YUT", "GAE"], pieces: [[6, 6, 0, 0], [3, 0, 0, 0]],
+      moves: [{ piece: 0, throwIndex: 0, destination: 10 }, { piece: 2, throwIndex: 0, destination: 4 }, { piece: 2, throwIndex: 1, destination: 2 }],
+    });
+    expect(screen.getByLabelText("나온 윷 결과")).toHaveTextContent("윷개");
+    const moves = within(screen.getByRole("list", { name: "옮길 수 있는 말" })).getAllByRole("button");
+    expect(moves.map((button) => button.textContent)).toEqual([
+      "윷: 6번 칸 말(2개 업힘) → 10번 칸", "윷: 새 말 → 4번 칸", "개: 새 말 → 2번 칸",
+    ]);
+    expect(screen.queryByRole("button", { name: "윷 던지기" })).not.toBeInTheDocument();
+    fireEvent.click(moves[2]!);
+    expect(socket.sent.at(-1)).toEqual({ type: "GAME_ACTION", action: "MOVE", numbers: [2, 1] });
+  });
+
+  it("상대 차례에는 버튼 없이 기다린다", () => {
+    openYutnori({ turnSeat: 1, phase: "MOVE", pendingThrows: ["GEOL"] });
+    expect(screen.getByText("영희 님 차례 (말 옮기는 중)")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "윷 던지기" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("list", { name: "옮길 수 있는 말" })).not.toBeInTheDocument();
+  });
+});
+
+describe("온라인 캐치마인드", () => {
+  const catchMindRoom = (game: Record<string, unknown>): OnlineRoom => ({
+    ...baseRoom,
+    ...twoPlayers,
+    gameType: "CATCH_MIND", gameTypeLabel: "캐치마인드",
+    game: {
+      mySeat: 0, phase: "DRAWING", drawerSeat: 0, turnNumber: 1, totalTurns: 4, word: "사과", wordLength: 2,
+      strokes: [{ color: 1, width: 8, points: [10, 10, 200, 200] }], scores: [0, 0], active: [true, true],
+      guesses: [], log: ["캐치마인드 시작!"], winnerSeats: [], finished: false, ...game,
+    },
+  });
+  // jsdom에는 Canvas 그리기가 없다. 그림은 그리지 않고 "무엇을 보내는지"만 확인한다
+  let canvasSpy: { mockRestore: () => void } | null = null;
+  beforeEach(() => {
+    canvasSpy = vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null);
+  });
+  afterEach(() => canvasSpy?.mockRestore());
+  const openCatchMind = (game: Record<string, unknown>) => {
+    renderRoom();
+    const socket = latestSocket();
+    socket.serverOpen();
+    socket.serverSend({ type: "ROOM_STATE", room: catchMindRoom(game) });
+    return socket;
+  };
+
+  it("출제자는 제시어를 보고, 그린 선과 되돌리기·넘기기를 보낸다", () => {
+    const socket = openCatchMind({});
+    expect(screen.getByLabelText("제시어")).toHaveTextContent("제시어: 사과");
+    expect(screen.queryByLabelText("정답")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "빨강" }));
+    expect(screen.getByRole("button", { name: "빨강" })).toHaveAttribute("aria-pressed", "true");
+
+    // jsdom의 그림판 크기는 0이라 모든 점이 (0, 0)이 된다. 손을 떼면 콕 찍은 점 하나를 보낸다
+    const canvas = screen.getByRole("img", { name: /그림판/ });
+    fireEvent.pointerDown(canvas, { pointerId: 1 });
+    fireEvent.pointerUp(canvas, { pointerId: 1 });
+    expect(socket.sent.at(-1)).toEqual({ type: "GAME_ACTION", action: "DRAW", numbers: [1, 8, 0, 0] });
+
+    fireEvent.click(screen.getByRole("button", { name: "되돌리기" }));
+    expect(socket.sent.at(-1)).toEqual({ type: "GAME_ACTION", action: "UNDO" });
+    fireEvent.click(screen.getByRole("button", { name: "넘기기" }));
+    expect(socket.sent.at(-1)).toEqual({ type: "GAME_ACTION", action: "PASS" });
+  });
+
+  it("다른 사람은 글자 수 힌트를 보고 정답을 보낸다", () => {
+    const socket = openCatchMind({ drawerSeat: 1, word: null, guesses: ["영희: 배"] });
+    expect(screen.getByText(/영희 님이 그리는 중 · 정답: ○○ \(2글자\)/)).toBeInTheDocument();
+    expect(screen.queryByLabelText("제시어")).not.toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "펜 색" })).not.toBeInTheDocument();
+
+    const sentBefore = socket.sent.length;
+    fireEvent.pointerDown(screen.getByRole("img", { name: "출제자의 그림" }), { pointerId: 1 });
+    expect(socket.sent).toHaveLength(sentBefore); // 출제자가 아니면 그려도 보내지 않는다
+
+    const submit = screen.getByRole("button", { name: "맞히기" });
+    expect(submit).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("정답"), { target: { value: " 사과 " } });
+    fireEvent.click(submit);
+    expect(socket.sent.at(-1)).toEqual({ type: "GAME_ACTION", action: "GUESS", text: "사과" });
+    expect(screen.getByLabelText("정답")).toHaveValue("");
+    expect(screen.getByRole("list", { name: "틀린 답" })).toHaveTextContent("영희: 배");
+  });
+
+  it("끝나면 승자와 점수를 보여 준다", () => {
+    openCatchMind({ phase: "END", finished: true, word: null, scores: [15, 10], winnerSeats: [0] });
+    expect(screen.getByText(/철수 승리!/)).toBeInTheDocument();
+    expect(screen.getByRole("list", { name: "점수" })).toHaveTextContent("15점");
+    expect(screen.queryByRole("button", { name: "맞히기" })).not.toBeInTheDocument();
+  });
+});
+
 describe("온라인 올림픽", () => {
-  const player = (extra: Record<string, unknown> = {}) => ({ active: true, submitted: false, ready: false, progress: null, gold: 0, silver: 0, bronze: 0, ...extra });
+  const player = (extra: Record<string, unknown> = {}) =>({ active: true, submitted: false, ready: false, progress: null, gold: 0, silver: 0, bronze: 0, ...extra });
   const olympicRoom = (game: Record<string, unknown>): OnlineRoom => ({
     ...baseRoom,
     gameType: "OLYMPIC", gameTypeLabel: "올림픽", status: "PLAYING", seats: ["p1", "p2"],

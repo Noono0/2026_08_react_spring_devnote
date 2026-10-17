@@ -22,6 +22,12 @@ export default defineConfig({
      * 타입 검사만 통과하고 실행 시 ReferenceError로 실패합니다.
      */
     globals: true,
+    /**
+     * 단위·컴포넌트 테스트는 src 안에만 둔다.
+     * e2e 폴더의 Playwright 테스트(*.spec.ts)는 진짜 브라우저가 필요하므로
+     * Vitest가 집어 가면 Playwright의 test() 규칙과 충돌해 실패한다.
+     */
+    include: ["src/**/*.{test,spec}.{ts,tsx}"],
     environment: "jsdom",
     setupFiles: ["./src/test/setupTests.ts"],
     /** 각 테스트가 남긴 mock 상태가 다음 테스트로 새지 않도록 정리합니다. */
