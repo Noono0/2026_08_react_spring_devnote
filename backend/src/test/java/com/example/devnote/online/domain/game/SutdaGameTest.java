@@ -88,6 +88,57 @@ class SutdaGameTest {
     }
 
     @Test
+    void 내_패의_족보_이름을_알려_주고_구사와_멍텅구리구사를_구분한다() {
+        SutdaGame game = new SutdaGame(List.of("철수", "영희"), new Random(5));
+        game.setHands(List.of(List.of("4Y", "9Y"), List.of("4B", "9Y")));
+        assertThat(view(game, 0).myHandName()).isEqualTo("멍텅구리구사");
+        assertThat(view(game, 1).myHandName()).isEqualTo("구사");
+        assertThat(view(game, 0).mode()).isEqualTo("TWO");
+        assertThat(view(game, 0).myCombos()).isEmpty();
+    }
+
+    @Test
+    void 세_장_섯다는_첫_베팅_뒤_한_장을_더_받고_두_장을_골라_비교한다() {
+        SutdaGame game = new SutdaGame(List.of("철수", "영희"), new Random(5), SutdaGame.Mode.THREE);
+        game.setHands(List.of(List.of("3G", "2B"), List.of("5B", "6B")));
+        game.putOnTopOfDeck(List.of("8G", "1G")); // 철수 3번째 = 8광, 영희 3번째 = 1광
+        assertThat(view(game, 0).myHandName()).isEqualTo("5끗"); // 두 장일 때의 족보
+        game.act(1, act("CHECK"));
+        game.act(0, act("CHECK"));
+
+        var choosing = view(game, 0);
+        assertThat(choosing.phase()).isEqualTo("CHOOSE");
+        assertThat(choosing.myCards()).containsExactly("3G", "2B", "8G");
+        assertThat(choosing.myCombos()).extracting(SutdaGame.Combo::name).containsExactly("5끗", "38광땡", "망통"); // 3+2, 3광+8광, 2+8=10
+        assertThat(choosing.pot()).isEqualTo(20); // 첫 바퀴 칩이 판돈으로 옮겨지고 두 번 세지 않는다
+        assertThatThrownBy(() -> game.act(1, act("CHECK"))).isInstanceOf(BusinessException.class); // 고르기 전에는 베팅 불가
+        assertThatThrownBy(() -> game.act(0, new GameAction("CHOOSE", null, null, List.of(1, 1)))).isInstanceOf(BusinessException.class);
+
+        game.act(0, new GameAction("CHOOSE", null, null, List.of(0, 2)));
+        assertThat(view(game, 1).chosen()).containsExactly(true, false); // 누가 골랐는지만 보이고 무엇을 골랐는지는 숨긴다
+        assertThat(view(game, 0).myHandName()).isEqualTo("38광땡");
+        game.act(1, new GameAction("CHOOSE", null, null, List.of(0, 1))); // 5·6 = 1끗
+        assertThat(view(game, 0).phase()).isEqualTo("BETTING");
+
+        game.act(1, act("CHECK"));
+        game.act(0, act("CHECK"));
+        var last = view(game, 1).lastRound();
+        assertThat(last.cards().get(0)).containsExactly("3G", "8G"); // 고른 두 장만 공개
+        assertThat(last.handNames()).containsExactly("38광땡", "1끗");
+        assertThat(last.winners()).containsExactly(0);
+    }
+
+    @Test
+    void 세_장_섯다에서_첫_베팅에_다이하면_세_번째_패_없이_끝난다() {
+        SutdaGame game = new SutdaGame(List.of("철수", "영희"), new Random(5), SutdaGame.Mode.THREE);
+        game.act(1, act("FOLD"));
+        var view = view(game, 0);
+        assertThat(view.round()).isEqualTo(2);
+        assertThat(view.lastRound().winners()).containsExactly(0);
+        assertThat(view.myCards()).hasSize(2); // 새 판은 다시 두 장부터
+    }
+
+    @Test
     void 다이로_혼자_남으면_판돈을_가져가고_다음_판이_시작된다() {
         SutdaGame game = new SutdaGame(List.of("철수", "영희"), new Random(5));
         game.act(1, new GameAction("RAISE", null, 50, null));

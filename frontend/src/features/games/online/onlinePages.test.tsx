@@ -683,7 +683,8 @@ describe("온라인 섯다", () => {
       { participantId: "p2", nickname: "영희", member: false, seatIndex: 1 },
     ],
     game: {
-      phase: "BETTING", round: 2, maxRounds: 6, mySeat: 0, myCards: ["3G", "8G"], chips: [960, 1000], inHand: [true, true], active: [true, true],
+      mode: "TWO", phase: "BETTING", round: 2, maxRounds: 6, mySeat: 0, myCards: ["3G", "8G"], myChosen: null, myHandName: "38광땡",
+      myCombos: [], chosen: [false, false], cardCounts: [2, 2], chips: [960, 1000], inHand: [true, true], active: [true, true],
       pot: 40, currentBet: 20, contributed: [0, 20], toCall: 20, minRaise: 10, maxRaise: 940, turnSeat: 0, dealerSeat: 1,
       lastRound: { cards: [["1G", "2B"], ["5B", "4B"]], handNames: ["알리", "갑오"], winners: [0], pot: 80, replay: false },
       winners: [], ...game,
@@ -715,6 +716,43 @@ describe("온라인 섯다", () => {
     expect(within(last).getByText("알리")).toBeInTheDocument();
     expect(within(last).getByText(/철수 승리/)).toBeInTheDocument();
     expect(screen.queryByRole("group", { name: "베팅" })).not.toBeInTheDocument(); // 영희 차례
+  });
+
+  it("왼쪽 족보표에서 지금 내 족보를 강조하고, 구사와 멍텅구리구사를 그림으로 구분한다", () => {
+    renderRoom();
+    const socket = latestSocket();
+    socket.serverOpen();
+    socket.serverSend({ type: "ROOM_STATE", room: sutdaRoom({ myCards: ["4Y", "9Y"], myHandName: "멍텅구리구사" }) });
+    expect(within(screen.getByRole("region", { name: "내 패" })).getByText("멍텅구리구사")).toBeInTheDocument();
+    const jokbo = screen.getByRole("complementary", { name: "섯다 족보" });
+    const current = within(jokbo).getAllByRole("listitem").filter((item) => item.getAttribute("aria-current") === "true");
+    expect(current).toHaveLength(1);
+    expect(current[0]).toHaveTextContent("멍텅구리구사 ← 내 패");
+    // 멍텅구리구사 예시는 두 열끗(두견새·술잔), 구사 예시는 피 두 장 그림이다
+    expect(within(current[0]!).getByRole("img", { name: "4월 흑싸리 열끗(두견새)" })).toHaveAttribute("src", "/images/hwatu/Hwatu_April_yul.svg");
+    expect(within(current[0]!).getByRole("img", { name: "9월 국진 열끗(술잔)" })).toHaveAttribute("src", "/images/hwatu/Hwatu_September_yul_ssang_pi.svg");
+    const gusaRow = within(jokbo).getAllByRole("listitem").find((item) => item.textContent?.startsWith("구사"));
+    expect(within(gusaRow!).getByRole("img", { name: "9월 국진 피" })).toHaveAttribute("src", "/images/hwatu/Hwatu_September_pi_1.svg");
+  });
+
+  it("3장 섯다에서는 세 가지 조합 중 보여 줄 두 장을 골라 CHOOSE를 보낸다", () => {
+    renderRoom();
+    const socket = latestSocket();
+    socket.serverOpen();
+    socket.serverSend({ type: "ROOM_STATE", room: sutdaRoom({
+      mode: "THREE", phase: "CHOOSE", turnSeat: null, myCards: ["3G", "2B", "8G"], myHandName: null, cardCounts: [3, 3], chosen: [false, true],
+      myCombos: [{ cards: [0, 1], name: "5끗" }, { cards: [0, 2], name: "38광땡" }, { cards: [1, 2], name: "망통" }],
+    }) });
+    expect(screen.getByText("보여 줄 두 장을 고르세요.")).toBeInTheDocument();
+    expect(within(screen.getByRole("region", { name: "영희 자리" })).getAllByRole("img", { name: "뒷면 화투" })).toHaveLength(3);
+    expect(within(screen.getByRole("region", { name: "영희 자리" })).getByText("두 장 고름")).toBeInTheDocument();
+    const choices = within(screen.getByRole("region", { name: "보여 줄 두 장 고르기" })).getAllByRole("button");
+    expect(choices.map((button) => button.textContent)).toEqual([
+      "5끗 3월 벚꽃 광 + 2월 매조 피", "38광땡 3월 벚꽃 광 + 8월 공산 광", "망통 2월 매조 피 + 8월 공산 광",
+    ]);
+    fireEvent.click(choices[1]!);
+    expect(socket.sent.at(-1)).toEqual({ type: "GAME_ACTION", action: "CHOOSE", numbers: [0, 2] });
+    expect(screen.queryByRole("group", { name: "베팅" })).not.toBeInTheDocument();
   });
 });
 
@@ -1159,6 +1197,106 @@ describe("온라인 당구", () => {
   });
 });
 
+describe("온라인 장기", () => {
+  const startBoard = [
+    "rheaaaher".replace("aaa", "a.a"), "....k....", ".c.....c.", "p.p.p.p.p", ".........",
+    ".........", "P.P.P.P.P", ".C.....C.", "....K....", "RHEA.AHER",
+  ];
+  const janggiRoom = (game: Record<string, unknown>): OnlineRoom => ({
+    ...baseRoom,
+    ...twoPlayers,
+    gameType: "JANGGI", gameTypeLabel: "장기",
+    game: {
+      mySeat: 0, phase: "PLAY", board: startBoard, arranged: [true, true], myFormation: "HEHE", turnSeat: 0, inCheck: false,
+      moves: [{ fromRow: 6, fromCol: 0, toRow: 5, toCol: 0 }, { fromRow: 6, fromCol: 0, toRow: 6, toCol: 1 }],
+      canPass: true, lastMove: null, scores: [144, 147], moveCount: 0, log: [], winnerSeat: null, result: null, finished: false, ...game,
+    },
+  });
+  const openJanggi = (game: Record<string, unknown>) => {
+    renderRoom();
+    const socket = latestSocket();
+    socket.serverOpen();
+    socket.serverSend({ type: "ROOM_STATE", room: janggiRoom(game) });
+    return socket;
+  };
+
+  it("상차림 단계에서는 네 가지 마·상 위치를 골라 ARRANGE를 보낸다", () => {
+    const socket = openJanggi({ phase: "SETUP", arranged: [false, true], myFormation: null, moves: [], canPass: false });
+    expect(screen.getByText("한 · 영희")).toBeInTheDocument();
+    expect(screen.getByText("상차림 고름")).toBeInTheDocument();
+    const choices = within(screen.getByRole("group", { name: "상차림 고르기" })).getAllByRole("button");
+    expect(choices.map((button) => button.querySelector("strong")?.textContent)).toEqual(["마상마상", "상마상마", "마상상마", "상마마상"]);
+    fireEvent.click(choices[2]!);
+    expect(socket.sent.at(-1)).toEqual({ type: "GAME_ACTION", action: "ARRANGE", text: "HEEH" });
+  });
+
+  it("내 기물을 누르면 갈 수 있는 점이 표시되고, 그 점을 누르면 MOVE를 보낸다", () => {
+    const socket = openJanggi({});
+    const board = screen.getByRole("grid", { name: "장기판" });
+    fireEvent.click(within(board).getByRole("gridcell", { name: "7줄 1칸 초 졸" }));
+    const target = within(board).getByRole("gridcell", { name: "6줄 1칸 (이동 가능)" });
+    fireEvent.click(target);
+    expect(socket.sent.at(-1)).toEqual({ type: "GAME_ACTION", action: "MOVE", numbers: [6, 0, 5, 0] });
+    fireEvent.click(screen.getByRole("button", { name: "한 수 쉬기" }));
+    expect(socket.sent.at(-1)).toEqual({ type: "GAME_ACTION", action: "PASS" });
+  });
+
+  it("한은 판을 돌려 보고, 장군이면 알려 준다", () => {
+    renderRoom();
+    const socket = latestSocket();
+    socket.serverOpen();
+    // 내 자리(mySeat)는 방의 자리 목록에서 정해진다. 영희(p2, 1번 자리 = 한)로 들어온 상태
+    socket.serverSend({ type: "ROOM_STATE", room: { ...janggiRoom({ mySeat: 1, turnSeat: 1, inCheck: true, canPass: false, moves: [] }), myParticipantId: "p2" } });
+    const cells = within(screen.getByRole("grid", { name: "장기판" })).getAllByRole("gridcell");
+    expect(cells[0]).toHaveAccessibleName("10줄 9칸 초 차"); // 한 쪽에서 보면 왼쪽 위가 초의 오른쪽 차
+    expect(screen.getByText(/장군!/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "한 수 쉬기" })).not.toBeInTheDocument();
+  });
+});
+
+describe("온라인 알까기", () => {
+  const alkkagiRoom = (game: Record<string, unknown>): OnlineRoom => ({
+    ...baseRoom,
+    ...twoPlayers,
+    gameType: "ALKKAGI", gameTypeLabel: "알까기",
+    game: {
+      mySeat: 0, phase: "PLAY", turnSeat: 0,
+      stones: [{ side: 0, x: 300, y: 800, alive: true }, { side: 0, x: 700, y: 800, alive: true }, { side: 1, x: 500, y: 200, alive: true }],
+      remaining: [2, 1], shotCount: 0, lastShot: null, log: [], winnerSeat: null, finished: false, ...game,
+    },
+  });
+  const openAlkkagi = (game: Record<string, unknown>) => {
+    renderRoom();
+    const socket = latestSocket();
+    socket.serverOpen();
+    socket.serverSend({ type: "ROOM_STATE", room: alkkagiRoom(game) });
+    return socket;
+  };
+
+  it("내 알을 고르고 각도·힘을 정해 FLICK을 보낸다", () => {
+    const socket = openAlkkagi({});
+    expect(screen.getByRole("img", { name: "알까기 판: 흑 2개, 백 1개" })).toBeInTheDocument();
+    const controls = screen.getByRole("group", { name: "튕기기 조작" });
+    const flickButton = within(controls).getByRole("button", { name: "튕기기" });
+    expect(flickButton).toBeDisabled();
+    fireEvent.change(within(controls).getByLabelText("내 알"), { target: { value: "1" } });
+    fireEvent.change(within(controls).getByLabelText(/각도/), { target: { value: "100" } });
+    fireEvent.change(within(controls).getByLabelText(/힘/), { target: { value: "75" } });
+    fireEvent.click(flickButton);
+    expect(socket.sent.at(-1)).toEqual({ type: "GAME_ACTION", action: "FLICK", numbers: [1, 100, 75] });
+    // 상대 알은 고를 목록에 없다
+    expect(within(within(controls).getByLabelText("내 알")).getAllByRole("option").map((option) => option.textContent)).toEqual([
+      "고르기", "1번 알 (300, 800)", "2번 알 (700, 800)",
+    ]);
+  });
+
+  it("상대 차례에는 조작이 없다", () => {
+    openAlkkagi({ turnSeat: 1 });
+    expect(screen.queryByRole("group", { name: "튕기기 조작" })).not.toBeInTheDocument();
+    expect(screen.getByText("백(영희) 차례")).toBeInTheDocument();
+  });
+});
+
 describe("온라인 윷놀이", () => {
   const yutnoriRoom = (game: Record<string, unknown>): OnlineRoom => ({
     ...baseRoom,
@@ -1398,6 +1536,18 @@ describe("온라인 대전 대기실", () => {
     fireEvent.click(screen.getByRole("button", { name: "만들고 들어가기" }));
     expect(await screen.findByText("방 화면")).toBeInTheDocument();
     expect(vi.mocked(createOnlineRoom).mock.calls[0]?.[0]).toEqual({ title: "오목 한 판", gameType: "OMOK", seatCount: 2, password: "1234", membersOnly: false, gameOption: null });
+  });
+
+  it("게임 목록은 혼자 연습할 수 있는 게임을 위에, 대전 전용 게임을 아래에 묶어 보여 준다", async () => {
+    vi.mocked(getOnlineRooms).mockResolvedValue([]);
+    renderLobby();
+    const openButton = await screen.findByRole("button", { name: "새 방 만들기" });
+    await waitFor(() => expect(openButton).toBeEnabled());
+    fireEvent.click(openButton);
+    const groups = within(screen.getByLabelText("게임")).getAllByRole("group");
+    expect(groups.map((group) => group.getAttribute("label"))).toEqual(["혼자 연습 가능", "대전 전용"]);
+    expect(within(groups[0]!).getAllByRole("option").map((option) => option.textContent)).toEqual(["2048 대전"]);
+    expect(within(groups[1]!).getAllByRole("option").map((option) => option.textContent)).toEqual(["오목", "체스 (준비 중)"]);
   });
 
   it("옵션이 있는 게임을 고르면 게임 옵션을 골라 방을 만든다", async () => {

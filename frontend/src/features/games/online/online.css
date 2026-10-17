@@ -377,15 +377,38 @@ button.battleship-cell:hover { background: #3a8fd0; filter: none; }
 .sutda-last-hands { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
 .sutda-last-hands > div { display: grid; justify-items: center; gap: 4px; padding: 8px; border-radius: 12px; background: var(--background-muted); }
 .sutda-last-hands > div.winner { box-shadow: 0 0 0 2px var(--success-color); }
+/* 화투 한 장: 그림 파일(976×1600 비율)을 그대로 보여 준다. small은 족보표·남의 패·지난 판용 */
 .hwatu-card {
-  display: inline-grid; place-content: center; justify-items: center; width: 44px; height: 68px; border: 2px solid #f1f3f5; border-radius: 6px;
-  color: #fff; background: linear-gradient(160deg, #e03131, #a61e4d); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25); line-height: 1.1;
+  display: inline-block; width: 64px; height: 105px; border-radius: 6px; object-fit: cover;
+  background: #c92a2a; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3); vertical-align: middle;
 }
-.hwatu-card strong { font-size: 22px; }
-.hwatu-card small { font-size: 11px; font-weight: 800; }
-.hwatu-card.kind-g { background: linear-gradient(160deg, #f59f00, #e8590c); }
-.hwatu-card.kind-y { background: linear-gradient(160deg, #1971c2, #3b5bdb); }
-.hwatu-card.back { background: repeating-linear-gradient(45deg, #c92a2a 0 6px, #a61e1e 6px 12px); }
+.hwatu-card.small { width: 30px; height: 49px; border-radius: 3px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3); }
+.hwatu-card.back { background: repeating-linear-gradient(45deg, #c92a2a 0 6px, #a61e1e 6px 12px); border: 2px solid #f1f3f5; }
+
+/* 섯다 배치: 왼쪽 족보표 + 오른쪽 게임. 좁은 화면에서는 족보표가 아래로 내려간다 */
+.sutda-layout { display: grid; grid-template-columns: minmax(230px, 280px) minmax(0, 1fr); gap: 14px; width: 100%; align-items: start; }
+@container (max-width: 760px) {
+  .sutda-layout { grid-template-columns: minmax(0, 1fr); }
+  .sutda-layout .sutda-jokbo { order: 2; }
+}
+.sutda-jokbo { display: grid; gap: 6px; padding: 10px; border-radius: 14px; background: var(--background-muted); }
+.sutda-jokbo h3 { margin: 0; font-size: 15px; }
+.sutda-jokbo h3 small { color: var(--text-muted); font-size: 12px; font-weight: 600; }
+.sutda-jokbo ol { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.sutda-jokbo li { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border: 2px solid transparent; border-radius: 10px; }
+.sutda-jokbo li.special { background: color-mix(in srgb, var(--warning-color) 10%, transparent); }
+.sutda-jokbo li.mine { border-color: var(--primary-color); background: var(--primary-soft); }
+.sutda-jokbo-cards { display: inline-flex; flex-shrink: 0; gap: 2px; }
+.sutda-jokbo-text { display: grid; gap: 1px; min-width: 0; }
+.sutda-jokbo-text strong { font-size: 13px; }
+.sutda-jokbo-text small { color: var(--text-secondary); font-size: 11px; line-height: 1.35; }
+.sutda-credit { margin: 4px 0 0; color: var(--text-muted); font-size: 11px; }
+.sutda-my-jokbo { font-weight: 600; }
+.sutda-my-jokbo strong { color: var(--primary-color); }
+.sutda-discarded { opacity: 0.35; }
+.sutda-choose { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.sutda-choose button { display: grid; gap: 2px; }
+.sutda-choose small { font-size: 11px; font-weight: 500; }
 
 /* 포커: 초록 펠트 테이블 */
 .poker { display: grid; gap: 12px; justify-items: center; width: 100%; }
@@ -444,6 +467,56 @@ button.battleship-cell:hover { background: #3a8fd0; filter: none; }
 .mafia-secret { margin: 0; padding: 8px 12px; border: 1px dashed #e03131; border-radius: 10px; }
 .mafia-secret ul { margin: 4px 0 0; padding-left: 20px; }
 .mafia-log { display: grid; gap: 2px; max-height: 160px; margin: 0; padding-left: 24px; overflow-y: auto; font-size: 13px; }
+
+/* 장기: 9×10 교차점 버튼 격자 뒤에 SVG 선을 깐다. 기물은 팔각형 대신 둥근 말에 한자 */
+.janggi { display: grid; gap: 10px; justify-items: center; width: 100%; }
+.janggi-player { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; width: min(100%, 460px); padding: 8px 12px; border: 2px solid var(--border-color); border-radius: 12px; background: var(--background-muted); }
+.janggi-player.side-cho strong { color: #2b8a3e; }
+.janggi-player.side-han strong { color: #c92a2a; }
+.janggi-player.turn { border-color: var(--primary-color); box-shadow: 0 0 0 2px var(--primary-soft); }
+.janggi-player.winner { border-color: var(--success-color); }
+.janggi-setup { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 6px; width: min(100%, 460px); }
+.janggi-setup button { display: grid; gap: 2px; }
+.janggi-setup small { font-size: 11px; font-weight: 500; }
+.janggi-board { position: relative; width: min(100%, 460px); aspect-ratio: 9 / 10; border: 4px solid #8a5a2b; border-radius: 8px; background: #e9c98f; }
+.janggi-lines { position: absolute; inset: 0; width: 100%; height: 100%; }
+.janggi-lines line { stroke: #6b4423; stroke-width: 1.2; vector-effect: non-scaling-stroke; }
+.janggi-points { position: absolute; inset: 0; display: grid; grid-template-rows: repeat(10, 1fr); }
+.janggi-row { display: grid; grid-template-columns: repeat(9, 1fr); }
+.janggi-point { position: relative; display: grid; place-items: center; min-width: 0; padding: 0; border: 0; border-radius: 50%; background: transparent; cursor: pointer; }
+.janggi-point:disabled { cursor: default; opacity: 1; }
+.janggi-point:focus-visible { outline: 3px solid var(--primary-color); outline-offset: -2px; }
+.janggi-point.target::after { position: absolute; width: 30%; height: 30%; border-radius: 50%; background: rgba(25, 113, 194, 0.55); content: ""; }
+.janggi-point.last .janggi-piece { box-shadow: 0 0 0 3px rgba(255, 196, 0, 0.9); }
+.janggi-point.selected .janggi-piece { box-shadow: 0 0 0 3px var(--primary-color); }
+.janggi-piece {
+  display: grid; place-items: center; width: 86%; aspect-ratio: 1; border: 2px solid currentColor; border-radius: 50%;
+  background: #fffaf0; font-family: "Noto Serif KR", "Batang", serif; font-size: clamp(13px, 4.2vw, 24px); font-weight: 900; line-height: 1;
+}
+.janggi-piece.cho { color: #2b8a3e; }
+.janggi-piece.han { color: #c92a2a; }
+.janggi-piece.type-k { width: 100%; font-size: clamp(15px, 4.8vw, 28px); }
+.janggi-piece.type-p, .janggi-piece.type-a { width: 72%; font-size: clamp(11px, 3.4vw, 19px); }
+/* 기보 줄에는 서버가 붙인 수 번호(1. 2. …)가 이미 있어서 목록 번호는 숨긴다 */
+.janggi-log { display: grid; gap: 2px; width: min(100%, 460px); max-height: 140px; margin: 0; padding: 0; overflow-y: auto; font-size: 13px; list-style: none; }
+
+/* 알까기: SVG 바둑판(1000×1000) 위의 흑·백 알. 내 차례에는 내 알에 손가락 커서 */
+.alkkagi { display: grid; gap: 10px; justify-items: center; width: 100%; }
+.alkkagi-score { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.alkkagi-side { padding: 6px 12px; border: 2px solid var(--border-color); border-radius: 999px; font-size: 13px; font-weight: 700; }
+.alkkagi-side.turn { border-color: var(--primary-color); box-shadow: 0 0 0 2px var(--primary-soft); }
+.alkkagi-board { width: min(100%, 620px); aspect-ratio: 1; border-radius: 10px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25); touch-action: none; }
+.alkkagi-wood { fill: #dcb35c; }
+.alkkagi-grid line { stroke: rgba(60, 40, 10, 0.6); stroke-width: 2; }
+.alkkagi-stone { stroke-width: 2; }
+.alkkagi-stone.side-0 { fill: #1d1f24; stroke: #000; }
+.alkkagi-stone.side-1 { fill: #fbfbf8; stroke: #868e96; }
+.alkkagi-stone.mine { cursor: grab; }
+.alkkagi-stone.selected { stroke: #1c7ed6; stroke-width: 6; }
+.alkkagi-aim { stroke: #1c7ed6; stroke-width: 6; stroke-dasharray: 14 10; stroke-linecap: round; pointer-events: none; }
+.alkkagi-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; }
+.alkkagi-controls label { display: grid; gap: 2px; font-size: 13px; }
+.alkkagi-log { display: grid; gap: 2px; width: min(100%, 620px); max-height: 140px; margin: 0; padding-left: 24px; overflow-y: auto; font-size: 13px; }
 
 /* 윷놀이: 위에 플레이어(차례 강조), 가운데 SVG 윷판, 아래 윷 결과·이동 버튼 */
 .yutnori { display: grid; gap: 12px; justify-items: center; width: 100%; }

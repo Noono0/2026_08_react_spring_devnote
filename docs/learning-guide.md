@@ -439,6 +439,9 @@ API Workspace는 요청 실행·응답·History·Collection 기능을 모두 사
 | `online/games/Game2048Battle.tsx`, `MinesweeperBattle.tsx` | 테트리스 대전 같은 배치(내 큰 판 + 남의 작은 판), 혼자 하기 CSS·`moveBoard` 재사용, 바뀌지 않을 행동은 보내지 않기, 로빙 탭인덱스·오른쪽 클릭·깃발 모드 |
 | `online/domain/game/YutnoriGame.java`, `online/games/YutnoriGame.tsx`·`yutnoriRules.ts` | 윷 던지기(난수)·지름길 길 계산·잡기·업기는 서버가 하고, 차례인 사람에게만 "옮길 수 있는 이동" 목록(`moves`)을 보냄. 화면은 길 계산을 다시 만들지 않고 칸 위치(SVG 비율 좌표)만 알며, 이동 버튼에 올리면 `useState` 미리 보기로 출발·도착 칸을 강조 |
 | `online/domain/game/CatchMindGame.java`, `online/games/CatchMindGame.tsx`·`catchMindRules.ts` | 제시어는 출제자에게만(`viewFor`), 출제자 채팅 차단(`canChat`). 그림은 1000×750 비율 좌표로 주고받고, 그리는 중인 점은 `useRef`에 모았다가 0.12초마다 `DRAW`로 보냄(메시지 1초 20개 제한 안). 서버 그림이 바뀔 때만 `useEffect`로 Canvas를 다시 그리고, `useMemo`로 답을 타이핑할 때 다시 검사·그리지 않음 |
+| `online/domain/game/JanggiGame.java`, `online/games/JanggiGame.tsx`·`janggiRules.ts` | 상차림(ARRANGE) → 대국. 기물마다 "갈 수 있는 곳"을 만든 뒤, 두어 보고 내 궁이 잡히면 버리는 방식으로 합법수를 거름(외통 = 장군 + 합법수 없음). 궁성 대각선은 "대각선 위의 점끼리만 잇는다"로 표현. 화면은 9×10 버튼 격자 뒤에 SVG 선을 깔아 교차점에 기물을 놓고, 한은 줄·칸 순서를 뒤집어 판을 돌림 |
+| `online/domain/game/AlkkagiGame.java`, `online/games/AlkkagiGame.tsx`·`alkkagiRules.ts` | 서버가 1/240초 간격으로 마찰·원판 충돌·떨어짐을 계산하고 1/30초 프레임을 보냄(난수 없음 → 같은 입력이면 같은 결과). 화면은 새총식 끌어당기기(Pointer Events)와 슬라이더 두 가지 입력, `requestAnimationFrame` 재생과 cleanup, 이미 본 궤적은 `useRef`로 기억 |
+| `online/domain/game/SutdaGame.java`(`Mode`), `online/games/SutdaGame.tsx`·`sutdaRules.ts` | 3장 섯다: 첫 베팅 → 세 번째 카드 → CHOOSE → 두 번째 베팅. "가장 좋은 두 장"을 서버가 대신 고르지 않고(땡잡이·암행어사는 상대에 따라 값이 바뀜) 세 조합의 족보 이름(`myCombos`)만 알려 줌. 족보 판정은 서버만 하고, 화면 족보표는 서버가 보낸 이름(`myHandName`)으로 줄을 찾아 강조 |
 
 - **서버 부담**: 방은 DB 대신 메모리(`OnlineRoomStore`)에 두고, 방 50개·방당 10명·메시지 1초 20개·채팅 1초 2개로 제한합니다. 오목은 수마다 판(1KB)을 보내고, 테트리스는 블록이 굳을 때만 200글자, 뿌요뿌요는 72글자 요약을 보냅니다. 캐치마인드는 선이 추가될 때마다 그림 전체를 보내므로 한 그림의 점 좌표를 숫자 12,000개(약 60KB)까지로 막습니다.
 - **학습용 한계**: 테트리스·뿌요뿌요 판·점수는 서버가 다시 계산해 검증하지 않습니다(조작을 막으려면 서버가 같은 규칙으로 다시 계산해야 합니다).

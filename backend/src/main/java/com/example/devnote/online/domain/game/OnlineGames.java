@@ -29,7 +29,7 @@ public final class OnlineGames {
             case MEMORY_MATCH -> new MemoryMatchGame(nicknames, random);
             case ONE_CARD -> new OneCardGame(nicknames, random);
             case BLACKJACK -> new BlackjackGame(nicknames, random);
-            case SUTDA -> new SutdaGame(nicknames, random);
+            case SUTDA -> new SutdaGame(nicknames, random, SutdaGame.modeFor(option));
             case POKER -> new PokerGame(nicknames, random);
             case CHESS -> new ChessGame(nicknames);
             case MAFIA -> new MafiaGame(nicknames, random);
@@ -40,6 +40,8 @@ public final class OnlineGames {
             case OLYMPIC -> new OlympicGame(nicknames);
             case YUTNORI -> new YutnoriGame(nicknames, random, YutnoriGame.pieceCountFor(option));
             case CATCH_MIND -> new CatchMindGame(nicknames, random, CatchMindGame.roundsFor(option));
+            case JANGGI -> new JanggiGame(nicknames);
+            case ALKKAGI -> new AlkkagiGame(nicknames, AlkkagiGame.stoneCountFor(option));
             default -> throw new IllegalStateException("아직 만들지 않은 게임입니다: " + type);
         };
     }

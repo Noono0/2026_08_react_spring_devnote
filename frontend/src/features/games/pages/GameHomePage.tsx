@@ -21,7 +21,7 @@ export const GameHomePage = () => (
       <Link className="utility-card game-online-card" to="/games/online">
         <span>🌐</span>
         <h3>온라인 대전</h3>
-        <p>방을 만들고 다른 사람과 실시간으로 겨룹니다. 오목·테트리스·뿌요뿌요·체스·스도쿠·2048·지뢰 찾기·3D 당구·올림픽·윷놀이·캐치마인드 등 19종. 테트리스·뿌요뿌요·카드 짝 맞추기·2048·지뢰 찾기·스도쿠·올림픽 방에서는 기다리는 동안 혼자 연습할 수 있습니다.</p>
+        <p>방을 만들고 다른 사람과 실시간으로 겨룹니다. 오목·테트리스·뿌요뿌요·체스·스도쿠·2048·지뢰 찾기·3D 당구·올림픽·윷놀이·캐치마인드·장기·알까기 등 21종. 테트리스·뿌요뿌요·카드 짝 맞추기·2048·지뢰 찾기·스도쿠·올림픽 방에서는 기다리는 동안 혼자 연습할 수 있습니다.</p>
         <small className="utility-card-usecase">배우는 것 · WebSocket · 서버가 정답인 상태 · 방·자리 규칙</small>
       </Link>
       <Link className="utility-card" to="/games/rankings">

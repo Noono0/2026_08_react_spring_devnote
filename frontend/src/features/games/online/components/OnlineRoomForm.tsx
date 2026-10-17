@@ -14,6 +14,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import type { OnlineRoomFormValues } from "@/features/games/online/onlineRoomHelpers";
 import type { OnlineGameTypeInfo } from "@/features/games/online/onlineTypes";
+import { isPracticeGameType } from "@/features/games/practice/practiceGames";
 
 
 const createRoomFormSchema = (gameTypes: OnlineGameTypeInfo[], requireNewPassword: boolean) => z.object({
@@ -75,6 +76,10 @@ export const OnlineRoomForm = ({
   const fieldId = useId();
   const ids = { title: `${fieldId}-title`, gameType: `${fieldId}-game`, seatCount: `${fieldId}-seats`, gameOption: `${fieldId}-option`, password: `${fieldId}-password` };
   const gameOptions = selectedType?.options ?? [];
+  const gameTypeGroups = [
+    { label: "혼자 연습 가능", types: gameTypes.filter((type) => isPracticeGameType(type.code)) },
+    { label: "대전 전용", types: gameTypes.filter((type) => !isPracticeGameType(type.code)) },
+  ];
   const errorId = (name: keyof typeof ids) => `${ids[name]}-error`;
 
   return (
@@ -104,10 +109,15 @@ export const OnlineRoomForm = ({
             })}
             disabled={gameLocked}
           >
-            {gameTypes.map((type) => (
-              <option key={type.code} value={type.code} disabled={!type.available}>
-                {type.label}{type.available ? "" : " (준비 중)"}
-              </option>
+            {/* 기다리는 동안 혼자 연습할 수 있는 게임을 위 묶음(optgroup)에, 상대가 꼭 있어야 하는 게임을 아래 묶음에 둔다 */}
+            {gameTypeGroups.map((group) => group.types.length > 0 && (
+              <optgroup key={group.label} label={group.label}>
+                {group.types.map((type) => (
+                  <option key={type.code} value={type.code} disabled={!type.available}>
+                    {type.label}{type.available ? "" : " (준비 중)"}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </select>
           {errors.gameType ? <small id={errorId("gameType")} className="field-error">{errors.gameType.message}</small> : null}
