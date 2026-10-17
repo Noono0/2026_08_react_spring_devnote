@@ -35,6 +35,67 @@ class AlkkagiGameTest {
         assertThat(game.drainAnnouncements()).singleElement().asString().contains("알 6개");
     }
 
+    private static GameAction place(int col, int row) {
+        return new GameAction("PLACE", null, null, List.of(col, row));
+    }
+
+    private static final GameAction READY = new GameAction("READY", null, null, null);
+
+    @Test
+    void 정석은_알_8개씩_정해진_자리에서_바로_시작한다() {
+        AlkkagiGame game = AlkkagiGame.create(TWO, "STANDARD");
+        AlkkagiGame.View view = view(game);
+        assertThat(view.mode()).isEqualTo("STANDARD");
+        assertThat(view.phase()).isEqualTo(AlkkagiGame.Phase.PLAY);
+        assertThat(view.remaining()).containsExactly(8, 8);
+        assertThat(AlkkagiGame.create(TWO, null).viewFor(0)).extracting("remaining").isEqualTo(List.of(8, 8)); // 옵션이 없던 방도 정석
+    }
+
+    @Test
+    void 커스텀은_최대_개수까지_내_쪽_절반에_놓고_다시_누르면_뺀다() {
+        AlkkagiGame game = AlkkagiGame.create(TWO, "CUSTOM_2");
+        assertThat(view(game).phase()).isEqualTo(AlkkagiGame.Phase.SETUP);
+        assertThat(view(game).maxStones()).isEqualTo(2);
+        assertThatThrownBy(() -> game.act(0, place(3, 9))).isInstanceOf(BusinessException.class); // 가운데 줄은 어느 쪽도 아니다
+        assertThatThrownBy(() -> game.act(0, place(3, 5))).isInstanceOf(BusinessException.class); // 백 쪽
+        assertThatThrownBy(() -> game.act(0, READY)).isInstanceOf(BusinessException.class); // 하나도 안 놓음
+        game.act(0, place(3, 15));
+        game.act(0, place(9, 12));
+        assertThatThrownBy(() -> game.act(0, place(4, 15))).isInstanceOf(BusinessException.class); // 최대 2개
+        game.act(0, place(9, 12)); // 같은 점 = 빼기
+        game.act(0, place(4, 16));
+        assertThat(view(game).stones()).extracting(AlkkagiGame.Stone::x, AlkkagiGame.Stone::y)
+            .containsExactly(org.assertj.core.groups.Tuple.tuple(200, 800), org.assertj.core.groups.Tuple.tuple(250, 850));
+        game.act(1, place(9, 3)); // 백은 차례 없이 동시에 놓는다
+        assertThat(view(game).placedCounts()).containsExactly(2, 1);
+        assertThatThrownBy(() -> game.act(0, flick(0, 90, 50))).isInstanceOf(BusinessException.class); // 배치 중에는 튕길 수 없다
+    }
+
+    @Test
+    void 커스텀_배치는_둘_다_완료할_때까지_상대에게_보이지_않고_완료하면_흑부터_시작한다() {
+        AlkkagiGame game = AlkkagiGame.create(TWO, "CUSTOM_4");
+        game.act(0, place(9, 15));
+        game.act(1, place(9, 3));
+        game.act(1, place(2, 1));
+        AlkkagiGame.View blackView = (AlkkagiGame.View) game.viewFor(0);
+        assertThat(blackView.stones()).hasSize(1).allMatch(stone -> stone.side() == 0); // 백 알은 안 보인다
+        assertThat(blackView.placedCounts()).containsExactly(1, 2); // 개수만 보인다
+        assertThat(((AlkkagiGame.View) game.viewFor(null)).stones()).isEmpty(); // 관전자도 못 본다
+
+        game.act(0, READY);
+        assertThatThrownBy(() -> game.act(0, place(3, 15))).isInstanceOf(BusinessException.class); // 완료 뒤에는 못 바꾼다
+        assertThat(view(game).ready()).containsExactly(true, false);
+        game.act(1, READY);
+        AlkkagiGame.View playing = view(game);
+        assertThat(playing.phase()).isEqualTo(AlkkagiGame.Phase.PLAY);
+        assertThat(playing.remaining()).containsExactly(1, 2);
+        assertThat(playing.stones()).extracting(AlkkagiGame.Stone::side).containsExactly(0, 1, 1);
+        assertThat(playing.turnSeat()).isZero();
+        // 흑 알(500, 800)을 위로 세게 → 같은 칸의 백 알(500, 200)을 친다
+        game.act(0, flick(0, 90, 100));
+        assertThat(view(game).lastShot().knockedOpponent()).isEqualTo(1);
+    }
+
     @Test
     void 정면으로_세게_맞히면_상대_알이_판_밖으로_떨어지고_마지막_알이면_이긴다() {
         AlkkagiGame game = board(new int[]{0, 500, 600}, new int[]{1, 500, 400});

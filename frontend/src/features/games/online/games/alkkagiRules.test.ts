@@ -1,4 +1,6 @@
-import { aimFromPull, aimLineEnd, framePositions, toBoardPoint } from "@/features/games/online/games/alkkagiRules";
+import {
+  aimFromPull, aimLineEnd, framePositions, gridToBoard, isOwnHalf, snapToGrid, toBoardPoint,
+} from "@/features/games/online/games/alkkagiRules";
 
 describe("alkkagiRules", () => {
   const stone = { x: 500, y: 500 };
@@ -18,6 +20,18 @@ describe("alkkagiRules", () => {
     const end = aimLineEnd(stone, 90, 100);
     expect(end.x).toBeCloseTo(500);
     expect(end.y).toBeCloseTo(200);
+  });
+
+  it("판 좌표를 가장 가까운 교차점으로 맞추고, 자기 쪽 절반만 허락한다", () => {
+    expect(snapToGrid({ x: 512, y: 788 })).toEqual({ col: 9, row: 15 });
+    expect(gridToBoard({ col: 9, row: 15 })).toEqual({ x: 500, y: 800 });
+    expect(snapToGrid({ x: 30, y: 500 })).toEqual({ col: 0, row: 9 }); // 첫 줄 바로 바깥도 가까운 교차점으로(-0이 아니라 0)
+    expect(snapToGrid({ x: 5, y: 500 })).toBeNull(); // 첫 줄에서 반 칸 넘게 바깥
+    expect(snapToGrid({ x: 990, y: 990 })).toBeNull(); // 판 테두리 밖
+    expect(isOwnHalf(0, 10)).toBe(true);
+    expect(isOwnHalf(0, 9)).toBe(false); // 가운데 줄은 어느 쪽도 아니다
+    expect(isOwnHalf(1, 8)).toBe(true);
+    expect(isOwnHalf(1, 9)).toBe(false);
   });
 
   it("화면 좌표를 판 좌표로 바꾸고, 프레임의 -1은 떨어진 알로 읽는다", () => {

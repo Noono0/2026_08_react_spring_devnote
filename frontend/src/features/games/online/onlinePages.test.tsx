@@ -1260,7 +1260,7 @@ describe("온라인 알까기", () => {
     ...twoPlayers,
     gameType: "ALKKAGI", gameTypeLabel: "알까기",
     game: {
-      mySeat: 0, phase: "PLAY", turnSeat: 0,
+      mySeat: 0, mode: "STANDARD", phase: "PLAY", maxStones: 2, placedCounts: [0, 0], ready: [false, false], turnSeat: 0,
       stones: [{ side: 0, x: 300, y: 800, alive: true }, { side: 0, x: 700, y: 800, alive: true }, { side: 1, x: 500, y: 200, alive: true }],
       remaining: [2, 1], shotCount: 0, lastShot: null, log: [], winnerSeat: null, finished: false, ...game,
     },
@@ -1288,6 +1288,35 @@ describe("온라인 알까기", () => {
     expect(within(within(controls).getByLabelText("내 알")).getAllByRole("option").map((option) => option.textContent)).toEqual([
       "고르기", "1번 알 (300, 800)", "2번 알 (700, 800)",
     ]);
+  });
+
+  it("커스텀 배치 중에는 칸·줄로 알을 놓고, 개수가 차면 배치 완료를 보낸다", () => {
+    const socket = openAlkkagi({
+      mode: "CUSTOM", phase: "SETUP", maxStones: 3, placedCounts: [2, 1], ready: [false, true],
+      stones: [{ side: 0, x: 500, y: 800, alive: true }, { side: 0, x: 200, y: 850, alive: true }], remaining: [0, 0],
+    });
+    expect(screen.getByText("커스텀 · 최대 3개")).toBeInTheDocument();
+    expect(screen.getByText(/아래 절반\)의 교차점을 눌러 알을 놓으세요.*\(2\/3개\)/)).toBeInTheDocument();
+    expect(screen.getByText(/백 · 영희 — 놓은 알 1 · 완료/)).toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "튕기기 조작" })).not.toBeInTheDocument(); // 배치 중에는 튕길 수 없다
+    const controls = screen.getByRole("group", { name: "알 배치" });
+    fireEvent.change(within(controls).getByLabelText("칸(1~19)"), { target: { value: "4" } });
+    fireEvent.change(within(controls).getByLabelText("줄(11~19)"), { target: { value: "17" } });
+    fireEvent.click(within(controls).getByRole("button", { name: "놓기·빼기" }));
+    expect(socket.sent.at(-1)).toEqual({ type: "GAME_ACTION", action: "PLACE", numbers: [3, 16] }); // 서버는 0부터 센다
+    fireEvent.click(within(controls).getByRole("button", { name: "모두 빼기" }));
+    expect(socket.sent.at(-1)).toEqual({ type: "GAME_ACTION", action: "CLEAR" });
+    fireEvent.click(within(controls).getByRole("button", { name: "배치 완료 (2/3)" }));
+    expect(socket.sent.at(-1)).toEqual({ type: "GAME_ACTION", action: "READY" });
+  });
+
+  it("배치를 마치면 상대를 기다리고, 알을 하나도 안 놓았으면 완료할 수 없다", () => {
+    openAlkkagi({ mode: "CUSTOM", phase: "SETUP", maxStones: 3, placedCounts: [0, 2], ready: [false, false], stones: [], remaining: [0, 0] });
+    expect(within(screen.getByRole("group", { name: "알 배치" })).getByRole("button", { name: "배치 완료 (0/3)" })).toBeDisabled();
+    cleanup();
+    openAlkkagi({ mode: "CUSTOM", phase: "SETUP", maxStones: 3, placedCounts: [2, 2], ready: [true, false], remaining: [0, 0] });
+    expect(screen.getByText("배치 완료! 상대(2개 놓는 중)를 기다리는 중…")).toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "알 배치" })).not.toBeInTheDocument();
   });
 
   it("상대 차례에는 조작이 없다", () => {

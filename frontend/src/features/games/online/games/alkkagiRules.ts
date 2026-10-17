@@ -27,7 +27,14 @@ const shotSchema = z.object({
 
 export const alkkagiSchema = z.object({
   mySeat: z.number().int().nullish(),
-  phase: z.enum(["PLAY", "END"]),
+  /** 방 옵션: STANDARD(정석·정해진 자리) · CUSTOM(최대 개수를 정하고 자유 배치) */
+  mode: z.enum(["STANDARD", "CUSTOM"]),
+  /** SETUP = 커스텀 배치 중. 이때 stones에는 내가 놓은 알만 온다 */
+  phase: z.enum(["SETUP", "PLAY", "END"]),
+  maxStones: z.number().int(),
+  /** 자리마다 놓은 알 개수(배치 중 상대는 개수만 보인다) */
+  placedCounts: z.array(z.number().int()).length(2),
+  ready: z.array(z.boolean()).length(2),
   turnSeat: z.number().int(),
   stones: z.array(z.object({ side: z.number().int(), x: z.number().int(), y: z.number().int(), alive: z.boolean() })),
   remaining: z.array(z.number().int()).length(2),
@@ -70,6 +77,30 @@ export const aimLineEnd = (stone: BoardPoint, angle: number, power: number): Boa
   const radians = (angle * Math.PI) / 180;
   return { x: stone.x + Math.cos(radians) * length, y: stone.y - Math.sin(radians) * length };
 };
+
+/** 바둑판 19줄(서버 AlkkagiGame.GRID_*와 같다): 교차점 (칸, 줄) → (50 + 50 × 칸, 50 + 50 × 줄) */
+export const GRID_LINES = 19;
+export const GRID_START = 50;
+export const GRID_STEP = 50;
+
+export interface GridPoint {
+  col: number;
+  row: number;
+}
+
+/** 판 좌표 → 가장 가까운 교차점. 판 테두리 밖이면 null */
+export const snapToGrid = (point: BoardPoint): GridPoint | null => {
+  // ★ Math.round(-0.4)는 -0이다. "+ 0"으로 0으로 바꿔 두어야 서버로 보내는 값·비교가 깔끔하다
+  const col = Math.round((point.x - GRID_START) / GRID_STEP) + 0;
+  const row = Math.round((point.y - GRID_START) / GRID_STEP) + 0;
+  if (col < 0 || col >= GRID_LINES || row < 0 || row >= GRID_LINES) return null;
+  return { col, row };
+};
+
+export const gridToBoard = ({ col, row }: GridPoint): BoardPoint => ({ x: GRID_START + GRID_STEP * col, y: GRID_START + GRID_STEP * row });
+
+/** 커스텀 배치에서 내가 놓을 수 있는 줄인지(흑 = 아래 10~18줄, 백 = 위 0~8줄). 서버도 같은 규칙으로 다시 검사한다 */
+export const isOwnHalf = (side: number, row: number) => (side === 0 ? row >= 10 && row < GRID_LINES : row >= 0 && row <= 8);
 
 /** 재생 프레임 하나 → 알 위치 목록(떨어진 알은 null) */
 export const framePositions = (frame: number[]): (BoardPoint | null)[] => {

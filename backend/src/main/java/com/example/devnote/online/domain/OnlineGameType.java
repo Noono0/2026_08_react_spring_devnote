@@ -49,7 +49,7 @@ public enum OnlineGameType {
     CATCH_MIND("캐치마인드", 2, 8, true),
     /** 마·상 위치(상차림)는 게임 안에서 각자 고른다 */
     JANGGI("장기", 2, 2, true),
-    /** 바둑알 튕기기. 알 수는 게임 옵션으로 고른다 */
+    /** 바둑알 튕기기. 게임 옵션으로 정석(정해진 자리)·커스텀(최대 개수를 정하고 자유 배치)을 고른다 */
     ALKKAGI("알까기", 2, 2, true);
 
     private final String label;
@@ -82,7 +82,10 @@ public enum OnlineGameType {
             case BILLIARDS -> List.of(
                 new OnlineGameOption("THREE_CUSHION", "3쿠션"), new OnlineGameOption("FOUR_BALL", "4구"), new OnlineGameOption("EIGHT_BALL", "8볼 포켓"));
             case YUTNORI -> List.of(new OnlineGameOption("4", "말 4개"), new OnlineGameOption("2", "말 2개 · 빠른 판"));
-            case ALKKAGI -> List.of(new OnlineGameOption("4", "알 4개씩"), new OnlineGameOption("6", "알 6개씩"), new OnlineGameOption("8", "알 8개씩"));
+            case ALKKAGI -> List.of(
+                new OnlineGameOption("STANDARD", "정석 · 알 8개씩 정해진 자리"),
+                new OnlineGameOption("CUSTOM_4", "커스텀 · 최대 4개 자유 배치"), new OnlineGameOption("CUSTOM_6", "커스텀 · 최대 6개 자유 배치"),
+                new OnlineGameOption("CUSTOM_8", "커스텀 · 최대 8개 자유 배치"), new OnlineGameOption("CUSTOM_10", "커스텀 · 최대 10개 자유 배치"));
             case SUTDA -> List.of(new OnlineGameOption("TWO", "2장 섯다"), new OnlineGameOption("THREE", "3장 섯다 · 두 장 골라 보여 주기"));
             case CATCH_MIND -> List.of(
                 new OnlineGameOption("1", "한 사람당 1번"), new OnlineGameOption("2", "한 사람당 2번"), new OnlineGameOption("3", "한 사람당 3번"));
@@ -100,7 +103,7 @@ public enum OnlineGameType {
             case BILLIARDS -> "THREE_CUSHION";
             case YUTNORI -> "4";
             case SUTDA -> "TWO";
-            case ALKKAGI -> "6";
+            case ALKKAGI -> "STANDARD";
             case CATCH_MIND -> "2";
             default -> null;
         };

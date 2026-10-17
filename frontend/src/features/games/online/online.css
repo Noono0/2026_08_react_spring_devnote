@@ -513,6 +513,11 @@ button.battleship-cell:hover { background: #3a8fd0; filter: none; }
 .alkkagi-stone.side-1 { fill: #fbfbf8; stroke: #868e96; }
 .alkkagi-stone.mine { cursor: grab; }
 .alkkagi-stone.selected { stroke: #1c7ed6; stroke-width: 6; }
+.alkkagi-board.placing { cursor: copy; }
+.alkkagi-own-half { fill: rgba(255, 255, 255, 0.28); pointer-events: none; }
+.alkkagi-center-line { stroke: #c92a2a; stroke-width: 4; stroke-dasharray: 18 12; pointer-events: none; }
+.alkkagi-mode { padding: 6px 12px; border-radius: 999px; color: #fff; background: #5f3dc4; font-size: 13px; font-weight: 700; }
+.alkkagi-controls input[type="number"] { width: 72px; }
 .alkkagi-aim { stroke: #1c7ed6; stroke-width: 6; stroke-dasharray: 14 10; stroke-linecap: round; pointer-events: none; }
 .alkkagi-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; }
 .alkkagi-controls label { display: grid; gap: 2px; font-size: 13px; }
