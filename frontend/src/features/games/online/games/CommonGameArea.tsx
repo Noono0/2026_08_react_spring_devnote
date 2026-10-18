@@ -5,6 +5,7 @@
  * 각 게임 화면이 자기 zod 스키마로 확인한 뒤 그린다. 새 게임을 추가하면 여기에 한 줄을 더한다.
  */
 import { AlkkagiGame } from "@/features/games/online/games/AlkkagiGame";
+import { AppleBattle } from "@/features/games/online/games/AppleBattle";
 import { BattleshipGame } from "@/features/games/online/games/BattleshipGame";
 import { BilliardsGame } from "@/features/games/online/games/billiards/BilliardsGame";
 import { BlackjackGame } from "@/features/games/online/games/BlackjackGame";
@@ -20,6 +21,7 @@ import { OlympicGame } from "@/features/games/online/games/OlympicGame";
 import { OneCardGame } from "@/features/games/online/games/OneCardGame";
 import { PokerGame } from "@/features/games/online/games/PokerGame";
 import { SudokuGame } from "@/features/games/online/games/SudokuGame";
+import { SuikaBattle } from "@/features/games/online/games/SuikaBattle";
 import { SutdaGame } from "@/features/games/online/games/SutdaGame";
 import { YutnoriGame } from "@/features/games/online/games/YutnoriGame";
 import type { OnlineClientMessage, OnlineRoom } from "@/features/games/online/onlineTypes";
@@ -69,6 +71,10 @@ export const CommonGameArea = (properties: CommonGameProperties) => {
       return <JanggiGame {...properties} />;
     case "ALKKAGI":
       return <AlkkagiGame {...properties} />;
+    case "APPLE":
+      return <AppleBattle {...properties} />;
+    case "SUIKA":
+      return <SuikaBattle {...properties} />;
     default:
       return <p className="online-hint">아직 준비 중인 게임입니다.</p>;
   }

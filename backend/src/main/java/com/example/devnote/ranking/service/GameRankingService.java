@@ -187,7 +187,12 @@ public class GameRankingService {
     /** 게임마다 필요한 값만 꺼낸다. 필요한 값이 비었으면 거절하고, 그 게임에서 쓰지 않는 값은 저장하지 않는다 */
     private static Metrics requireMetrics(SoloGameCode gameCode, SoloGameRecordRequest request) {
         return switch (gameCode.getRankingOrder()) {
-            case SCORE_DESC -> new Metrics(requireValue(request.score()), null, null);
+            case SCORE_DESC -> {
+                int score = requireValue(request.score());
+                // 브라우저가 계산한 점수라 완전히 믿을 수는 없지만, 그 게임에서 나올 수 없는 점수는 거른다
+                if (gameCode.maxScore() != null && score > gameCode.maxScore()) throw new BusinessException(ErrorCode.GAME_RECORD_INVALID);
+                yield new Metrics(score, null, null);
+            }
             case TIME_ASC -> new Metrics(null, requireValue(request.elapsedSeconds()), null);
             case MOVES_THEN_TIME_ASC -> new Metrics(null, requireValue(request.elapsedSeconds()), requireValue(request.moves()));
         };

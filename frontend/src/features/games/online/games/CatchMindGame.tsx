@@ -19,25 +19,10 @@ import { useEffect, useMemo, useRef, useState, type FormEvent, type PointerEvent
 import type { CommonGameProperties } from "@/features/games/online/games/CommonGameArea";
 import {
   CANVAS_HEIGHT, CANVAS_WIDTH, catchMindSchema, DRAW_FLUSH_INTERVAL_MS, drawStroke, GUESS_MAX_LENGTH, isFarEnough,
-  MAX_POINTS_PER_MESSAGE, penColors, penWidths, secondsLeft, toCanvasPoint, toDrawNumbers, wordHint,
+  MAX_POINTS_PER_MESSAGE, penColors, penWidths, toCanvasPoint, toDrawNumbers, wordHint,
   type CanvasPoint, type CatchMindStroke,
 } from "@/features/games/online/games/catchMindRules";
-
-/**
- * 남은 시간 표시. 1초마다 바뀌는 "지금 시각"을 이 작은 컴포넌트 안에만 둔다.
- * ★ 큰 게임 화면(CatchMindGame)에 두면 1초마다 화면 전체가 다시 렌더링된다. 자주 바뀌는 상태는 쓰는 곳 가까이에 둔다.
- */
-const TurnTimer = ({ deadline }: { deadline: number | null | undefined }) => {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    if (deadline == null) return;
-    const timerId = window.setInterval(() => setNow(Date.now()), 500);
-    return () => window.clearInterval(timerId); // 정리: 차례가 바뀌거나 방을 나가면 타이머를 멈춘다
-  }, [deadline]);
-  const left = secondsLeft(deadline, now);
-  if (left == null) return null;
-  return <span className={`catch-mind-timer${left <= 10 ? " urgent" : ""}`} role="timer" aria-label={`남은 시간 ${left}초`}>⏱ {left}초</span>;
-};
+import { DeadlineTimer } from "@/features/games/online/games/DeadlineTimer";
 
 /** 지금 그리는 중인 선. sentCount = 서버로 이미 보낸 점 개수 */
 interface DrawingStroke {
@@ -157,7 +142,7 @@ export const CatchMindGame = ({ room, mySeat, connected, send }: CommonGamePrope
     <div className="catch-mind">
       <div className="catch-mind-head">
         {/* 남은 시간은 aria-live 문단 밖에 둔다. 안에 두면 화면 낭독기가 1초마다 읽어 버린다 */}
-        {!game.finished ? <TurnTimer deadline={game.turnDeadline} /> : null}
+        {!game.finished ? <DeadlineTimer deadline={game.turnDeadline} /> : null}
         <p className="game-status" aria-live="polite">
           {game.turnNumber}/{game.totalTurns}번째 그림 · {status}
         </p>

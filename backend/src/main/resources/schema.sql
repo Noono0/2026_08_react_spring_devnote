@@ -394,7 +394,7 @@ CREATE TABLE IF NOT EXISTS online_game_results (
 
 CREATE TABLE IF NOT EXISTS solo_game_records (
     solo_game_record_id BIGINT NOT NULL AUTO_INCREMENT COMMENT '혼자 하는 게임 기록 식별자',
-    game_code VARCHAR(30) NOT NULL COMMENT 'GAME_2048, TETRIS, PUYO, MINESWEEPER, MEMORY 또는 SUDOKU',
+    game_code VARCHAR(30) NOT NULL COMMENT 'GAME_2048, TETRIS, PUYO, MINESWEEPER, MEMORY, SUDOKU, APPLE 또는 SUIKA',
     difficulty VARCHAR(20) NOT NULL DEFAULT '' COMMENT '난이도(난이도가 없는 게임은 빈 문자열)',
     member_id BIGINT NULL COMMENT '로그인 회원 식별자(비회원이면 NULL)',
     nickname VARCHAR(100) NOT NULL COMMENT '기록할 때 쓴 이름',

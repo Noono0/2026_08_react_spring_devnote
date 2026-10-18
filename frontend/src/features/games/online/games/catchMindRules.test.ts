@@ -1,4 +1,5 @@
-import { isFarEnough, secondsLeft, toCanvasPoint, toDrawNumbers, wordHint } from "@/features/games/online/games/catchMindRules";
+import { isFarEnough, toCanvasPoint, toDrawNumbers, wordHint } from "@/features/games/online/games/catchMindRules";
+import { secondsLeft } from "@/features/games/online/games/deadline";
 
 describe("catchMindRules", () => {
   // 화면에 500×375로 줄여 보이는 그림판(왼쪽 위 = 100, 50)

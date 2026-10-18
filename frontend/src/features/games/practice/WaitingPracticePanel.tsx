@@ -7,6 +7,7 @@
  */
 import { useState } from "react";
 import { AlkkagiPractice } from "./AlkkagiPractice";
+import { ApplePractice } from "./ApplePractice";
 import { Game2048Practice } from "./Game2048Practice";
 import { MemoryPractice } from "./MemoryPractice";
 import { MinesweeperPractice } from "./MinesweeperPractice";
@@ -22,6 +23,7 @@ import {
 } from "./practiceGames";
 import { PuyoPractice } from "./PuyoPractice";
 import { SudokuPractice } from "./SudokuPractice";
+import { SuikaPractice } from "./SuikaPractice";
 import { TetrisPractice } from "./TetrisPractice";
 
 interface WaitingPracticePanelProps {
@@ -48,6 +50,10 @@ const PracticeBody = ({ gameType, gameOption, nickname }: { gameType: PracticeGa
       return <OlympicPractice />;
     case "ALKKAGI":
       return <AlkkagiPractice />;
+    case "APPLE":
+      return <ApplePractice nickname={nickname} />;
+    case "SUIKA":
+      return <SuikaPractice nickname={nickname} />;
   }
 };
 

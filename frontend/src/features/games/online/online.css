@@ -547,8 +547,52 @@ button.battleship-cell:hover { background: #3a8fd0; filter: none; }
 .catch-mind { display: grid; gap: 10px; width: 100%; }
 .catch-mind-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; }
 .catch-mind-head .game-status { margin: 0; }
-.catch-mind-timer { padding: 4px 12px; border-radius: 999px; color: #fff; background: #1c7ed6; font-weight: 800; font-variant-numeric: tabular-nums; }
-.catch-mind-timer.urgent { background: #e03131; }
+/* 사과게임: 17×10 사과판. 판 위에서 끌어 사각형을 고르고, 합이 10이면 초록 표시 */
+.apple-game { display: grid; gap: 10px; justify-items: center; width: 100%; }
+.apple-stats { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px; font-size: 14px; }
+.apple-stats .game-status { margin: 0; }
+.apple-time.urgent strong { color: #e03131; }
+.apple-scoreboard { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.apple-scoreboard li { display: grid; gap: 2px; padding: 6px 12px; border: 2px solid var(--border-color); border-radius: 12px; font-size: 13px; }
+.apple-scoreboard li.me { border-color: var(--primary-color); }
+.apple-scoreboard li.winner { box-shadow: 0 0 0 2px var(--success-color); }
+.apple-scoreboard li.left { opacity: 0.45; }
+.apple-board-wrap { display: grid; gap: 6px; justify-items: center; width: 100%; }
+.apple-sum { margin: 0; min-height: 1.4em; font-weight: 700; }
+.apple-sum.ok { color: #2f9e44; }
+.apple-sum.over { color: #e03131; }
+.apple-board {
+  display: grid; grid-template-rows: repeat(10, 1fr); width: min(100%, 760px); aspect-ratio: 17 / 10; padding: 6px;
+  border-radius: 14px; background: #d3f9d8; touch-action: none; user-select: none;
+}
+.apple-board.disabled { opacity: 0.6; }
+.apple-row { display: grid; grid-template-columns: repeat(17, 1fr); }
+.apple-cell {
+  display: grid; place-items: center; min-width: 0; margin: 1px; padding: 0; border: 0; border-radius: 50%;
+  color: #fff; background: radial-gradient(circle at 35% 30%, #ff8787, #e03131 60%, #a51111); font-size: clamp(9px, 2.2vw, 18px); font-weight: 900;
+}
+.apple-cell:disabled { cursor: default; opacity: 1; }
+.apple-cell.empty { background: transparent; }
+.apple-cell.selected { box-shadow: 0 0 0 3px #1c7ed6; }
+.apple-cell.anchor { box-shadow: 0 0 0 3px #f08c00; }
+.apple-cell:focus-visible { outline: 3px solid var(--primary-color); outline-offset: 1px; }
+.apple-ready { display: grid; gap: 8px; justify-items: center; padding: 20px; }
+
+/* 수박게임: 420×600 상자(SVG). 빨간 점선 = 위험선 */
+.suika-game { display: grid; gap: 10px; justify-items: center; width: 100%; }
+.suika-board-wrap { display: grid; gap: 6px; justify-items: center; width: 100%; }
+.suika-hud { display: flex; gap: 16px; font-size: 14px; }
+.suika-board { width: min(100%, 380px); aspect-ratio: 420 / 600; border-radius: 0 0 18px 18px; touch-action: none; user-select: none; cursor: pointer; }
+.suika-board:focus-visible { outline: 3px solid var(--primary-color); outline-offset: 2px; }
+.suika-board.stopped { cursor: default; filter: saturate(0.6); }
+.suika-box { fill: #fff4e6; stroke: #d9480f; stroke-width: 6; }
+.suika-danger { stroke: #e03131; stroke-width: 3; stroke-dasharray: 12 8; }
+.suika-aim line { stroke: rgba(0, 0, 0, 0.25); stroke-width: 2; stroke-dasharray: 6 6; }
+.suika-fruit { stroke: rgba(0, 0, 0, 0.25); stroke-width: 2; }
+
+/* 남은 시간 배지(DeadlineTimer — 캐치마인드·사과게임·수박게임 공용) */
+.deadline-timer { padding: 4px 12px; border-radius: 999px; color: #fff; background: #1c7ed6; font-weight: 800; font-variant-numeric: tabular-nums; }
+.deadline-timer.urgent { background: #e03131; }
 .catch-mind-word { margin: 0; padding: 8px 14px; border-left: 6px solid var(--warning-color); border-radius: 10px; background: var(--background-muted); font-size: 18px; }
 .catch-mind-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .catch-mind-tools [role="group"] { display: flex; flex-wrap: wrap; gap: 4px; }
