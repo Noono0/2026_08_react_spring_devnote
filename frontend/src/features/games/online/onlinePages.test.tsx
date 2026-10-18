@@ -1197,6 +1197,79 @@ describe("온라인 당구", () => {
   });
 });
 
+describe("온라인 사과게임 대전", () => {
+  const row = (digits: string) => digits.padEnd(17, "1");
+  const appleRoom = (game: Record<string, unknown>): OnlineRoom => ({
+    ...baseRoom,
+    ...twoPlayers,
+    gameType: "APPLE", gameTypeLabel: "사과게임 대전",
+    game: {
+      mySeat: 0, myBoard: [row("19"), ...Array.from({ length: 9 }, () => row(""))], scores: [4, 6], remaining: [166, 164],
+      active: [true, true], deadline: Date.now() + 60_000, log: [], winnerSeats: [], finished: false, ...game,
+    },
+  });
+  const openApple = (game: Record<string, unknown>) => {
+    renderRoom();
+    const socket = latestSocket();
+    socket.serverOpen();
+    socket.serverSend({ type: "ROOM_STATE", room: appleRoom(game) });
+    return socket;
+  };
+
+  it("두 칸으로 사각형을 고르면 SELECT를 보내고, 점수·남은 시간을 보여 준다", () => {
+    const socket = openApple({});
+    expect(screen.getByRole("timer", { name: /남은 시간 (59|60)초/ })).toBeInTheDocument();
+    expect(screen.getByRole("list", { name: "점수" })).toHaveTextContent("철수 (나)4개 · 남은 사과 166");
+    fireEvent.click(screen.getByRole("gridcell", { name: /^1줄 2칸 사과 9/ }));
+    expect(screen.getByText("고른 사과 합: 9")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("gridcell", { name: /^1줄 1칸 사과 1/ }));
+    expect(socket.sent.at(-1)).toEqual({ type: "GAME_ACTION", action: "SELECT", numbers: [0, 0, 0, 1] });
+  });
+
+  it("끝나면 승자를 보여 주고 판을 잠근다", () => {
+    openApple({ finished: true, deadline: null, winnerSeats: [1] });
+    expect(screen.getByText("영희 승리!")).toBeInTheDocument();
+    expect(screen.queryByRole("timer")).not.toBeInTheDocument();
+    expect(screen.getByRole("gridcell", { name: /^1줄 1칸/ })).toBeDisabled();
+  });
+});
+
+describe("온라인 수박게임 대전", () => {
+  const suikaRoom = (game: Record<string, unknown>): OnlineRoom => ({
+    ...baseRoom,
+    ...twoPlayers,
+    gameType: "SUIKA", gameTypeLabel: "수박게임 대전",
+    game: {
+      mySeat: 0, seed: 1234, scores: [12, 30], over: [false, true], active: [true, true], deadline: Date.now() + 120_000,
+      log: [], winnerSeats: [], finished: false, ...game,
+    },
+  });
+  const openSuika = (game: Record<string, unknown>) => {
+    renderRoom();
+    const socket = latestSocket();
+    socket.serverOpen();
+    socket.serverSend({ type: "ROOM_STATE", room: suikaRoom(game) });
+    return socket;
+  };
+
+  it("점수판과 남은 시간을 보여 주고, 내 상자에서 과일을 떨어뜨릴 수 있다", () => {
+    openSuika({});
+    expect(screen.getByRole("list", { name: "점수" })).toHaveTextContent("영희30점 · 넘침");
+    expect(screen.getByRole("timer")).toBeInTheDocument();
+    const board = screen.getByRole("application", { name: /수박게임 상자/ });
+    fireEvent.keyDown(board, { key: " " });
+    expect(board.querySelectorAll("circle.suika-fruit")).toHaveLength(1);
+  });
+
+  it("내 상자가 넘쳤으면 판이 멈추고, 끝나면 승자를 보여 준다", () => {
+    openSuika({ over: [true, false] });
+    expect(screen.getByText("내 상자가 넘쳤어요. 다른 사람을 기다리는 중…")).toBeInTheDocument();
+    cleanup();
+    openSuika({ finished: true, deadline: null, winnerSeats: [1] });
+    expect(screen.getByText("영희 승리!")).toBeInTheDocument();
+  });
+});
+
 describe("온라인 장기", () => {
   const startBoard = [
     "rheaaaher".replace("aaa", "a.a"), "....k....", ".c.....c.", "p.p.p.p.p", ".........",

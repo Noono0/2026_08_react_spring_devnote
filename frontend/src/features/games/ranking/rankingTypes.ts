@@ -1,6 +1,6 @@
 // rankingTypes.ts — 게임 랭킹 API의 요청·응답 모양(서버 ranking/dto와 1:1)
 
-export type SoloGameCode = "GAME_2048" | "TETRIS" | "PUYO" | "MINESWEEPER" | "MEMORY" | "SUDOKU";
+export type SoloGameCode = "GAME_2048" | "TETRIS" | "PUYO" | "MINESWEEPER" | "MEMORY" | "SUDOKU" | "APPLE" | "SUIKA";
 
 /** 조회 기간. 한국 날짜 "yyyy-MM-dd"이고 null이면 그쪽 끝은 제한하지 않는다(둘 다 null = 전체) */
 export interface RankingPeriod {

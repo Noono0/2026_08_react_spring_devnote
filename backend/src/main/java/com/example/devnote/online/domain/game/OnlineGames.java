@@ -42,6 +42,8 @@ public final class OnlineGames {
             case CATCH_MIND -> new CatchMindGame(nicknames, random, CatchMindGame.roundsFor(option));
             case JANGGI -> new JanggiGame(nicknames);
             case ALKKAGI -> AlkkagiGame.create(nicknames, option);
+            case APPLE -> new AppleGame(nicknames, random);
+            case SUIKA -> new SuikaGame(nicknames, random);
             default -> throw new IllegalStateException("아직 만들지 않은 게임입니다: " + type);
         };
     }

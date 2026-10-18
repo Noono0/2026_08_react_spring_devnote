@@ -50,7 +50,11 @@ public enum OnlineGameType {
     /** 마·상 위치(상차림)는 게임 안에서 각자 고른다 */
     JANGGI("장기", 2, 2, true),
     /** 바둑알 튕기기. 게임 옵션으로 정석(정해진 자리)·커스텀(최대 개수를 정하고 자유 배치)을 고른다 */
-    ALKKAGI("알까기", 2, 2, true);
+    ALKKAGI("알까기", 2, 2, true),
+    /** 같은 사과판으로 2분 동안 합 10 만들기 점수를 겨룬다(각자 자기 판) */
+    APPLE("사과게임 대전", 2, 4, true),
+    /** 같은 과일 순서로 3분 동안 점수를 겨룬다(각자 자기 상자, 물리는 브라우저가 계산) */
+    SUIKA("수박게임 대전", 2, 4, true);
 
     private final String label;
     private final int minSeats;

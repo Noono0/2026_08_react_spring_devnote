@@ -28,7 +28,7 @@ import { ModalDialog } from "@/shared/ui/ModalDialog";
 const FATAL_JOIN_ERRORS = new Set(["ONLINE_ROOM_NOT_FOUND", "ONLINE_ROOM_FULL", "ONLINE_ROOM_MEMBERS_ONLY"]);
 const NICKNAME_ERRORS = new Set(["ONLINE_NICKNAME_INVALID", "ONLINE_NICKNAME_TAKEN"]);
 /** 판이 커서 채팅·자리 목록을 아래로 내려 넓게 쓰는 게임(테트리스·뿌요뿌요는 isFallingPuzzle로 따로 본다) */
-const wideGameTypes = new Set(["BILLIARDS", "OLYMPIC", "CATCH_MIND", "SUTDA", "ALKKAGI"]);
+const wideGameTypes = new Set(["BILLIARDS", "OLYMPIC", "CATCH_MIND", "SUTDA", "ALKKAGI", "APPLE", "SUIKA"]);
 /** 방 안에서 받은 오류 알림은 잠깐 보여 주고 지운다 */
 export const ERROR_VISIBLE_MS = 4_000;
 

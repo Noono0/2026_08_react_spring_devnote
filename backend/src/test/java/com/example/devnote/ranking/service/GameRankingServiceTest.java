@@ -147,6 +147,8 @@ class GameRankingServiceTest {
             ErrorCode.GAME_RECORD_INVALID); // 스도쿠는 시간이 필요
         assertError(() -> service.recordSoloGame(new SoloGameRecordRequest(SoloGameCode.MEMORY, "NORMAL", "철수", null, 30, null), request),
             ErrorCode.GAME_RECORD_INVALID); // 카드 짝 맞추기는 시도 횟수도 필요
+        assertError(() -> service.recordSoloGame(new SoloGameRecordRequest(SoloGameCode.APPLE, null, "철수", 171, null, null), request),
+            ErrorCode.GAME_RECORD_INVALID); // 사과게임은 사과가 170개라 171점은 나올 수 없다
         assertError(() -> service.recordSoloGame(new SoloGameRecordRequest(SoloGameCode.TETRIS, null, "철", 100, null, null), request),
             ErrorCode.GAME_RANKING_NICKNAME_INVALID);
         assertError(() -> service.recordSoloGame(new SoloGameRecordRequest(SoloGameCode.TETRIS, null, "철수\n영희", 100, null, null), request),

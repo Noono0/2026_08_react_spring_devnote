@@ -47,6 +47,8 @@ export const soloRankingGames: SoloRankingGame[] = [
   { kind: "SOLO", id: "solo:GAME_2048", code: "GAME_2048", label: "2048", playRoute: "/games/online", metric: "SCORE", difficulties: [] },
   { kind: "SOLO", id: "solo:TETRIS", code: "TETRIS", label: "테트리스", playRoute: "/games/online", metric: "SCORE", difficulties: [] },
   { kind: "SOLO", id: "solo:PUYO", code: "PUYO", label: "뿌요뿌요", playRoute: "/games/online", metric: "SCORE", difficulties: [] },
+  { kind: "SOLO", id: "solo:APPLE", code: "APPLE", label: "사과게임", playRoute: "/games/online", metric: "SCORE", difficulties: [] },
+  { kind: "SOLO", id: "solo:SUIKA", code: "SUIKA", label: "수박게임", playRoute: "/games/online", metric: "SCORE", difficulties: [] },
   {
     kind: "SOLO", id: "solo:MINESWEEPER", code: "MINESWEEPER", label: "지뢰 찾기", playRoute: "/games/online", metric: "TIME",
     difficulties: minesweeperOrder.map((value) => ({ value, label: minesweeperDifficulties[value].label })),
@@ -88,6 +90,8 @@ export const onlineRankingGames: OnlineRankingGame[] = [
   onlineGame("CATCH_MIND", "캐치마인드"),
   onlineGame("JANGGI", "장기"),
   onlineGame("ALKKAGI", "알까기"),
+  onlineGame("APPLE", "사과게임 대전"),
+  onlineGame("SUIKA", "수박게임 대전"),
 ];
 
 export const defaultRankingGame: RankingGame = omokRankingGame;
