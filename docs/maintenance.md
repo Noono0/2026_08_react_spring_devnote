@@ -2,6 +2,17 @@
 
 [문서 목록으로](../README.md) · [작업 규칙](../AGENTS.md) · [검증 명령](verification.md)
 
+## 2026-10-18 — 알까기 백 시점·혼자 연습, 장기 빅장·반복, 캐치마인드 제한 시간, 편집기 접근성
+
+- **알까기 백 시점**: 백은 SVG 판 전체를 `rotate(180)` 묶음으로 돌리고, 화면 ↔ 판 좌표·각도(+180°)를 바꿀 때만 뒤집는다. 서버 좌표·규칙은 그대로다. 각도 슬라이더는 화면 기준(90° = 화면 위쪽).
+- **알까기 혼자 연습**: `features/games/alkkagi/alkkagiPhysics.ts`에 서버와 같은 상수·순서의 물리를 만들고(입력 불변), `AlkkagiPractice.tsx`로 흑 4개로 백 6개 떨어뜨리기·튕긴 횟수·처음부터를 넣었다. 재생은 `setInterval`과 cleanup. `practiceGames`에 ALKKAGI를 넣어 게임 목록의 '혼자 연습 가능' 묶음으로 옮겨졌다. 규칙이 Java·TypeScript 두 곳에 있으므로 같은 상황 테스트를 양쪽에 둔다.
+- **장기**: 빅장(두 궁이 같은 줄에서 마주 봄)을 다음 수에 풀지 않으면(쉬어도) 점수로 끝, 같은 국면(판 + 둘 차례) 세 번이면 점수로 끝. 화면 상태에 빅장 안내.
+- **캐치마인드 제한 시간**: `OnlineGame.tick(now)` 기본 메서드와 `OnlineRoom.tickGame`, `OnlineRoomService.tickGames`(`@Scheduled` 1초, 바뀐 방에만 전송·랭킹 저장은 잠금 밖)를 추가했다. 그림마다 80초, 차례 뒤 첫 tick에서 마감 시각을 정하고 지나면 정답 공개 후 다음 그림. 화면은 `TurnTimer`(1초마다 바뀌는 상태를 작은 컴포넌트에 가둠, aria-live 밖)로 남은 초를 보여 준다.
+- **문서 편집기 접근성**: `RichTextEditor`의 편집 영역에 `role="textbox"`·`aria-multiline`·`aria-label`(= editorLabel, 기본 "상세 내용")을 붙이고, E2E·컴포넌트 테스트를 `.ProseMirror` 대신 역할·이름으로 찾게 바꿨다.
+- **pnpm 안내**: `docs/local-development.md`에 pnpm은 `frontend` 안에서 실행해야 11 버전이 잡힌다는 점과 전역 pnpm 9에서 나는 오류를 적었다.
+- **작업 위치**: 사용자가 원래 폴더에서 작업하라고 했으나, 이 세션은 앱이 만든 worktree에 묶여 원래 폴더 편집이 막혀 있어 worktree(최신 main과 같게 맞춤)에서 작업했다.
+- **검증**: 백엔드 `gradlew.bat test` 337개 통과(1개 기본 건너뜀: 외부 크롤러). 프론트 `lint`·`typecheck`·`test`(141개 파일, 685개)·`build`·`e2e` 8개 통과. 별도 MySQL + 새 코드 백엔드(8090) + Vite(3000)에서 Playwright로 휴대폰 폭(iPhone 13, 390px)의 알까기 연습·백 시점(판 회전 확인)·캐치마인드(남은 시간 78초 표시)·장기·윷놀이·3장 섯다를 열어 가로 넘침 0px, 페이지 오류 0건을 확인했다. 실제 손가락 터치 조작과 80초가 실제로 다 지나는 장면은 확인하지 않았다(단위·서비스 테스트로 확인).
+
 ## 2026-10-18 — 알까기 정석·커스텀 모드
 
 - **방 옵션**: 기존 알 개수 옵션(4·6·8)을 `STANDARD`(정석, 처음 값 · 알 8개 고정 배치)와 `CUSTOM_4·6·8·10`(최대 개수 자유 배치)으로 바꿨다. 옵션이 없는 방도 정석으로 시작한다(`AlkkagiGame.create`).

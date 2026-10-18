@@ -1,4 +1,4 @@
-import { isFarEnough, toCanvasPoint, toDrawNumbers, wordHint } from "@/features/games/online/games/catchMindRules";
+import { isFarEnough, secondsLeft, toCanvasPoint, toDrawNumbers, wordHint } from "@/features/games/online/games/catchMindRules";
 
 describe("catchMindRules", () => {
   // 화면에 500×375로 줄여 보이는 그림판(왼쪽 위 = 100, 50)
@@ -23,6 +23,13 @@ describe("catchMindRules", () => {
     expect(isFarEnough(undefined, { x: 0, y: 0 })).toBe(true);
     expect(isFarEnough({ x: 0, y: 0 }, { x: 2, y: 2 })).toBe(false);
     expect(isFarEnough({ x: 0, y: 0 }, { x: 3, y: 4 })).toBe(true);
+  });
+
+  it("마감 시각까지 남은 초를 올림으로 세고, 지나면 0이다", () => {
+    expect(secondsLeft(10_000, 0)).toBe(10);
+    expect(secondsLeft(10_000, 9_001)).toBe(1);
+    expect(secondsLeft(10_000, 12_000)).toBe(0);
+    expect(secondsLeft(null, 0)).toBeNull();
   });
 
   it("제시어 글자 수 힌트를 만든다", () => {

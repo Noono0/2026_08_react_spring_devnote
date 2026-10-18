@@ -18,6 +18,8 @@ export const janggiSchema = z.object({
   myFormation: z.string().nullish(),
   turnSeat: z.number().int(),
   inCheck: z.boolean(),
+  /** 직전 수로 두 궁이 마주 봄(빅장). 지금 둘 사람이 풀지 않으면 점수로 끝난다 */
+  bikjang: z.boolean(),
   moves: z.array(moveSchema),
   canPass: z.boolean(),
   lastMove: moveSchema.nullish(),

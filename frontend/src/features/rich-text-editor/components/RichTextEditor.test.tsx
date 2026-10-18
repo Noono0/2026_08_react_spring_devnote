@@ -159,16 +159,17 @@ describe("RichTextEditor", () => {
       downloadUrl: "/api/v1/files/4/download",
       contentUrl: "/api/v1/files/4/content",
     });
-    const { container } = render(
+    render(
       <RichTextEditor
         imageUploadFunction={imageUploadFunction}
         handleContentChange={handleContentChange}
       />,
     );
-    const editableArea = container.querySelector<HTMLElement>(".ProseMirror");
+    // 편집 영역은 role="textbox"와 editorLabel(기본 "상세 내용")로 찾는다
+    const editableArea = await screen.findByRole("textbox", { name: "상세 내용" });
 
-    expect(editableArea).not.toBeNull();
-    fireEvent.paste(editableArea!, {
+    expect(editableArea).toHaveAttribute("aria-multiline", "true");
+    fireEvent.paste(editableArea, {
       clipboardData: {
         files: [imageFile],
         getData: () => "",

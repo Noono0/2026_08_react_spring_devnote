@@ -338,6 +338,13 @@ public class OnlineRoom {
         afterGameChange(now);
     }
 
+    /** 시간 흐름(OnlineGame.tick)을 공통 틀 게임에 전한다. 게임 상태가 바뀌었으면 true(방 사람들에게 보낼 것) */
+    public boolean tickGame(long now) {
+        if (status != Status.PLAYING || game == null || !game.tick(now)) return false;
+        afterGameChange(now);
+        return true;
+    }
+
     /** 게임이 남긴 안내를 채팅으로 옮기고, 끝났으면 방을 대기 상태로 돌린다 */
     private void afterGameChange(long now) {
         for (String announcement : game.drainAnnouncements()) addSystemMessage(announcement, now);

@@ -22,8 +22,9 @@ import java.util.List;
  * [장군] 내 궁이 잡힐 수 있는 수는 둘 수 없다(서버가 합법수만 보낸다). 장군을 막을 수 없으면 외통(패배).
  *   장군이 아닐 때는 한 수 쉴 수 있다(PASS). 둘이 연달아 쉬거나 200수가 되면 남은 기물 점수로 끝낸다.
  * [점수] 차 13 · 포 7 · 마 5 · 상 3 · 사 3 · 졸 2, 한(후수)에 덤 1.5점. 화면에는 반 점 단위로 보낸다(점수 × 2).
- *
- * ★ 학습용 단순화: 빅장(두 궁이 마주 보면 무승부)·같은 수 반복 금지 규칙은 넣지 않았다.
+ * [빅장] 수를 둔 뒤 두 궁이 같은 세로줄에서 사이에 아무것도 없이 마주 보면 "빅장"이다.
+ *   상대는 다음 수로 빅장을 풀어야 한다(사이에 기물을 넣거나 궁을 옮기기). 풀지 않으면(쉬어도) 그 자리에서 점수로 끝낸다.
+ * [같은 수 반복] 같은 국면(판 + 둘 차례)이 세 번 나오면 점수로 끝낸다. 서로 같은 수만 주고받아 끝나지 않는 판을 막는다.
  */
 public class JanggiGame implements OnlineGame {
     public static final int ROWS = 10;
@@ -43,7 +44,7 @@ public class JanggiGame implements OnlineGame {
      * scores: [초, 한] 반 점 단위(점수 × 2). moves: 내 차례일 때만 둘 수 있는 수
      */
     public record View(Integer mySeat, Phase phase, List<String> board, List<Boolean> arranged, String myFormation, int turnSeat,
-                       boolean inCheck, List<Move> moves, boolean canPass, Move lastMove, List<Integer> scores, int moveCount,
+                       boolean inCheck, boolean bikjang, List<Move> moves, boolean canPass, Move lastMove, List<Integer> scores, int moveCount,
                        List<String> log, Integer winnerSeat, String result, boolean finished) {}
 
     private final List<String> nicknames;
@@ -55,6 +56,10 @@ public class JanggiGame implements OnlineGame {
     private int turnSeat;
     private int moveCount;
     private int consecutivePasses;
+    /** 직전 수가 빅장을 만들었는지. 이번 수가 풀지 못하면 끝난다 */
+    private boolean bikjang;
+    /** 국면(판 + 둘 차례) → 나온 횟수. 같은 수 반복을 센다 */
+    private final java.util.Map<String, Integer> positionCounts = new java.util.HashMap<>();
     private Move lastMove;
     private Integer winnerSeat;
     private String result;
@@ -369,7 +374,18 @@ public class JanggiGame implements OnlineGame {
         afterTurn();
     }
 
-    /** 차례가 넘어간 뒤: 외통·장군·수 제한을 확인한다 */
+    /** 두 궁이 같은 세로줄에서 사이에 아무것도 없이 마주 보는지(빅장) */
+    boolean kingsFacing() {
+        int[] cho = findKing(0);
+        int[] han = findKing(1);
+        if (cho == null || han == null || cho[1] != han[1]) return false;
+        for (int row = Math.min(cho[0], han[0]) + 1; row < Math.max(cho[0], han[0]); row++) {
+            if (board[row][cho[1]] != '.') return false;
+        }
+        return true;
+    }
+
+    /** 차례가 넘어간 뒤: 외통 → 같은 수 반복 → 빅장 → 장군 알림 → 수 제한 순서로 확인한다 */
     private void afterTurn() {
         boolean check = isInCheck(turnSeat);
         if (check && legalMoves(turnSeat).isEmpty()) {
@@ -378,6 +394,22 @@ public class JanggiGame implements OnlineGame {
             phase = Phase.END;
             say(result);
             return;
+        }
+        String position = turnSeat + ":" + String.join("/", java.util.Arrays.stream(board).map(String::new).toList());
+        if (positionCounts.merge(position, 1, Integer::sum) >= 3) {
+            finishByScore("같은 국면이 세 번 나와");
+            return;
+        }
+        if (kingsFacing()) {
+            if (bikjang) {
+                // 직전 수가 빅장을 만들었는데 이번 수(방금 둔 사람)도 풀지 않았다
+                finishByScore("빅장을 풀지 않아");
+                return;
+            }
+            bikjang = true;
+            say("빅장! " + (turnSeat == 0 ? "초" : "한") + "이 이번 수에 풀지 않으면 점수로 끝납니다.");
+        } else {
+            bikjang = false;
         }
         if (check) say("장군! " + (turnSeat == 0 ? "초" : "한") + "은 궁을 지키세요.");
         if (moveCount >= MAX_MOVES) finishByScore(MAX_MOVES + "수가 되어");
@@ -454,7 +486,7 @@ public class JanggiGame implements OnlineGame {
         boolean myTurn = player && phase == Phase.PLAY && seat == turnSeat;
         boolean check = phase == Phase.PLAY && isInCheck(turnSeat);
         return new View(player ? seat : null, phase, rows, List.of(formations[0] != null, formations[1] != null),
-            player ? formations[seat] : null, turnSeat, check, myTurn ? legalMoves(seat) : List.of(), myTurn && !check, lastMove,
+            player ? formations[seat] : null, turnSeat, check, phase == Phase.PLAY && bikjang, myTurn ? legalMoves(seat) : List.of(), myTurn && !check, lastMove,
             phase == Phase.SETUP ? List.of(0, 3) : halfPointScores(), moveCount, List.copyOf(log), winnerSeat, result, phase == Phase.END);
     }
 

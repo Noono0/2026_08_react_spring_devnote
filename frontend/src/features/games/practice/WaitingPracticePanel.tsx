@@ -6,6 +6,7 @@
  * 펼쳐 두었을 때 방장이 게임 종류나 옵션을 바꾸면 key가 바뀌어 연습 판이 처음부터 다시 만들어진다.
  */
 import { useState } from "react";
+import { AlkkagiPractice } from "./AlkkagiPractice";
 import { Game2048Practice } from "./Game2048Practice";
 import { MemoryPractice } from "./MemoryPractice";
 import { MinesweeperPractice } from "./MinesweeperPractice";
@@ -45,6 +46,8 @@ const PracticeBody = ({ gameType, gameOption, nickname }: { gameType: PracticeGa
       return <SudokuPractice nickname={nickname} difficulty={toSudokuDifficulty(gameOption)} />;
     case "OLYMPIC":
       return <OlympicPractice />;
+    case "ALKKAGI":
+      return <AlkkagiPractice />;
   }
 };
 

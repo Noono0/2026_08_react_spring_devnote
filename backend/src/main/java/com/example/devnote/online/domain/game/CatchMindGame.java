@@ -20,7 +20,10 @@ import java.util.Random;
  * [숨기기] 제시어는 출제자에게만 보낸다(다른 사람은 글자 수만 안다). 출제자는 차례 동안 채팅도 막는다(canChat).
  *   채팅으로 정답을 알려 주는 반칙을 서버가 막는 것이다.
  *
- * ★ 마피아처럼 시간제한이 없는 학습용 버전이다. 아무도 못 맞히면 출제자가 넘기기(PASS)를 누른다.
+ * [제한 시간] 그림마다 80초. 시간이 다 되면 정답을 공개하고 다음 그림으로 넘어간다(점수 없음).
+ *   서버가 1초마다 tick(now)을 부르고, 차례가 시작된 뒤 첫 tick에서 마감 시각(turnDeadline)을 정한다.
+ *   화면은 마감 시각까지 남은 초를 스스로 센다(내 컴퓨터 시계가 많이 틀리면 몇 초 어긋날 수 있다).
+ *   아무도 못 맞힐 것 같으면 시간이 다 되기 전에 출제자가 넘기기(PASS)를 눌러도 된다.
  */
 public class CatchMindGame implements OnlineGame {
     public static final int CANVAS_WIDTH = 1000;
@@ -34,6 +37,7 @@ public class CatchMindGame implements OnlineGame {
     /** 한 그림의 점 좌표 숫자 합계 상한. 그림 전체를 매번 모두에게 보내므로 너무 커지지 않게 막는다 */
     static final int MAX_POINT_NUMBERS_PER_DRAWING = 12_000;
     static final int GUESS_MAX_LENGTH = 20;
+    public static final long TURN_MILLIS = 80_000;
     private static final int GUESSER_POINTS = 10;
     private static final int DRAWER_POINTS = 5;
 
@@ -56,7 +60,7 @@ public class CatchMindGame implements OnlineGame {
 
     public record View(Integer mySeat, Phase phase, int drawerSeat, int turnNumber, int totalTurns, String word,
                        int wordLength, List<Stroke> strokes, List<Integer> scores, List<Boolean> active,
-                       List<String> guesses, List<String> log, List<Integer> winnerSeats, boolean finished) {}
+                       List<String> guesses, List<String> log, List<Integer> winnerSeats, Long turnDeadline, boolean finished) {}
 
     private final List<String> nicknames;
     private final List<String> words;
@@ -73,6 +77,8 @@ public class CatchMindGame implements OnlineGame {
     private int turnNumber = 1;
     private int wordIndex;
     private int pointNumbersInDrawing;
+    /** 이번 그림의 마감 시각(epoch ms). 차례가 바뀌면 null이 되고 다음 tick에서 다시 정한다 */
+    private Long turnDeadline;
 
     public CatchMindGame(List<String> nicknames, Random random, int rounds) {
         this(nicknames, shuffled(random), rounds);
@@ -200,8 +206,22 @@ public class CatchMindGame implements OnlineGame {
         pointNumbersInDrawing = 0;
     }
 
+    @Override
+    public boolean tick(long nowMillis) {
+        if (phase == Phase.END) return false;
+        if (turnDeadline == null) {
+            turnDeadline = nowMillis + TURN_MILLIS; // 새 차례의 마감 시각을 정한다(화면에 남은 시간이 보이도록 true)
+            return true;
+        }
+        if (nowMillis < turnDeadline) return false;
+        say("시간 초과! 정답은 '" + currentWord() + "'였습니다.");
+        nextTurn();
+        return true;
+    }
+
     /** 다음 그림으로. 남은 차례가 없거나 사람이 1명뿐이면 끝낸다 */
     private void nextTurn() {
+        turnDeadline = null;
         clearDrawing();
         guesses.clear();
         if (turnNumber >= totalTurns || activeCount() < 2) {
@@ -286,7 +306,7 @@ public class CatchMindGame implements OnlineGame {
         for (boolean value : active) activeView.add(value);
         return new View(player ? seat : null, phase, drawerSeat, turnNumber, totalTurns, showWord ? currentWord() : null,
             currentWord().length(), List.copyOf(strokes), scoreView, activeView, List.copyOf(guesses), List.copyOf(log),
-            winnerSeats(), phase == Phase.END);
+            winnerSeats(), phase == Phase.END ? null : turnDeadline, phase == Phase.END);
     }
 
     @Override

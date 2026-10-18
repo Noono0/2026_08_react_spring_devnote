@@ -305,6 +305,11 @@ corepack pnpm install --frozen-lockfile
 
 `corepack enable`을 한 번 실행해 두면 이후에는 `pnpm install`처럼 짧게 쓸 수 있습니다. 설치 뒤 `npm run dev`, `npm run test` 같은 스크립트 실행 명령은 그대로 사용할 수 있습니다.
 
+> **pnpm 명령은 반드시 `frontend` 폴더 안에서 실행하세요.** 프로젝트가 정한 pnpm 11 버전은 `frontend/package.json`이 있는 폴더 안에서만 적용됩니다.
+> 다른 폴더에서 `pnpm --dir frontend install`처럼 실행하면 PC에 전역으로 설치된 pnpm(예: Volta의 pnpm 9)이 실행되어
+> `ERROR  packages field missing or empty`(pnpm 11 형식의 `pnpm-workspace.yaml`을 읽지 못함)나 `ERR_PNPM_NO_PKG_MANIFEST`(package.json 없는 폴더) 오류가 납니다.
+> 지금 버전은 `frontend` 폴더 안에서 `pnpm -v`로 확인하고(11.19.0이어야 함), 전역 pnpm도 맞추고 싶으면 Volta 사용자는 `volta install pnpm@11.19.0`을 실행합니다.
+
 의존성 설치가 끝나면 브라우저 Mock API를 위한 Service Worker를 생성합니다.
 
 ```bash

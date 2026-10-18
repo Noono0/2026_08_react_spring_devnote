@@ -48,6 +48,15 @@ public interface OnlineGame {
         return false;
     }
 
+    /**
+     * 시간이 흘렀음을 알린다(OnlineRoomService가 1초마다 부른다). 캐치마인드 제한 시간처럼
+     * "아무도 행동하지 않아도 바뀌는" 게임만 구현하고, 상태가 바뀌었으면 true를 돌려준다(그때만 방 사람들에게 보낸다).
+     * ★ 게임 객체는 시계를 직접 읽지 않고 now를 받는다. 그래야 테스트에서 시간을 마음대로 정할 수 있다.
+     */
+    default boolean tick(long nowMillis) {
+        return false;
+    }
+
     /** 지난번 이후 새로 생긴 안내 문구(채팅에 시스템 메시지로 남긴다). 꺼내면 비워진다 */
     default List<String> drainAnnouncements() {
         return List.of();

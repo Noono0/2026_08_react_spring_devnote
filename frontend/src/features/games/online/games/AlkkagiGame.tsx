@@ -83,10 +83,18 @@ export const AlkkagiGame = ({ room, mySeat, connected, send }: CommonGamePropert
     setPulling(false);
   };
 
-  const pointerToBoard = (event: PointerEvent<SVGElement>) => {
+  // ★ 백은 판을 180° 돌려 내 알이 아래에 오게 본다(장기의 한과 같은 방식).
+  //   서버 좌표는 그대로 두고, 화면 ↔ 판 좌표를 바꿀 때만 뒤집는다. 각도도 180°를 더해 바꾼다.
+  //   angle 상태는 "화면에서 보이는 방향"(90 = 화면 위쪽)으로 들고 있다가 보낼 때 판 기준으로 바꾼다.
+  const flipped = mySeat === 1;
+  const flipAngle = (value: number) => (flipped ? (value + 180) % 360 : value);
+  const screenToBoard = (clientX: number, clientY: number): BoardPoint | null => {
     const box = boardRef.current?.getBoundingClientRect();
-    return box ? toBoardPoint(event.clientX, event.clientY, box) : { x: 0, y: 0 };
+    if (!box) return null;
+    const point = toBoardPoint(clientX, clientY, box);
+    return flipped ? { x: ALKKAGI_BOARD - point.x, y: ALKKAGI_BOARD - point.y } : point;
   };
+  const pointerToBoard = (event: PointerEvent<SVGElement>) => screenToBoard(event.clientX, event.clientY) ?? { x: 0, y: 0 };
 
   const startPull = (event: PointerEvent<SVGCircleElement>, index: number) => {
     if (!myTurn || game.stones[index]?.side !== mySeat) return;
@@ -98,7 +106,7 @@ export const AlkkagiGame = ({ room, mySeat, connected, send }: CommonGamePropert
   const movePull = (event: PointerEvent<SVGElement>) => {
     if (!pulling || !selectedPoint) return;
     const aim = aimFromPull(selectedPoint, pointerToBoard(event));
-    setAngle(aim.angle);
+    setAngle(flipAngle(aim.angle)); // 판 기준 각도 → 화면에서 보이는 각도
     setPower(aim.power);
   };
 
@@ -109,7 +117,7 @@ export const AlkkagiGame = ({ room, mySeat, connected, send }: CommonGamePropert
     // 거의 안 당기고 놓으면(그냥 누른 것) 고르기만 한다
     if (Math.hypot(pointer.x - selectedPoint.x, pointer.y - selectedPoint.y) < ALKKAGI_STONE_RADIUS) return;
     const aim = aimFromPull(selectedPoint, pointer);
-    sendFlick(selected, aim.angle, aim.power);
+    sendFlick(selected, aim.angle, aim.power); // 끌어당기기는 판 좌표로 계산하므로 이미 판 기준 각도
   };
 
   /** 커스텀 배치: 그 교차점에 놓기(이미 내 알이 있으면 서버가 뺀다) */
@@ -117,19 +125,18 @@ export const AlkkagiGame = ({ room, mySeat, connected, send }: CommonGamePropert
 
   const clickBoard = (event: MouseEvent<SVGSVGElement>) => {
     if (!canPlace || mySeat == null) return;
-    const box = boardRef.current?.getBoundingClientRect();
-    if (!box) return;
-    const point = snapToGrid(toBoardPoint(event.clientX, event.clientY, box));
+    const boardPoint = screenToBoard(event.clientX, event.clientY);
+    const point = boardPoint ? snapToGrid(boardPoint) : null;
     if (point && isOwnHalf(mySeat, point.row)) sendPlace(point.col, point.row);
   };
 
-  const aimEnd = selectedPoint ? aimLineEnd(selectedPoint, angle, power) : null;
+  const aimEnd = selectedPoint ? aimLineEnd(selectedPoint, flipAngle(angle), power) : null;
   const sideName = (seat: number) => (seat === 0 ? "흑" : "백");
   const opponent = mySeat === 0 ? 1 : 0;
   const status = game.finished ? room.lastResult ?? "게임 끝"
     : settingUp ? (mySeat == null ? "두 사람이 알을 놓는 중입니다. 배치는 둘 다 끝나면 공개됩니다."
       : game.ready[mySeat] ? `배치 완료! 상대(${game.ready[opponent] ? "완료" : `${game.placedCounts[opponent] ?? 0}개 놓는 중`})를 기다리는 중…`
-      : `내 쪽(${mySeat === 0 ? "아래" : "위"} 절반)의 교차점을 눌러 알을 놓으세요. 다시 누르면 뺍니다. (${myPlaced}/${game.maxStones}개)`)
+      : `내 쪽(화면 아래 절반)의 교차점을 눌러 알을 놓으세요. 다시 누르면 뺍니다. (${myPlaced}/${game.maxStones}개)`)
     : replaying ? "알이 굴러가는 중…"
     : myTurn ? (selected === null ? "튕길 내 알을 누르세요." : "알을 끌어당겼다 놓거나, 아래에서 각도·힘을 정해 튕기세요.")
     : `${sideName(game.turnSeat)}(${nameAt(game.turnSeat)}) 차례`;
@@ -151,6 +158,8 @@ export const AlkkagiGame = ({ room, mySeat, connected, send }: CommonGamePropert
       <svg ref={boardRef} className={`alkkagi-board${myTurn ? " playable" : ""}${canPlace ? " placing" : ""}`} viewBox={`0 0 ${ALKKAGI_BOARD} ${ALKKAGI_BOARD}`}
         role="img" aria-label={settingUp ? `알까기 배치 판: 내 알 ${myPlaced}개` : `알까기 판: 흑 ${game.remaining[0]}개, 백 ${game.remaining[1]}개`}
         onPointerMove={movePull} onPointerUp={endPull} onPointerCancel={() => setPulling(false)} onClick={clickBoard}>
+        {/* 판 전체를 한 묶음(g)으로 그려, 백일 때 묶음째 180° 돌린다 */}
+        <g transform={flipped ? `rotate(180 ${ALKKAGI_BOARD / 2} ${ALKKAGI_BOARD / 2})` : undefined}>
         <rect width={ALKKAGI_BOARD} height={ALKKAGI_BOARD} className="alkkagi-wood" />
         {/* 배치 중에는 내가 놓을 수 있는 절반(흑 = 아래, 백 = 위)을 밝게 표시한다 */}
         {canPlace ? (
@@ -176,6 +185,7 @@ export const AlkkagiGame = ({ room, mySeat, connected, send }: CommonGamePropert
               onPointerDown={(event) => startPull(event, index)} />
           );
         })}
+        </g>
       </svg>
 
       {canPlace ? (
@@ -216,7 +226,7 @@ export const AlkkagiGame = ({ room, mySeat, connected, send }: CommonGamePropert
             힘 {power}
             <input type="range" min={MIN_POWER} max={MAX_POWER} value={power} onChange={(event) => setPower(Number(event.target.value))} />
           </label>
-          <button type="button" disabled={selected === null} onClick={() => selected !== null && sendFlick(selected, angle, power)}>튕기기</button>
+          <button type="button" disabled={selected === null} onClick={() => selected !== null && sendFlick(selected, flipAngle(angle), power)}>튕기기</button>
         </div>
       ) : null}
 

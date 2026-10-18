@@ -297,6 +297,27 @@ class OnlineRoomServiceTest {
     }
 
     @Test
+    void 일초마다_게임에_시간을_알리고_바뀐_방에만_상태를_보낸다() {
+        OnlineRoomCreatedResponse created = service.createRoom(new OnlineRoomCreateRequest("그림", OnlineGameType.CATCH_MIND, 2, null, false, null), new MockHttpServletRequest());
+        OnlineConnection first = new OnlineConnection("s1", null, null);
+        OnlineConnection second = new OnlineConnection("s2", null, null);
+        service.join(first, joinMessage(created.roomId(), "하나", null, created.hostToken()));
+        service.join(second, joinMessage(created.roomId(), "둘둘", null, null));
+        service.sit(first, 0);
+        service.sit(second, 1);
+        service.start(first);
+
+        int before = sender.sent.size();
+        service.tickGames(); // 첫 tick: 마감 시각이 정해져 상태가 바뀐다
+        assertThat(sender.sent.size()).isGreaterThan(before);
+        var view = (CatchMindGame.View) sender.lastRoomStateFor("s2").room().game();
+        assertThat(view.turnDeadline()).isEqualTo(5_000_000 + CatchMindGame.TURN_MILLIS); // 테스트 시계는 5,000,000ms에 멈춰 있다
+        int afterFirst = sender.sent.size();
+        service.tickGames(); // 시간이 그대로면 바뀐 것이 없어 보내지 않는다
+        assertThat(sender.sent.size()).isEqualTo(afterFirst);
+    }
+
+    @Test
     void 캐치마인드는_제시어를_출제자에게만_보내고_출제자의_채팅을_막는다() {
         OnlineRoomCreatedResponse created = service.createRoom(new OnlineRoomCreateRequest("그림", OnlineGameType.CATCH_MIND, 2, null, false, null), new MockHttpServletRequest());
         OnlineConnection first = new OnlineConnection("s1", null, null);

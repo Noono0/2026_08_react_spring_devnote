@@ -1207,7 +1207,7 @@ describe("온라인 장기", () => {
     ...twoPlayers,
     gameType: "JANGGI", gameTypeLabel: "장기",
     game: {
-      mySeat: 0, phase: "PLAY", board: startBoard, arranged: [true, true], myFormation: "HEHE", turnSeat: 0, inCheck: false,
+      mySeat: 0, phase: "PLAY", board: startBoard, arranged: [true, true], myFormation: "HEHE", turnSeat: 0, inCheck: false, bikjang: false,
       moves: [{ fromRow: 6, fromCol: 0, toRow: 5, toCol: 0 }, { fromRow: 6, fromCol: 0, toRow: 6, toCol: 1 }],
       canPass: true, lastMove: null, scores: [144, 147], moveCount: 0, log: [], winnerSeat: null, result: null, finished: false, ...game,
     },
@@ -1251,6 +1251,11 @@ describe("온라인 장기", () => {
     expect(cells[0]).toHaveAccessibleName("10줄 9칸 초 차"); // 한 쪽에서 보면 왼쪽 위가 초의 오른쪽 차
     expect(screen.getByText(/장군!/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "한 수 쉬기" })).not.toBeInTheDocument();
+  });
+
+  it("빅장이면 이번 수에 풀어야 한다고 알려 준다", () => {
+    openJanggi({ bikjang: true });
+    expect(screen.getByText(/빅장! 이번 수에 풀지 않으면 점수로 끝나요/)).toBeInTheDocument();
   });
 });
 
@@ -1317,6 +1322,21 @@ describe("온라인 알까기", () => {
     openAlkkagi({ mode: "CUSTOM", phase: "SETUP", maxStones: 3, placedCounts: [2, 2], ready: [true, false], remaining: [0, 0] });
     expect(screen.getByText("배치 완료! 상대(2개 놓는 중)를 기다리는 중…")).toBeInTheDocument();
     expect(screen.queryByRole("group", { name: "알 배치" })).not.toBeInTheDocument();
+  });
+
+  it("백은 판을 돌려 보고, 화면 위쪽(90도)으로 튕기면 판 기준 270도로 보낸다", () => {
+    renderRoom();
+    const socket = latestSocket();
+    socket.serverOpen();
+    socket.serverSend({ type: "ROOM_STATE", room: { ...alkkagiRoom({ mySeat: 1, turnSeat: 1 }), myParticipantId: "p2" } });
+    const board = screen.getByRole("img", { name: /알까기 판/ });
+    expect(board.querySelector("g")).toHaveAttribute("transform", "rotate(180 500 500)");
+    const controls = screen.getByRole("group", { name: "튕기기 조작" });
+    fireEvent.change(within(controls).getByLabelText("내 알"), { target: { value: "2" } });
+    fireEvent.change(within(controls).getByLabelText(/각도/), { target: { value: "90" } });
+    fireEvent.change(within(controls).getByLabelText(/힘/), { target: { value: "40" } });
+    fireEvent.click(within(controls).getByRole("button", { name: "튕기기" }));
+    expect(socket.sent.at(-1)).toEqual({ type: "GAME_ACTION", action: "FLICK", numbers: [2, 270, 40] });
   });
 
   it("상대 차례에는 조작이 없다", () => {
@@ -1436,6 +1456,14 @@ describe("온라인 캐치마인드", () => {
     expect(socket.sent.at(-1)).toEqual({ type: "GAME_ACTION", action: "GUESS", text: "사과" });
     expect(screen.getByLabelText("정답")).toHaveValue("");
     expect(screen.getByRole("list", { name: "틀린 답" })).toHaveTextContent("영희: 배");
+  });
+
+  it("마감 시각이 오면 남은 시간을 보여 주고, 10초 이하면 강조한다", () => {
+    openCatchMind({ turnDeadline: Date.now() + 45_000 });
+    expect(screen.getByRole("timer", { name: /남은 시간 (44|45)초/ })).not.toHaveClass("urgent");
+    cleanup();
+    openCatchMind({ turnDeadline: Date.now() + 5_000 });
+    expect(screen.getByRole("timer", { name: /남은 시간 [45]초/ })).toHaveClass("urgent");
   });
 
   it("끝나면 승자와 점수를 보여 준다", () => {

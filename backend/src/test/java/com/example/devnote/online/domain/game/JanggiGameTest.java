@@ -141,6 +141,46 @@ class JanggiGameTest {
     }
 
     @Test
+    void 빅장을_다음_수에_풀지_않으면_점수로_끝난다() {
+        JanggiGame game = new JanggiGame(TWO);
+        game.setBoard(rows("1:....k....", "3:p........", "8:...K.....", "9:R........"), 0);
+        game.act(0, move(8, 3, 8, 4)); // 초 궁이 한 궁과 같은 줄로 → 빅장
+        assertThat(game.kingsFacing()).isTrue();
+        assertThat(game.drainAnnouncements()).anyMatch(text -> text.startsWith("빅장!"));
+        assertThat(game.isFinished()).isFalse();
+        game.act(1, move(3, 0, 4, 0)); // 한이 빅장을 풀지 않음
+        assertThat(game.isFinished()).isTrue();
+        assertThat(game.resultText()).contains("빅장을 풀지 않아").contains("철수 승리"); // 초 13점 vs 한 2 + 1.5점
+    }
+
+    @Test
+    void 빅장을_풀면_계속_둔다() {
+        JanggiGame game = new JanggiGame(TWO);
+        game.setBoard(rows("1:....k....", "3:p........", "8:...K.....", "9:R........"), 0);
+        game.act(0, move(8, 3, 8, 4));
+        game.act(1, move(1, 4, 1, 3)); // 한 궁이 옆으로 비켜 빅장 해제
+        assertThat(game.kingsFacing()).isFalse();
+        assertThat(game.isFinished()).isFalse();
+        game.act(0, move(9, 0, 9, 1));
+        assertThat(game.isFinished()).isFalse();
+    }
+
+    @Test
+    void 같은_국면이_세_번_나오면_점수로_끝난다() {
+        JanggiGame game = new JanggiGame(TWO);
+        game.setBoard(rows("0:........r", "1:...k.....", "8:....K....", "9:R........"), 0);
+        int[][] cycle = {{9, 0, 9, 1}, {0, 8, 0, 7}, {9, 1, 9, 0}, {0, 7, 0, 8}};
+        for (int index = 0; index < 8; index++) {
+            int[] step = cycle[index % 4];
+            game.act(index % 2, move(step[0], step[1], step[2], step[3]));
+        }
+        assertThat(game.isFinished()).isFalse(); // 같은 국면 두 번까지는 괜찮다
+        game.act(0, move(9, 0, 9, 1)); // 세 번째
+        assertThat(game.isFinished()).isTrue();
+        assertThat(game.resultText()).contains("같은 국면이 세 번");
+    }
+
+    @Test
     void 나가면_상대가_이긴다() {
         JanggiGame game = new JanggiGame(TWO);
         game.leave(1);

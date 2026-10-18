@@ -49,6 +49,8 @@ export const catchMindSchema = z.object({
   guesses: z.array(z.string()),
   log: z.array(z.string()),
   winnerSeats: z.array(z.number().int()),
+  /** 이번 그림의 마감 시각(epoch ms). 차례가 막 바뀐 직후 1초 정도는 아직 없을 수 있다 */
+  turnDeadline: z.number().int().nullish(),
   finished: z.boolean(),
 });
 
@@ -110,6 +112,10 @@ export const drawStroke = (context: CanvasRenderingContext2D, stroke: CatchMindS
   }
   context.stroke();
 };
+
+/** 마감 시각까지 남은 초(0 밑으로는 내려가지 않음). 마감 시각이 없으면 null */
+export const secondsLeft = (deadline: number | null | undefined, now: number): number | null =>
+  deadline == null ? null : Math.max(0, Math.ceil((deadline - now) / 1000));
 
 /** 제시어 글자 수 힌트: "○○○ (3글자)" */
 export const wordHint = (length: number) => `${"○".repeat(length)} (${length}글자)`;

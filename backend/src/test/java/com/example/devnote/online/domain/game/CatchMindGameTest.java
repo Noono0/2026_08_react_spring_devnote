@@ -116,6 +116,24 @@ class CatchMindGameTest {
     }
 
     @Test
+    void 제한_시간이_지나면_정답을_공개하고_다음_그림으로_넘어간다() {
+        CatchMindGame game = new CatchMindGame(THREE, WORDS, 1);
+        game.drainAnnouncements();
+        assertThat(view(game, 1).turnDeadline()).isNull(); // 첫 tick 전에는 마감 시각이 없다
+        assertThat(game.tick(1_000)).isTrue();
+        assertThat(view(game, 1).turnDeadline()).isEqualTo(1_000 + CatchMindGame.TURN_MILLIS);
+        assertThat(game.tick(1_000 + CatchMindGame.TURN_MILLIS - 1)).isFalse(); // 아직 시간이 남았다
+        game.act(0, draw(0, 4, 10, 10));
+        assertThat(game.tick(1_000 + CatchMindGame.TURN_MILLIS)).isTrue();
+        CatchMindGame.View next = view(game, 1);
+        assertThat(next.drawerSeat()).isEqualTo(1);
+        assertThat(next.scores()).containsOnly(0); // 시간 초과는 점수 없음
+        assertThat(next.strokes()).isEmpty();
+        assertThat(next.turnDeadline()).isNull(); // 다음 tick에서 새 마감 시각
+        assertThat(game.drainAnnouncements()).anyMatch(text -> text.startsWith("시간 초과! 정답은 '사과'"));
+    }
+
+    @Test
     void 섞은_제시어로_시작한다() {
         CatchMindGame game = new CatchMindGame(List.of("가", "나"), new Random(1), 3);
         assertThat(view(game, 0).totalTurns()).isEqualTo(6);

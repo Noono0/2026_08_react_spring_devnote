@@ -30,9 +30,9 @@ test.describe("14단계 문서 CRUD (MSW)", () => {
     await page.getByLabel("문서 제목").fill("E2E로 등록한 문서");
     // 라벨 안에 설명 문구(<small>)도 들어 있어 이름이 "태그 쉼표로 구분…"이 된다. 정규식으로 앞부분만 맞춘다.
     await page.getByLabel(/^태그/).fill("E2E, 스모크");
-    // Tiptap 에디터는 <input>이 아니라 contenteditable 영역이다. 지금은 접근 가능한 이름이 없어서
-    // Tiptap이 붙이는 .ProseMirror 클래스로 찾는다. (라벨이 생기면 getByRole("textbox", { name })으로 바꾸자)
-    await page.locator(".ProseMirror").click();
+    // Tiptap 에디터는 <input>이 아니라 contenteditable 영역이다. RichTextEditor가 role="textbox"와
+    // 이름(aria-label = editorLabel, 기본 "상세 내용")을 붙여 두어 CSS 클래스 대신 역할과 이름으로 찾는다.
+    await page.getByRole("textbox", { name: "상세 내용" }).click();
     await page.keyboard.type("E2E 테스트로 작성한 본문입니다.");
     await page.getByRole("button", { name: "문서 등록" }).click();
 
