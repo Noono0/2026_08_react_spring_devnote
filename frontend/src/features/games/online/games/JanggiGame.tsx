@@ -60,7 +60,7 @@ export const JanggiGame = ({ room, mySeat, connected, send }: CommonGameProperti
 
   const status = game.finished ? game.result ?? room.lastResult ?? "대국 끝"
     : game.phase === "SETUP" ? "마·상 위치(상차림)를 고르세요. 둘 다 고르면 초부터 둡니다."
-    : `${sideName(game.turnSeat)}(${nameAt(game.turnSeat)}) 차례${game.inCheck ? " — 장군!" : ""}${myTurn ? " · 내 기물을 고르세요" : ""}`;
+    : `${sideName(game.turnSeat)}(${nameAt(game.turnSeat)}) 차례${game.inCheck ? " — 장군!" : ""}${game.bikjang ? " — 빅장! 이번 수에 풀지 않으면 점수로 끝나요" : ""}${myTurn ? " · 내 기물을 고르세요" : ""}`;
 
   return (
     <div className="janggi">

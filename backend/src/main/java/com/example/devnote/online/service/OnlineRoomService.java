@@ -269,6 +269,25 @@ public class OnlineRoomService {
         roomStore.removeExpiredEmptyRooms(now());
     }
 
+    /**
+     * 1초마다 진행 중인 방의 게임에 시간 흐름을 알린다(캐치마인드 제한 시간 등).
+     * 방마다 잠근 뒤 바뀐 방에만 상태를 보내고, 끝난 판의 랭킹 저장은 잠금 밖에서 한다(withRoom과 같은 순서).
+     */
+    @Scheduled(fixedDelay = 1_000)
+    public void tickGames() {
+        long now = now();
+        for (OnlineRoom room : roomStore.findAll()) {
+            OnlineMatchResult finishedMatch = null;
+            synchronized (room) {
+                if (room.tickGame(now)) {
+                    broadcast(room, true);
+                    finishedMatch = room.drainFinishedMatch();
+                }
+            }
+            saveFinishedMatch(finishedMatch);
+        }
+    }
+
     // ── 도우미 ──────────────────────────────────────────────────────
 
     /** 내가 들어가 있는 방을 잠근 채 action을 하고, 바뀐 내용을 방 사람 모두에게 알린다 */

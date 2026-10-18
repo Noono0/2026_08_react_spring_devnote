@@ -545,6 +545,10 @@ button.battleship-cell:hover { background: #3a8fd0; filter: none; }
 
 /* 캐치마인드: 그림판은 실제 크기 1000×750을 화면 너비에 맞춰 줄여 보여 준다(좌표는 catchMindRules.ts가 비율로 바꾼다) */
 .catch-mind { display: grid; gap: 10px; width: 100%; }
+.catch-mind-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; }
+.catch-mind-head .game-status { margin: 0; }
+.catch-mind-timer { padding: 4px 12px; border-radius: 999px; color: #fff; background: #1c7ed6; font-weight: 800; font-variant-numeric: tabular-nums; }
+.catch-mind-timer.urgent { background: #e03131; }
 .catch-mind-word { margin: 0; padding: 8px 14px; border-left: 6px solid var(--warning-color); border-radius: 10px; background: var(--background-muted); font-size: 18px; }
 .catch-mind-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .catch-mind-tools [role="group"] { display: flex; flex-wrap: wrap; gap: 4px; }

@@ -151,6 +151,10 @@ export const RichTextEditor = ({
     content: initialContent ?? { type: "doc", content: [{ type: "paragraph" }] },
 
     editorProps: {
+      // ★ 편집 영역(contenteditable)에 역할과 이름을 붙인다.
+      //   이게 없으면 화면 낭독기는 "편집 가능" 정도만 읽어 무엇을 쓰는 칸인지 알 수 없고,
+      //   테스트도 getByRole("textbox", { name: "상세 내용" })으로 찾을 수 없어 CSS 클래스(.ProseMirror)에 기대야 한다.
+      attributes: { role: "textbox", "aria-multiline": "true", "aria-label": editorLabel },
       // ★ 붙여넣기(Ctrl+V) 가로채기.
       //   클립보드에 이미지가 있으면 자동으로 업로드해 본문에 넣는다.
       //   화면을 캡처해서 바로 붙여넣는 흔한 사용 방식을 지원하는 것이다.
