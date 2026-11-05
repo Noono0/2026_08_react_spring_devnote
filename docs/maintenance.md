@@ -2,6 +2,12 @@
 
 [문서 목록으로](../README.md) · [작업 규칙](../AGENTS.md) · [검증 명령](verification.md)
 
+## 2026-11-05 — E2E CI 실행 환경 고정
+
+- **원인**: GitHub의 `ubuntu-latest` 실행 환경이 Ubuntu 26.04로 바뀌면서 Playwright 1.55의 Chromium 설치가 지원되지 않아, E2E 테스트 시작 전에 CI가 실패했습니다.
+- **수정**: `frontend-e2e` 작업만 `ubuntu-24.04`로 고정했습니다. Playwright 버전과 다른 CI 작업의 실행 환경은 그대로입니다.
+- **검증 범위**: `git diff --check` 통과. 로컬 Python은 Microsoft Store 별칭뿐이라 정적 검사와 Python 회귀 테스트는 로컬에서 실행하지 못했습니다. PR CI에서 이 검사와 E2E를 확인합니다.
+
 ## 2026-10-24 — 직접 해 보기 "미리보기에 적용" 버튼
 
 - **사용자 요청**: Sandpack 미리보기 오른쪽 아래의 작은 새로고침 아이콘이 잘 보이지 않아, 누르면 적용된다는 것을 바로 알 수 있는 버튼으로 바꿨습니다.
