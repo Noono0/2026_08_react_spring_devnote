@@ -60,7 +60,8 @@ jobs:
   # 실제 Chromium으로 핵심 화면을 열어 보는 스모크 테스트.
   # 백엔드 없이 MSW(가짜 서버) 모드로 돌기 때문에 다른 job과 병렬로 실행한다.
   frontend-e2e:
-    runs-on: ubuntu-latest
+    # Playwright 1.55의 Chromium 설치는 Ubuntu 26.04를 지원하지 않는다.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

@@ -12,6 +12,11 @@
  *     테마를 바꾸면 이 컴포넌트가 다시 그려지며 객체를 새로 만들게 되므로, useMemo로 단계(source)가 같으면 같은 객체를 쓴다.
  *     미리보기 색은 files를 바꾸지 않고 PreviewThemeSync가 /styles.css 한 파일만 updateFile로 바꾼다(고친 App.tsx는 그대로).
  *
+ * [미리보기에 적용]
+ *   고친 코드는 0.5초 뒤 미리보기에 저절로 적용된다(recompileMode: "delayed").
+ *   Sandpack 기본 새로고침 버튼은 미리보기 오른쪽 아래의 작은 아이콘이라 잘 보이지 않아 숨기고,
+ *   같은 일을 하는 큰 버튼(ApplyPreviewButton)을 툴바에 둔다.
+ *
  * [크기 조절]
  *   편집기·미리보기 사이 세로 막대로 좌우 비율, 아래 가로 막대로 높이를 바꾼다(SandboxResizeHandle).
  *   값은 stageSandboxStore에 저장되고, 아래 frameStyle의 CSS 변수로 화면에 반영된다.
@@ -21,9 +26,10 @@
  *   Sandpack과 예제 원문(학습 단계 25개 + 게임 규칙 연습)은 크다. PracticeSandboxSection이 lazy()로 불러와,
  *   편집기 영역을 펼쳤을 때만 내려받는다(첫 화면 속도에 영향 없음).
  */
-import { useEffect, useMemo, useRef, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { SandpackCodeEditor, SandpackConsole, SandpackLayout, SandpackPreview, SandpackProvider, useSandpack } from "@codesandbox/sandpack-react";
 import { useApplicationUiStore } from "@/app/state/applicationUiStore";
+import { applicationLogger } from "@/shared/logging/applicationLogger";
 import { SandboxResizeHandle, type ResizeAxis } from "@/features/curriculum/components/SandboxResizeHandle";
 import { selectSandboxDependencies } from "@/features/curriculum/sandbox/sandboxSetup";
 import { createSandboxStyles, isSandboxThemeChoice, resolveSandboxTheme, sandboxEditorThemes, sandboxThemeChoices, sandboxThemeLabels } from "@/features/curriculum/sandbox/sandboxThemes";
@@ -42,6 +48,47 @@ interface StageSandboxPanelProperties {
 function ResetButton() {
   const { sandpack } = useSandpack();
   return <button type="button" className="secondary-button" onClick={() => sandpack.resetAllFiles()}>처음 코드로 되돌리기</button>;
+}
+
+/** 번들러의 "done"이 오지 않을 때(인터넷 끊김 등) 버튼이 "적용하는 중…"에 멈춰 있지 않게 하는 시간 */
+const APPLY_PENDING_LIMIT_MS = 15_000;
+
+/**
+ * 지금 편집기 코드로 미리보기를 다시 실행하는 버튼.
+ * runSandpack()은 미리보기를 새로 만들므로, 자동 적용(0.5초)을 기다리기 전에 눌러도 마지막으로 친 글자까지 반영되고
+ * 미리보기 안의 상태(useState 값 등)도 처음부터 다시 시작한다.
+ */
+function ApplyPreviewButton() {
+  const { sandpack, listen } = useSandpack();
+  const [applying, setApplying] = useState(false);
+
+  // 적용하는 동안에만 번들러 메시지를 듣는다. 실행이 끝나면(오류가 나도) "done"이 온다.
+  useEffect(() => {
+    if (!applying) return undefined;
+    const stopListening = listen((message) => {
+      if (message.type === "done") setApplying(false);
+    });
+    const timeoutId = window.setTimeout(() => setApplying(false), APPLY_PENDING_LIMIT_MS);
+    return () => {
+      stopListening();
+      window.clearTimeout(timeoutId);
+    };
+  }, [applying, listen]);
+
+  const apply = () => {
+    setApplying(true);
+    sandpack.runSandpack().catch((error: unknown) => {
+      applicationLogger.error("[StageSandboxPanel] 미리보기를 다시 실행하지 못했습니다.", { error });
+      setApplying(false);
+    });
+  };
+
+  return (
+    <button type="button" className="stage-sandbox-apply" disabled={applying} aria-busy={applying} onClick={apply}>
+      <span className={`stage-sandbox-apply-icon${applying ? " spinning" : ""}`} aria-hidden="true" />
+      {applying ? "적용하는 중…" : "미리보기에 적용"}
+    </button>
+  );
 }
 
 /**
@@ -128,7 +175,11 @@ const StageSandboxPanel = ({ sandboxId }: StageSandboxPanelProperties) => {
     >
       <PreviewThemeSync styles={styles} />
       <div className="stage-sandbox-toolbar">
-        <span>파일 맨 위 주석의 &apos;해 볼 것&apos;부터 시작해 보세요. 고친 내용은 접거나 다른 화면으로 가면 사라지고, 실제 사이트 코드에는 영향이 없습니다.</span>
+        <span>
+          파일 맨 위 주석의 &apos;해 볼 것&apos;부터 시작해 보세요. 고친 코드는 잠시 뒤 오른쪽 미리보기에 저절로 적용되고,
+          바로 보거나 처음 상태부터 다시 실행하려면 오른쪽 <strong>미리보기에 적용</strong> 버튼을 누르세요.
+          고친 내용은 접거나 다른 화면으로 가면 사라지고, 실제 사이트 코드에는 영향이 없습니다.
+        </span>
         <div className="stage-sandbox-toolbar-actions">
           <label className="stage-sandbox-theme">
             색 테마
@@ -143,6 +194,7 @@ const StageSandboxPanel = ({ sandboxId }: StageSandboxPanelProperties) => {
             </select>
           </label>
           <ResetButton />
+          <ApplyPreviewButton />
         </div>
       </div>
       <div ref={frameRef} className="stage-sandbox-frame" style={frameStyle}>
@@ -155,7 +207,7 @@ const StageSandboxPanel = ({ sandboxId }: StageSandboxPanelProperties) => {
             onStep={stepEditorWidth}
             onReset={() => setEditorWidthPercent(SANDBOX_EDITOR_WIDTH_RANGE.initial)}
           />
-          <SandpackPreview showOpenInCodeSandbox={false} className="stage-sandbox-preview" />
+          <SandpackPreview showOpenInCodeSandbox={false} showRefreshButton={false} className="stage-sandbox-preview" />
         </SandpackLayout>
         <SandboxResizeHandle
           orientation="horizontal"
