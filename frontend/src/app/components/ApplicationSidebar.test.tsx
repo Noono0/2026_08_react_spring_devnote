@@ -5,17 +5,21 @@ import { ApplicationSidebar } from "@/app/components/ApplicationSidebar";
 import { SIDEBAR_WIDTH_RANGE, useApplicationUiStore } from "@/app/state/applicationUiStore";
 import { PortfolioLayout } from "@/features/portfolio/layouts/PortfolioLayout";
 
+const sessionState = vi.hoisted(() => ({ authenticated: false, administrator: false }));
+
 vi.mock("@/features/auth/components/AuthenticationControls", () => ({
   AuthenticationControls: () => <div>로그인 영역</div>,
 }));
 vi.mock("@/features/auth/hooks/useAuthSession", () => ({
-  useAuthSessionQuery: () => ({ data: { authenticated: false, administrator: false } }),
+  useAuthSessionQuery: () => ({ data: sessionState }),
 }));
 vi.mock("@/features/development/components/DataSourceToggle", () => ({
   DataSourceToggle: () => <div>데이터 소스</div>,
 }));
 
 beforeEach(() => {
+  sessionState.authenticated = false;
+  sessionState.administrator = false;
   useApplicationUiStore.setState({ isSidebarCollapsed: false, isMobileSidebarOpen: false });
 });
 
@@ -91,6 +95,7 @@ describe("ApplicationSidebar", () => {
   });
 
   it("게임 메뉴는 유틸리티 그룹 아래에 있고, 대전 방으로 들어오면 펼쳐져 온라인 대전을 현재 메뉴로 보여 준다", () => {
+    sessionState.authenticated = true;
     render(<MemoryRouter initialEntries={["/games/online/abcd2345"]}><ApplicationSidebar /></MemoryRouter>);
     const navigation = screen.getByRole("navigation", { name: "전체 사이트 메뉴" });
     const utilityToggle = within(navigation).getByRole("button", { name: /각종 유틸리티 게시판 메뉴/ });
@@ -102,6 +107,21 @@ describe("ApplicationSidebar", () => {
     expect(within(navigation).getByRole("link", { name: /게임 랭킹/ })).toHaveAttribute("href", "/games/rankings");
     // 혼자 하는 게임 화면은 없앴다(직접 만들어 보기는 React 연습으로 옮김)
     expect(within(navigation).queryByRole("link", { name: /테트리스|카드 짝 맞추기|지뢰 찾기/ })).not.toBeInTheDocument();
+  });
+
+  it("비회원에게 게임 메뉴를 숨기고 로그인·로그아웃하면 표시를 갱신한다", () => {
+    const sidebar = <MemoryRouter><ApplicationSidebar /></MemoryRouter>;
+    const { rerender } = render(sidebar);
+    const navigation = screen.getByRole("navigation", { name: "전체 사이트 메뉴" });
+    expect(within(navigation).queryByRole("button", { name: /게임 메뉴/ })).not.toBeInTheDocument();
+
+    sessionState.authenticated = true;
+    rerender(<MemoryRouter><ApplicationSidebar /></MemoryRouter>);
+    expect(within(navigation).getByRole("button", { name: "게임 메뉴 펼치기" })).toBeInTheDocument();
+
+    sessionState.authenticated = false;
+    rerender(<MemoryRouter><ApplicationSidebar /></MemoryRouter>);
+    expect(within(navigation).queryByRole("button", { name: /게임 메뉴/ })).not.toBeInTheDocument();
   });
 
   it("그룹 버튼으로 상세 메뉴를 접고 펼치며 화살표와 접근성 상태를 함께 바꾼다", () => {

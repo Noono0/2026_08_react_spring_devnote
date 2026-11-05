@@ -104,7 +104,7 @@ const getSubgroupKey = (navigationGroup: NavigationGroup, subgroup: NavigationSu
 export const ApplicationSidebar = () => {
   const location = useLocation();
 
-  // 로그인 정보를 서버에서 가져온다. 관리자 메뉴를 보여줄지 판단하는 데 쓴다.
+  // 로그인 정보를 서버에서 가져온다. 게임·관리자 메뉴를 보여줄지 판단하는 데 쓴다.
   const sessionQuery = useAuthSessionQuery();
 
   // ★ useState에 "함수"를 넘긴 것에 주목! (lazy initializer / 게으른 초기화)
@@ -127,11 +127,11 @@ export const ApplicationSidebar = () => {
     closeMobileSidebar,
   } = useApplicationUiStore();
 
-  // 누구나 볼 수 있는 그룹 4개(유틸리티 아래에 게임)를 먼저 담는다.
+  // 누구나 볼 수 있는 그룹 3개를 먼저 담는다.
   // ★ 이 배열은 화면을 그릴 때마다 새로 만들어지는 "임시 변수"다.
   //   State가 아니므로 여기에 push해도 문제없다.
   //   (State 배열이었다면 push는 절대 금지! 새 배열을 만들어야 한다)
-  const navigationGroups = [portfolioNavigationGroup, reactNavigationGroup, utilityNavigationGroup, gameNavigationGroup];
+  const navigationGroups = [portfolioNavigationGroup, reactNavigationGroup, utilityNavigationGroup];
 
   // `?.` = 옵셔널 체이닝(optional chaining).
   //   sessionQuery.data는 로그인 정보를 아직 못 받았으면 undefined다.
@@ -142,6 +142,7 @@ export const ApplicationSidebar = () => {
   // ★ 중요: 이건 어디까지나 "화면 편의"일 뿐 보안 장치가 아니다.
   //   메뉴를 숨겨도 사용자가 주소를 직접 치고 들어올 수 있다.
   //   진짜 차단은 RoleProtectedRoute와 백엔드 서버가 담당한다.
+  if (sessionQuery.data?.authenticated) navigationGroups.push(gameNavigationGroup);
   if (sessionQuery.data?.administrator) navigationGroups.push(administratorNavigationGroup);
 
   // 조건에 따라 CSS 클래스를 조합하는 흔한 패턴.
