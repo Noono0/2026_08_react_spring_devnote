@@ -529,6 +529,7 @@ export APP_KEY=~/Downloads/<키파일>
 
 `deploy.sh` 는 pull → 컨테이너 교체 → healthy 대기 → 옛 이미지 정리까지 한다.
 5분 안에 healthy 가 안 되면 백엔드 로그를 출력하고 실패로 끝난다.
+운영 설정의 `CRAWLER_BROWSER_MODE=remote`에서는 백엔드가 Xvfb 없이 Java를 바로 시작한다. 서버에서 직접 브라우저를 실행하는 `local` 모드에서만 Xvfb를 사용한다.
 
 빌드가 끝났는지는 이렇게 확인한다.
 
