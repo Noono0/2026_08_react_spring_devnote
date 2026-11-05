@@ -245,6 +245,23 @@ button.online-practice-option { width: 100%; min-height: 0; background: transpar
 .stage-sandbox-toolbar-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .stage-sandbox-theme { display: inline-flex; align-items: center; gap: 6px; color: var(--text-primary); font-weight: 700; white-space: nowrap; }
 .stage-sandbox-theme select { min-height: 36px; padding: 4px 8px; border: 1px solid var(--border-color); border-radius: 9px; color: var(--text-primary); background: var(--background-panel); }
+.stage-sandbox-toolbar > span { flex: 1 1 320px; }
+.stage-sandbox-toolbar > span strong { color: var(--primary-color); }
+/* 미리보기에 적용: 툴바에서 가장 눈에 띄는 버튼. 오른쪽 끝(미리보기 바로 위)에 둔다. */
+.stage-sandbox-apply {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 10px 20px;
+  border-radius: 10px; font-size: 15px; box-shadow: 0 4px 12px color-mix(in srgb, var(--primary-color) 35%, transparent);
+}
+.stage-sandbox-apply:focus-visible { outline: 3px solid var(--primary-color); outline-offset: 2px; }
+.stage-sandbox-apply:disabled { opacity: 0.75; box-shadow: none; }
+/* ▶ 글자는 Windows에서 색 이모지로 그려져 버튼 글자색을 따르지 않으므로 테두리로 삼각형을 그린다. 적용하는 동안은 도는 원 */
+.stage-sandbox-apply-icon { flex: 0 0 auto; width: 0; height: 0; border-top: 7px solid transparent; border-bottom: 7px solid transparent; border-left: 11px solid currentColor; }
+.stage-sandbox-apply-icon.spinning {
+  width: 14px; height: 14px; border: 2px solid color-mix(in srgb, currentColor 35%, transparent); border-top-color: currentColor;
+  border-radius: 50%; animation: stage-sandbox-spin 0.8s linear infinite;
+}
+@keyframes stage-sandbox-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .stage-sandbox-apply-icon.spinning { animation: none; } }
 /* 크기는 StageSandboxPanel이 .stage-sandbox-frame에 CSS 변수(--sp-layout-height, --sandbox-editor-width)로 넣는다. */
 .stage-sandbox-layout { border-radius: 12px; }
 .stage-sandbox-body .stage-sandbox-layout > .stage-sandbox-editor { flex: 0 0 var(--sandbox-editor-width, 50%); min-width: 0; }
@@ -264,11 +281,11 @@ button.online-practice-option { width: 100%; min-height: 0; background: transpar
 .stage-sandbox-resize-handle:hover, .stage-sandbox-resize-handle:focus-visible { color: #fff; background: var(--primary-color); filter: none; }
 .stage-sandbox-resize-handle:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
 /* Sandpack 스타일이 나중에 붙어 같은 우선순위 규칙을 덮으므로 .stage-sandbox-body를 앞에 붙였다.
-   (높이가 0이 되면 콘솔이 안 보이고, 콘솔 지우기 버튼이 위 미리보기의 새로고침 버튼과 겹친다) */
+   (높이가 0이 되면 콘솔이 안 보이고, 콘솔 지우기 버튼이 위 미리보기 위로 겹친다) */
 .stage-sandbox-body .stage-sandbox-console { height: 160px; border-radius: 12px; }
 .stage-sandbox-console-title { margin: 14px 0 6px; color: var(--text-secondary); font-size: 13px; }
 .stage-sandbox-console-title strong { margin-right: 6px; color: var(--text-primary); }
-/* 사이트 전체 button 규칙의 min-height(40px)가 Sandpack 아이콘 버튼(새로고침 등, 28px 원형)을 세로로 늘려 겹쳐 보이게 하므로 되돌린다. */
+/* 사이트 전체 button 규칙의 min-height(40px)가 Sandpack 아이콘 버튼(콘솔 지우기 등, 28px 원형)을 세로로 늘려 겹쳐 보이게 하므로 되돌린다. */
 .stage-sandbox-layout button, .stage-sandbox-console button { min-height: 0; }
 @media (max-width: 760px) {
   /* 위아래로 쌓으면 Sandpack 기본 flex(1 1 0)로 높이가 0이 되므로 편집기·미리보기 높이를 직접 정한다.
