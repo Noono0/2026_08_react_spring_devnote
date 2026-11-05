@@ -2,6 +2,12 @@
 
 [문서 목록으로](../README.md) · [작업 규칙](../AGENTS.md) · [검증 명령](verification.md)
 
+## 2026-11-05 — 운영 백엔드 기동 지연 수정
+
+- **원인**: 새 운영 이미지에서 `xvfb-run`이 화면 서버의 준비 신호를 기다리며 멈춰 Java 앱이 시작되지 않았습니다. 서버에서 화면 서버 준비 신호를 보내자 Java가 시작되고 백엔드가 `healthy`가 됐습니다.
+- **수정**: `CRAWLER_BROWSER_MODE=remote`일 때 Xvfb 없이 Java를 바로 실행합니다. `local` 모드에서만 기존 Xvfb 실행을 유지합니다.
+- **검증 범위**: 셸 문법·저장소 정적 검사·CI Docker 빌드와 운영 컨테이너의 재기동 및 HTTP 준비 상태를 확인합니다.
+
 ## 2026-11-05 — E2E CI 실행 환경 고정
 
 - **원인**: GitHub의 `ubuntu-latest` 실행 환경이 Ubuntu 26.04로 바뀌면서 Playwright 1.55의 Chromium 설치가 지원되지 않아, E2E 테스트 시작 전에 CI가 실패했습니다.
