@@ -60,6 +60,10 @@ public enum ErrorCode {
     DOCUMENT_DELETE_FORBIDDEN(HttpStatus.FORBIDDEN, "DOCUMENT_DELETE_FORBIDDEN", "이 문서를 삭제할 권한이 없습니다."),
     DOCUMENT_VERSION_CONFLICT(HttpStatus.CONFLICT, "DOCUMENT_VERSION_CONFLICT", "다른 사용자가 먼저 문서를 수정했습니다."),
     DOCUMENT_ALREADY_DELETED(HttpStatus.CONFLICT, "DOCUMENT_ALREADY_DELETED", "이미 삭제된 문서입니다."),
+    // ── 통합 게시판 ──────────────────────────────────────────────────
+    BOARD_POST_NOT_FOUND(HttpStatus.NOT_FOUND, "BOARD_POST_NOT_FOUND", "게시글을 찾을 수 없습니다."),
+    BOARD_VERSION_CONFLICT(HttpStatus.CONFLICT, "BOARD_VERSION_CONFLICT", "다른 화면에서 게시글을 먼저 수정했습니다."),
+    BOARD_ANSWER_EXISTS(HttpStatus.CONFLICT, "BOARD_ANSWER_EXISTS", "이미 답변이 등록된 질문입니다."),
     // ── 파일 업로드·다운로드 ───────────────────────────────────────────
     FILE_NOT_FOUND(HttpStatus.NOT_FOUND, "FILE_NOT_FOUND", "요청한 파일을 찾을 수 없습니다."),
     FILE_ACCESS_FORBIDDEN(HttpStatus.FORBIDDEN, "FILE_ACCESS_FORBIDDEN", "다른 사용자가 업로드한 파일은 사용할 수 없습니다."),

@@ -43,6 +43,7 @@ flowchart LR
 | 처음 접속한 사용자의 화면별 사용 방법과 문제 해결 | [사용설명서](docs/user-guide.md) |
 | 설치, Docker·로컬 실행, 환경변수, 문제 해결 | [실행 가이드](docs/local-development.md) |
 | 학습 로드맵, 화면별 기능, API Workspace | [기능·학습 가이드](docs/learning-guide.md) |
+| 일반·공지·Q&A·갤러리·그리드·달력 통합 게시판 실습 | [게시판 실전 가이드](docs/board-lab.md) |
 | 크롤러 설정, 로그인 세션, 단계 실행 | [크롤러 가이드](docs/crawler.md) |
 | 테스트와 정적 검사, 필요한 개발 도구 | [검증 가이드](docs/verification.md) |
 | ERD·순서도 편집 | [Diagram Designer](docs/diagram-designer.md) |

@@ -70,6 +70,11 @@ export const apiErrorMessageMap: Record<string, string> = {
   //   DocumentEditorPage에서 이 코드를 어떻게 처리하는지 확인해 보자.
   DOCUMENT_VERSION_CONFLICT: "다른 사용자가 먼저 수정했습니다. 최신 내용을 확인해 주세요.",
 
+  // ── 통합 게시판 ──────────────────────────────────────────
+  BOARD_POST_NOT_FOUND: "삭제되었거나 존재하지 않는 게시글입니다.",
+  BOARD_VERSION_CONFLICT: "게시글이 먼저 수정되었습니다. 최신 내용을 확인해 주세요.",
+  BOARD_ANSWER_EXISTS: "이미 답변이 등록된 질문입니다.",
+
   // ── 파일 업로드 ───────────────────────────────────────────
   FILE_ACCESS_FORBIDDEN: "다른 사용자가 올린 파일은 현재 문서에 사용할 수 없습니다.",
   FILE_NOT_IMAGE: "대표 이미지에는 이미지 파일만 사용할 수 있습니다.",

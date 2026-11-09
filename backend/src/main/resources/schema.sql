@@ -197,6 +197,53 @@ CREATE TABLE IF NOT EXISTS documents (
     CONSTRAINT fk_documents_thumbnail_file FOREIGN KEY (thumbnail_file_id) REFERENCES file_resources(file_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='문서';
 
+-- 통합 게시판 실습: 여섯 종류가 같은 CRUD 구조를 쓰고 종류별 규칙은 Service에서 처리한다.
+CREATE TABLE IF NOT EXISTS board_posts (
+    post_id BIGINT NOT NULL AUTO_INCREMENT,
+    board_type VARCHAR(20) NOT NULL COMMENT 'GENERAL, NOTICE, QNA, GALLERY, GRID, CALENDAR',
+    author_id BIGINT NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    content_json JSON NOT NULL COMMENT 'Tiptap 편집 원본',
+    content_html LONGTEXT NOT NULL COMMENT '화면 표시용',
+    content_text LONGTEXT NOT NULL COMMENT '검색용',
+    image_file_id BIGINT NULL COMMENT '갤러리 대표 이미지',
+    pinned BOOLEAN NOT NULL DEFAULT FALSE,
+    answered BOOLEAN NOT NULL DEFAULT FALSE,
+    view_count BIGINT NOT NULL DEFAULT 0,
+    version_number BIGINT NOT NULL DEFAULT 1,
+    use_yn CHAR(1) NOT NULL DEFAULT 'Y',
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+    PRIMARY KEY (post_id),
+    KEY idx_board_posts_list (board_type, use_yn, pinned, created_at),
+    KEY idx_board_posts_image (image_file_id),
+    CONSTRAINT fk_board_posts_author FOREIGN KEY (author_id) REFERENCES members(member_id),
+    CONSTRAINT fk_board_posts_image FOREIGN KEY (image_file_id) REFERENCES file_resources(file_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='통합 게시판 글';
+
+-- 기존 board_posts 테이블을 변경하지 않아 이미 저장된 글도 그대로 유지된다.
+CREATE TABLE IF NOT EXISTS board_calendar_dates (
+    post_id BIGINT NOT NULL,
+    event_date DATE NOT NULL,
+    PRIMARY KEY (post_id),
+    KEY idx_board_calendar_dates_date (event_date, post_id),
+    CONSTRAINT fk_board_calendar_dates_post FOREIGN KEY (post_id) REFERENCES board_posts(post_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='달력 게시글 날짜';
+
+CREATE TABLE IF NOT EXISTS board_answers (
+    answer_id BIGINT NOT NULL AUTO_INCREMENT,
+    post_id BIGINT NOT NULL,
+    author_id BIGINT NOT NULL,
+    content_json JSON NOT NULL,
+    content_html LONGTEXT NOT NULL,
+    content_text LONGTEXT NOT NULL,
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    PRIMARY KEY (answer_id),
+    UNIQUE KEY uk_board_answers_post (post_id),
+    CONSTRAINT fk_board_answers_post FOREIGN KEY (post_id) REFERENCES board_posts(post_id),
+    CONSTRAINT fk_board_answers_author FOREIGN KEY (author_id) REFERENCES members(member_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Q&A 관리자 답변';
+
 CREATE TABLE IF NOT EXISTS document_histories (
     document_history_id BIGINT NOT NULL AUTO_INCREMENT COMMENT '문서 이력 식별자',
     document_id BIGINT NOT NULL COMMENT '문서 식별자',

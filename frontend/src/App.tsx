@@ -57,6 +57,7 @@ const developmentScenarioEnabled = import.meta.env.VITE_ENABLE_DEVELOPMENT_MENU 
 //       아래처럼 직접 `{ default: ... }` 모양으로 바꿔서 넘겨 준다.
 const AdminUserPracticePage = lazy(async () => ({ default: (await import("@/features/practice/13-admin-users/pages/AdminUserPracticePage")).AdminUserPracticePage }));
 const GeneralBoardPracticePage = lazy(async () => ({ default: (await import("@/features/practice/06-board/pages/GeneralBoardPracticePage")).GeneralBoardPracticePage }));
+const BoardLabPage = lazy(async () => ({ default: (await import("@/features/board-lab/BoardLabPage")).BoardLabPage }));
 const CategoryTreePracticePage = lazy(async () => ({ default: (await import("@/features/practice/12-category/pages/CategoryTreePracticePage")).CategoryTreePracticePage }));
 const CommentPracticePage = lazy(async () => ({ default: (await import("@/features/practice/08-comment/pages/CommentPracticePage")).CommentPracticePage }));
 const ContactPracticePage = lazy(async () => ({ default: (await import("@/features/practice/03-contact/pages/ContactPracticePage")).ContactPracticePage }));
@@ -285,6 +286,11 @@ export const App = () => (
           <Route path="modal-products" element={<ProductModalCrudPage />} />
           <Route path="search-autocomplete" element={<SearchAutocompletePracticePage />} />
           <Route path="general-board" element={<GeneralBoardPracticePage />} />
+          <Route path="boards" element={<BoardLabPage />} />
+          <Route path="boards/:boardType" element={<BoardLabPage />} />
+          <Route path="boards/:boardType/new" element={<BoardLabPage />} />
+          <Route path="boards/:boardType/:postId" element={<BoardLabPage />} />
+          <Route path="boards/:boardType/:postId/edit" element={<BoardLabPage />} />
           <Route path="gallery" element={<GalleryPracticePage />} />
           <Route path="comments" element={<CommentPracticePage />} />
           <Route path="reservations" element={<ReservationPracticePage />} />
