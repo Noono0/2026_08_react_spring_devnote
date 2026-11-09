@@ -14,12 +14,13 @@
  *   3. autoComplete 속성으로 비밀번호 관리자와 협력하기
  *   4. 서로 연동되는 체크박스 다루기
  *
- * ★ 이 프로젝트에서 유일하게 비밀번호를 다루는 화면이다.
+ * 비밀번호는 로그인·가입과 내 계정의 비밀번호 변경 화면에서만 다룬다.
  *   비밀번호는 State에 잠깐 담겼다가 서버로 보내지고,
  *   성공 즉시 비워진다. 어디에도 저장되지 않는다.
  */
 
 import { useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 import { ModalDialog } from "@/shared/ui/ModalDialog";
 import { useAuthSessionQuery, useLoginMutation, useLogoutMutation, useRegisterMutation } from "@/features/auth/hooks/useAuthSession";
 import { applicationNotification } from "@/shared/notification/applicationNotification";
@@ -115,6 +116,7 @@ export const AuthenticationControls = () => {
     return (
       <div className="authentication-controls">
         <span><strong>{sessionQuery.data.memberName}</strong> · {sessionQuery.data.grade}</span>
+        <Link className="ghost-button" to="/account">내 계정</Link>
         <button type="button" className="ghost-button" disabled={logoutMutation.isPending} onClick={() => void handleLogout()}>{logoutMutation.isPending ? "로그아웃 중..." : "로그아웃"}</button>
       </div>
     );

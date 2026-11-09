@@ -29,6 +29,7 @@ public class MemberDaoImpl implements MemberDao {
     @Override public MemberRow selectMemberByLoginId(String loginId) { return sqlSessionTemplate.selectOne(NAMESPACE + "selectMemberByLoginId", loginId); }
     @Override public MemberRow selectMemberByEmail(String email) { return sqlSessionTemplate.selectOne(NAMESPACE + "selectMemberByEmail", email); }
     @Override public MemberRow selectMemberById(Long memberId) { return sqlSessionTemplate.selectOne(NAMESPACE + "selectMemberById", memberId); }
+    @Override public MemberRow selectMemberForManagement(Long memberId) { return sqlSessionTemplate.selectOne(NAMESPACE + "selectMemberForManagement", memberId); }
     @Override public List<MemberRow> selectAllMembers() { return sqlSessionTemplate.selectList(NAMESPACE + "selectAllMembers"); }
     @Override public void insertMember(MemberCreateParameter parameter) { sqlSessionTemplate.insert(NAMESPACE + "insertMember", parameter); }
     @Override public void updateLastLoginAt(Long memberId) { sqlSessionTemplate.update(NAMESPACE + "updateLastLoginAt", memberId); }
@@ -37,4 +38,10 @@ public class MemberDaoImpl implements MemberDao {
         return sqlSessionTemplate.update(NAMESPACE + "updateMemberManagement", Map.of("memberId", memberId, "gradeCode", gradeCode, "memberRole", memberRole, "accountStatus", accountStatus));
     }
     @Override public void upsertSuperAdministrator(String passwordHash) { sqlSessionTemplate.update(NAMESPACE + "upsertSuperAdministrator", passwordHash); }
+    @Override public int updateMemberProfile(Long memberId, String memberName, String email) {
+        return sqlSessionTemplate.update(NAMESPACE + "updateMemberProfile", Map.of("memberId", memberId, "memberName", memberName, "email", email));
+    }
+    @Override public int updateMemberPassword(Long memberId, String passwordHash) {
+        return sqlSessionTemplate.update(NAMESPACE + "updateMemberPassword", Map.of("memberId", memberId, "passwordHash", passwordHash));
+    }
 }

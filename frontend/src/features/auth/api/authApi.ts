@@ -38,7 +38,7 @@
 
 import type { ApiResponse } from "@/shared/api/apiResponseTypes";
 import { selectedHttpClient } from "@/shared/api/http/selectedHttpClient";
-import type { AuthSession, LoginRequest, RegisterRequest } from "@/features/auth/types/authTypes";
+import type { AuthSession, LoginRequest, MemberDetail, MemberProfileUpdateRequest, PasswordChangeRequest, RegisterRequest } from "@/features/auth/types/authTypes";
 
 /** 현재 로그인 상태를 조회한다. 비로그인이어도 오류가 아니라 정상 응답이 온다. */
 export const getAuthSession = async (): Promise<AuthSession> => (await selectedHttpClient.get<ApiResponse<AuthSession>>("/auth/session")).data;
@@ -58,3 +58,10 @@ export const register = async (request: RegisterRequest): Promise<AuthSession> =
  *   화면이 그걸 그대로 캐시에 넣으면 즉시 로그아웃 상태가 반영된다.
  */
 export const logout = async (): Promise<AuthSession> => (await selectedHttpClient.delete<ApiResponse<AuthSession>>("/auth/session")).data;
+
+export const getOwnAccount = async (): Promise<MemberDetail> => (await selectedHttpClient.get<ApiResponse<MemberDetail>>("/account")).data;
+export const updateOwnAccount = async (request: MemberProfileUpdateRequest): Promise<MemberDetail> =>
+  (await selectedHttpClient.put<MemberProfileUpdateRequest, ApiResponse<MemberDetail>>("/account", request)).data;
+export const changeOwnPassword = async (request: PasswordChangeRequest): Promise<void> => {
+  await selectedHttpClient.put<PasswordChangeRequest, ApiResponse<null>>("/account/password", request);
+};

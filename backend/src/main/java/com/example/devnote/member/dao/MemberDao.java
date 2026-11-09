@@ -15,11 +15,15 @@ public interface MemberDao {
     MemberRow selectMemberByLoginId(String loginId);
     MemberRow selectMemberByEmail(String email);
     MemberRow selectMemberById(Long memberId);
+    // 관리자 상세 화면에서는 삭제 표시된 회원도 조회한다.
+    MemberRow selectMemberForManagement(Long memberId);
     // 관리자 화면용 전체 목록(삭제 표시된 회원 포함).
     List<MemberRow> selectAllMembers();
     void insertMember(MemberCreateParameter parameter);
     void updateLastLoginAt(Long memberId);
     // 관리자가 등급·역할·계정 상태를 바꾼다. 돌려주는 int = 실제로 바뀐 행 수(0이면 대상 회원 없음).
     int updateMemberManagement(Long memberId, String gradeCode, String memberRole, String accountStatus);
+    int updateMemberProfile(Long memberId, String memberName, String email);
+    int updateMemberPassword(Long memberId, String passwordHash);
     void upsertSuperAdministrator(String passwordHash);
 }

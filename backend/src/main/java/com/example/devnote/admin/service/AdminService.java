@@ -41,8 +41,9 @@ public class AdminService {
         MemberRow target = memberDao.selectMemberById(memberId);
         if (target == null) throw new BusinessException(ErrorCode.MEMBER_NOT_FOUND);
         // 슈퍼관리자가 실수로 자기 권한을 내려 버리면 아무도 관리 화면에 들어올 수 없게 될 수 있어 막는다.
-        if (currentAdmin.getMemberId().equals(memberId) && updateRequest.role() != MemberRole.SUPER_ADMIN) {
-            throw new BusinessException(ErrorCode.ACCESS_DENIED, "자신의 슈퍼관리자 권한은 해제할 수 없습니다.");
+        if (currentAdmin.getMemberId().equals(memberId)
+            && (updateRequest.role() != MemberRole.SUPER_ADMIN || !"ACTIVE".equals(updateRequest.accountStatus()))) {
+            throw new BusinessException(ErrorCode.ACCESS_DENIED, "자신의 슈퍼관리자 권한이나 활성 상태는 해제할 수 없습니다.");
         }
         memberDao.updateMemberManagement(memberId, updateRequest.grade().name(), updateRequest.role().name(), updateRequest.accountStatus());
         // 바뀐 결과를 다시 읽어 돌려준다(updated_at 등 DB가 바꾼 값 포함).

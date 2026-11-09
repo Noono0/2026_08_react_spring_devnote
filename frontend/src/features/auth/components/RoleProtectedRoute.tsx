@@ -33,7 +33,7 @@ import { Navigate } from "react-router-dom";
 import { useAuthSessionQuery } from "@/features/auth/hooks/useAuthSession";
 
 // fallback: 권한이 없을 때 홈으로 보내는 대신 보여 줄 안내. 메뉴에서 들어온 사람이 이유도 모른 채 튕기지 않게 할 때 쓴다.
-export const RoleProtectedRoute = ({ children, superAdminOnly = false, fallback }: { children: ReactNode; superAdminOnly?: boolean; fallback?: ReactNode }) => {
+export const RoleProtectedRoute = ({ children, superAdminOnly = false, authenticatedOnly = false, fallback }: { children: ReactNode; superAdminOnly?: boolean; authenticatedOnly?: boolean; fallback?: ReactNode }) => {
   const sessionQuery = useAuthSessionQuery();
 
   // ★★ 로딩 중 처리가 반드시 필요하다.
@@ -49,7 +49,7 @@ export const RoleProtectedRoute = ({ children, superAdminOnly = false, fallback 
   //   기본           → administrator (관리자 이상)
   //   superAdminOnly → superAdministrator (최고 관리자만)
   // 문서 작성/수정처럼 더 엄격해야 하는 곳에 superAdminOnly를 쓴다.
-  const allowed = superAdminOnly ? sessionQuery.data?.superAdministrator : sessionQuery.data?.administrator;
+  const allowed = superAdminOnly ? sessionQuery.data?.superAdministrator : authenticatedOnly ? sessionQuery.data?.authenticated : sessionQuery.data?.administrator;
 
   // 통과하면 감싼 내용을 그대로 그리고, 아니면 홈으로 보낸다.
   //

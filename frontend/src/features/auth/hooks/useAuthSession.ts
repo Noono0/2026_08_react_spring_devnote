@@ -52,6 +52,8 @@ export const authSessionQueryKey = ["auth", "session"] as const;
  *   Promise.all은 세 개를 한꺼번에 보내므로 훨씬 빠르다.
  */
 const resetAuthenticatedQueries = async (queryClient: ReturnType<typeof useQueryClient>): Promise<void> => {
+  // 내 계정 상세에는 이메일 등 개인정보가 있으므로 계정이 바뀔 때 즉시 캐시에서 제거한다.
+  queryClient.removeQueries({ queryKey: ["account"] });
   await Promise.all([
     queryClient.invalidateQueries({ queryKey: ["portfolio", "sections"] }),
     queryClient.invalidateQueries({ queryKey: ["admin"] }),

@@ -7,11 +7,14 @@
 import type { ApiResponse } from "@/shared/api/apiResponseTypes";
 import { selectedHttpClient } from "@/shared/api/http/selectedHttpClient";
 import type { AdminMember, Grade, RolePermission, VisitAnalytics } from "@/features/admin/types/adminTypes";
-import type { MemberGrade, MemberRole } from "@/features/auth/types/authTypes";
+import type { MemberDetail, MemberGrade, MemberProfileUpdateRequest, MemberRole } from "@/features/auth/types/authTypes";
 
 // 회원 목록 / 회원 등급·역할·상태 변경
 export const getAdminMembers = async (): Promise<AdminMember[]> => (await selectedHttpClient.get<ApiResponse<AdminMember[]>>("/admin/members")).data;
 export const updateAdminMember = async (memberId: number, request: { grade: MemberGrade; role: MemberRole; accountStatus: string }): Promise<AdminMember> => (await selectedHttpClient.put<typeof request, ApiResponse<AdminMember>>(`/admin/members/${memberId}`, request)).data;
+export const getAdminMember = async (memberId: number): Promise<MemberDetail> => (await selectedHttpClient.get<ApiResponse<MemberDetail>>(`/admin/members/${memberId}`)).data;
+export const updateAdminMemberProfile = async (memberId: number, request: MemberProfileUpdateRequest): Promise<MemberDetail> =>
+  (await selectedHttpClient.put<MemberProfileUpdateRequest, ApiResponse<MemberDetail>>(`/admin/members/${memberId}/profile`, request)).data;
 // 등급 목록 / 등급 수정. Omit<Grade, "gradeCode">: 등급 코드는 주소에 넣으므로 본문에서는 뺀다.
 export const getGrades = async (): Promise<Grade[]> => (await selectedHttpClient.get<ApiResponse<Grade[]>>("/admin/grades")).data;
 export const updateGrade = async (gradeCode: string, request: Omit<Grade, "gradeCode">): Promise<Grade> => (await selectedHttpClient.put<typeof request, ApiResponse<Grade>>(`/admin/grades/${gradeCode}`, request)).data;

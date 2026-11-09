@@ -39,6 +39,7 @@ public enum ErrorCode {
     LOGIN_TEMPORARILY_LOCKED(HttpStatus.TOO_MANY_REQUESTS, "LOGIN_TEMPORARILY_LOCKED", "로그인 실패가 반복되어 잠시 로그인할 수 없습니다. 잠시 후 다시 시도해 주세요."),
     LOGIN_ID_ALREADY_EXISTS(HttpStatus.CONFLICT, "LOGIN_ID_ALREADY_EXISTS", "이미 사용 중인 아이디입니다."),
     EMAIL_ALREADY_EXISTS(HttpStatus.CONFLICT, "EMAIL_ALREADY_EXISTS", "이미 가입된 이메일입니다."),
+    CURRENT_PASSWORD_INVALID(HttpStatus.BAD_REQUEST, "CURRENT_PASSWORD_INVALID", "현재 비밀번호가 올바르지 않습니다."),
     MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "MEMBER_NOT_FOUND", "회원을 찾을 수 없습니다."),
     // ── 토픽 투표 ─────────────────────────────────────────────────────
     POLL_NOT_FOUND(HttpStatus.NOT_FOUND, "POLL_NOT_FOUND", "투표를 찾을 수 없습니다."),

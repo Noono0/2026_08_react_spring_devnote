@@ -34,6 +34,8 @@ const navigationItems = [portfolioNavigationGroup, reactNavigationGroup, utility
 /** 주소에 가장 잘 맞는 화면 이름. 못 찾으면 undefined */
 export const resolvePageName = (pathname: string): string | undefined => {
   if (pathname === "/") return undefined;
+  if (pathname === "/account") return "내 계정";
+  if (pathname.startsWith("/admin/members/")) return "회원 상세정보";
   if (pathname.startsWith("/projects/")) return "프로젝트 상세";
   if (pathname.startsWith(GAME_EXERCISE_ROUTE_PREFIX)) {
     const exercise = findGameExerciseById(pathname.slice(GAME_EXERCISE_ROUTE_PREFIX.length));
