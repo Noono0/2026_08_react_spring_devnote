@@ -6,7 +6,7 @@
 
 - **변경**: 통합 게시판에 AG Grid Community 목록과 날짜별 월간 게시판을 추가했습니다. 두 화면은 필요할 때만 불러오며, 같은 Tiptap 작성·상세·수정 흐름을 사용합니다. 달력 날짜는 `board_calendar_dates`에 따로 저장합니다. 그리드 열 정렬·필터는 현재 페이지 최대 50건, 전체 검색은 서버에 적용됩니다.
 - **검증**: 프론트 `lint`·`typecheck`·전체 Vitest(155파일 738개)·`build`, 백엔드 369개 테스트(실패 0, 외부 테스트 1개 기본 건너뜀), 정적 검사 10그룹, Python 회귀 테스트 5개, `git diff --check` 통과. 첫 전체 프론트 실행에서 시간 민감한 온라인 채팅 테스트 1개가 실패했으나 단독 83개와 재실행한 전체 738개가 통과했습니다.
-- **배포**: 아래 배포 절차와 운영 확인 결과를 기록할 예정입니다.
+- **배포**: [PR #21](https://github.com/Noono0/2026_08_react_spring_devnote/pull/21)을 `main`에 병합한 뒤, `main` CI 4개 작업과 [Publish Images](https://github.com/Noono0/2026_08_react_spring_devnote/actions/runs/42716205864)가 통과했습니다. Oracle 앱 서버에서 백엔드·프론트 이미지를 받고 새 테이블 생성용 `SQL_INIT_MODE=always`로 한 번 기동한 뒤 `never`로 되돌려 재기동했습니다. 두 컨테이너의 실행 이미지 ID가 내려받은 `main` 태그와 일치하고 백엔드가 `healthy`입니다. 공개 주소의 달력·그리드 화면과 목록 API는 모두 HTTP 200이며 달력 API는 빈 월의 `content: []`, `truncated: false`로 정상 응답했습니다. 실제 로그인 계정으로 글 작성·수정은 운영에서 실행하지 않았습니다.
 
 ## 2026-11-09 — Tiptap 통합 게시판 실습
 
