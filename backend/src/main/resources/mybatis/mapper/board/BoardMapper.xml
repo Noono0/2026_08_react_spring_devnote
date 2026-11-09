@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.devnote.board.BoardMapper">
+    <sql id="postColumns">
+        p.post_id, p.board_type, p.author_id, m.member_name AS author_name,
+        p.title, p.content_json, p.content_html, p.content_text, p.image_file_id,
+        p.pinned, p.answered, p.view_count, p.version_number, p.created_at, p.updated_at, c.event_date
+    </sql>
+    <sql id="filter">
+        p.use_yn = 'Y' AND p.board_type = #{boardType}
+        <if test="keyword != null and keyword != ''">
+            AND (p.title LIKE CONCAT('%', #{keyword}, '%') OR p.content_text LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+    </sql>
+    <select id="list" resultType="com.example.devnote.board.dao.BoardPostRow">
+        SELECT <include refid="postColumns"/>
+        FROM board_posts p JOIN members m ON m.member_id = p.author_id
+        LEFT JOIN board_calendar_dates c ON c.post_id = p.post_id
+        WHERE <include refid="filter"/>
+        ORDER BY p.pinned DESC, p.created_at DESC, p.post_id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+    <select id="count" resultType="long">
+        SELECT COUNT(*) FROM board_posts p WHERE <include refid="filter"/>
+    </select>
+    <select id="calendar" resultType="com.example.devnote.board.dao.BoardPostRow">
+        SELECT <include refid="postColumns"/>
+        FROM board_calendar_dates c
+        JOIN board_posts p ON p.post_id = c.post_id
+        JOIN members m ON m.member_id = p.author_id
+        WHERE p.use_yn = 'Y' AND p.board_type = 'CALENDAR'
+          AND c.event_date &gt;= #{startDate} AND c.event_date &lt; #{endDate}
+        <if test="keyword != null and keyword != ''">
+          AND (p.title LIKE CONCAT('%', #{keyword}, '%') OR p.content_text LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+        ORDER BY c.event_date, p.post_id
+        LIMIT #{limit}
+    </select>
+    <select id="find" resultType="com.example.devnote.board.dao.BoardPostRow">
+        SELECT <include refid="postColumns"/>
+        FROM board_posts p JOIN members m ON m.member_id = p.author_id
+        LEFT JOIN board_calendar_dates c ON c.post_id = p.post_id
+        WHERE p.post_id = #{postId} AND p.use_yn = 'Y'
+    </select>
+    <insert id="insert" parameterType="com.example.devnote.board.dao.BoardPostRow" useGeneratedKeys="true" keyProperty="postId">
+        INSERT INTO board_posts (board_type, author_id, title, content_json, content_html, content_text, image_file_id, pinned)
+        VALUES (#{boardType}, #{authorId}, #{title}, #{contentJson}, #{contentHtml}, #{contentText}, #{imageFileId}, #{pinned})
+    </insert>
+    <update id="update" parameterType="com.example.devnote.board.dao.BoardPostRow">
+        UPDATE board_posts SET title = #{title}, content_json = #{contentJson},
+            content_html = #{contentHtml}, content_text = #{contentText},
+            image_file_id = #{imageFileId}, pinned = #{pinned}, version_number = version_number + 1
+        WHERE post_id = #{postId} AND version_number = #{versionNumber} AND use_yn = 'Y'
+    </update>
+    <insert id="upsertCalendarDate">
+        INSERT INTO board_calendar_dates (post_id, event_date) VALUES (#{postId}, #{eventDate})
+        ON DUPLICATE KEY UPDATE event_date = VALUES(event_date)
+    </insert>
+    <update id="delete">
+        UPDATE board_posts SET use_yn = 'N', version_number = version_number + 1
+        WHERE post_id = #{postId} AND version_number = #{versionNumber} AND use_yn = 'Y'
+    </update>
+    <update id="incrementViews">
+        UPDATE board_posts SET view_count = view_count + 1 WHERE post_id = #{postId} AND use_yn = 'Y'
+    </update>
+    <select id="findAnswer" resultType="com.example.devnote.board.dao.BoardAnswerRow">
+        SELECT a.answer_id, a.post_id, a.author_id, m.member_name AS author_name,
+            a.content_json, a.content_html, a.content_text, a.created_at
+        FROM board_answers a JOIN members m ON m.member_id = a.author_id WHERE a.post_id = #{postId}
+    </select>
+    <insert id="insertAnswer" parameterType="com.example.devnote.board.dao.BoardAnswerRow" useGeneratedKeys="true" keyProperty="answerId">
+        INSERT INTO board_answers (post_id, author_id, content_json, content_html, content_text)
+        VALUES (#{postId}, #{authorId}, #{contentJson}, #{contentHtml}, #{contentText})
+    </insert>
+    <delete id="deleteAnswer">DELETE FROM board_answers WHERE post_id = #{postId}</delete>
+    <update id="setAnswered">UPDATE board_posts SET answered = #{answered} WHERE post_id = #{postId} AND use_yn = 'Y'</update>
+</mapper>

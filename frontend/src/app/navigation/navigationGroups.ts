@@ -69,6 +69,7 @@ export const reactNavigationGroup: NavigationGroup = {
   collapsible: true,
   items: [
     { label: "전체 로드맵", description: "왕초보부터 고급까지 학습 순서", route: "/react", symbol: "00" },
+    { label: "게시판 실전", description: "일반·공지·Q&A·갤러리·그리드·달력", route: "/react/boards", symbol: "BD", matchChildren: true },
     { label: "왕초보", description: "컴포넌트·State·이벤트", route: "/react/level/beginner", symbol: "01" },
     { label: "초급", description: "폼·Reducer·로컬 CRUD", route: "/react/level/basic", symbol: "02" },
     { label: "중급", description: "Effect·게시판·비동기", route: "/react/level/intermediate", symbol: "03" },

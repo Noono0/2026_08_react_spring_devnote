@@ -36,6 +36,7 @@ describe("useLogoutMutation", () => {
     // 업무 History는 슈퍼관리자에게만 임시저장 글이 보이므로, 로그아웃 뒤 남아 있으면 정보 노출이 된다.
     expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["history"] });
     expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["documents"] });
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["board-lab"] });
     expect(queryClient.getQueryData(["account"])).toBeUndefined();
   });
 });
