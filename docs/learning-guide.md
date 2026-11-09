@@ -51,7 +51,7 @@ Docker 실행 후 `/react`에서 아래 단계를 확인할 수 있습니다. �
 | Codespaces에서 전체 실행 | 저장소 전체(React + Spring Boot + MySQL) | GitHub 로그인 필요. `.devcontainer/devcontainer.json`이 JDK 21·Node 22·Docker를 준비하고, 열린 뒤 터미널에서 `bash scripts/start-codespace.sh`를 실행하면 MySQL → 백엔드 → 프론트엔드 순서로 켜집니다. |
 
 - 사이트 안 편집기 예제는 실제 `.tsx` 파일이라 `tsc`·ESLint가 함께 검사하고, `stageSandboxes.test.ts`가 25단계 모두 예제가 있는지와 예제가 쓰는 패키지가 `sandboxSetup.ts`의 의존성 목록에 있는지 확인합니다. 의존성 버전은 `frontend/package.json`과 맞춥니다.
-- Sandpack(`@codesandbox/sandpack-react`)과 예제 원문은 아래 영역을 펼칠 때만 내려받는 별도 묶음(`StageSandboxPanel`)입니다. 펼침 상태는 `curriculum/state/stageSandboxStore.ts`(Zustand)가 제목 옆 메뉴와 아래 영역(`StageSandboxSection`, `ApplicationLayout`에서 렌더링) 사이에 공유합니다. 첫 화면 크기에는 영향이 없습니다.
+- Sandpack(`@codesandbox/sandpack-react`)과 예제 원문은 아래 영역을 펼칠 때만 내려받는 별도 묶음(`StageSandboxPanel`)입니다. 펼침 상태는 `curriculum/state/stageSandboxStore.ts`(Zustand)가 제목 옆 메뉴와 아래 영역(`StageSandboxSection`, `ApplicationLayout`에서 렌더링) 사이에 공유합니다. 첫 화면 크기에는 영향이 없습니다. 공개 HTTP IP에서는 브라우저가 `crypto.subtle`을 제공하지 않아 Sandpack 2.20.0의 미리보기 ID 계산이 실패합니다. `sandpackDigestFallback.ts`가 이 ID 계산에 필요한 SHA-256만 대신 제공합니다. 이는 HTTP 통신을 암호화하지 않으므로 운영 사이트는 별도로 HTTPS를 적용해야 합니다.
 
 #### Codespaces 선택지 끄기·지우기
 
