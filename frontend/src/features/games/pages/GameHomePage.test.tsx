@@ -5,10 +5,11 @@ import { gameExerciseList } from "@/features/curriculum/data/gameExercises";
 import { GameHomePage } from "@/features/games/pages/GameHomePage";
 
 describe("게임 홈", () => {
-  it("온라인 대전·게임 랭킹으로 가는 카드를 보여 주고, 혼자 하는 게임 화면 링크는 없다", () => {
+  it("온라인 대전·게임 랭킹·타로 카드로 가는 링크를 보여 준다", () => {
     render(<MemoryRouter><GameHomePage /></MemoryRouter>);
     expect(screen.getByRole("link", { name: /온라인 대전/ })).toHaveAttribute("href", "/games/online");
     expect(screen.getByRole("link", { name: /게임 랭킹/ })).toHaveAttribute("href", "/games/rankings");
+    expect(screen.getByRole("link", { name: /타로 카드 뽑기/ })).toHaveAttribute("href", "/games/tarot");
     const links = screen.getAllByRole("link").map((link) => link.getAttribute("href"));
     expect(links).not.toContain("/games/memory");
     expect(links).not.toContain("/games/tetris");

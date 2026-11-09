@@ -149,16 +149,17 @@ export const utilityNavigationGroup: NavigationGroup = {
   ],
 };
 
-// 게임: 다른 사람과 겨루는 온라인 대전과 종목별 랭킹. 게임 규칙을 직접 만들어 보는 편집기는 React 연습(초급·중급)에 있다.
+// 게임: 온라인 대전·랭킹과 브라우저에서 혼자 쓰는 타로. 게임 규칙 편집기는 React 연습(초급·중급)에 있다.
 export const gameNavigationGroup: NavigationGroup = {
   id: "games",
   title: "게임",
   symbol: "GM",
   collapsible: true,
   items: [
-    { label: "게임 홈", description: "온라인 대전·랭킹 안내", route: "/games", symbol: "GM" },
+    { label: "게임 홈", description: "온라인 대전·랭킹·타로 안내", route: "/games", symbol: "GM" },
     { label: "온라인 대전", description: "방·관전·채팅 · 대전 23종", route: "/games/online", symbol: "ON", matchChildren: true },
     { label: "게임 랭킹", description: "종목별 순위 · 기간 선택", route: "/games/rankings", symbol: "RK" },
+    { label: "타로 카드", description: "한 장·세 장 뽑기와 해석", route: "/games/tarot", symbol: "✦" },
   ],
 };
 

@@ -142,6 +142,7 @@ const GameHomePage = lazy(async () => ({ default: (await import("@/features/game
 const OnlineLobbyPage = lazy(async () => ({ default: (await import("@/features/games/online/pages/OnlineLobbyPage")).OnlineLobbyPage }));
 const OnlineRoomPage = lazy(async () => ({ default: (await import("@/features/games/online/pages/OnlineRoomPage")).OnlineRoomPage }));
 const GameRankingPage = lazy(async () => ({ default: (await import("@/features/games/ranking/GameRankingPage")).GameRankingPage }));
+const TarotPage = lazy(async () => ({ default: (await import("@/features/games/tarot/TarotPage")).TarotPage }));
 const WebCrawlerPage = lazy(async () => ({ default: (await import("@/features/crawler/pages/WebCrawlerPage")).WebCrawlerPage }));
 
 // ----------------------------------------------------------------------------
@@ -249,11 +250,12 @@ export const App = () => (
               </RoleProtectedRoute>
             } />
           </Route>
-          {/* 게임: 게임 홈·온라인 대전·랭킹. 화면마다 코드가 커서 각각 따로 내려받는다(lazy). */}
+          {/* 게임: 게임 홈·온라인 대전·랭킹·타로. 화면마다 필요한 코드만 따로 내려받는다(lazy). */}
           <Route path="games" element={<UtilityLayout />}>
             <Route index element={<Suspense fallback={<UtilityLazyFallback name="게임 홈" />}><GameHomePage /></Suspense>} />
             {/* 랭킹: 종목·난이도는 주소의 ?game=·?difficulty=로 받는다(화면에서 목록에 있는 값인지 검사한다) */}
             <Route path="rankings" element={<Suspense fallback={<UtilityLazyFallback name="게임 랭킹" />}><GameRankingPage /></Suspense>} />
+            <Route path="tarot" element={<Suspense fallback={<UtilityLazyFallback name="타로 카드" />}><TarotPage /></Suspense>} />
             {/* 온라인 대전: 대기실(방 목록·만들기)과 방(:roomId는 화면에서 모양을 검사한다) */}
             <Route path="online" element={<Suspense fallback={<UtilityLazyFallback name="온라인 대전" />}><OnlineLobbyPage /></Suspense>} />
             <Route path="online/:roomId" element={<Suspense fallback={<UtilityLazyFallback name="온라인 대전 방" />}><OnlineRoomPage /></Suspense>} />
