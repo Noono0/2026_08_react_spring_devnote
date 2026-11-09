@@ -1,7 +1,7 @@
 /**
  * GameHomePage.tsx — 게임 홈(/games)
  *
- * 게임 메뉴의 안내판이다. 실제 게임은 온라인 대전(/games/online)에서 하고, 순위는 게임 랭킹(/games/rankings)에서 본다.
+ * 게임 메뉴의 안내판이다. 온라인 대전·랭킹과 서버 없이 동작하는 타로 카드 뽑기로 연결한다.
  * 예전의 혼자 하는 게임 화면은 없앴고, 게임 규칙을 직접 만들어 보는 편집기 연습은 React 연습(초급·중급)으로 옮겼다.
  * 카드 모양은 유틸리티 홈(utility-card)과 같은 스타일을 재사용한다.
  */
@@ -14,7 +14,7 @@ export const GameHomePage = () => (
     <div className="page-hero">
       <span className="page-kicker">Games</span>
       <h1>게임</h1>
-      <p>다른 사람과 실시간으로 겨루는 온라인 대전과, 종목마다 순위를 보는 게임 랭킹이 있습니다.</p>
+      <p>온라인 대전과 게임 랭킹을 둘러보거나, 혼자 타로 카드를 뽑아 볼 수 있습니다.</p>
     </div>
 
     <div className="utility-card-grid game-card-grid">
@@ -29,6 +29,12 @@ export const GameHomePage = () => (
         <h3>게임 랭킹</h3>
         <p>종목마다 순위를 봅니다. 이번 주·이번 달·전체 버튼이나 날짜로 기간을 고릅니다. 비회원 기록은 1주일 뒤 사라집니다.</p>
         <small className="utility-card-usecase">배우는 것 · 주소에 담는 화면 상태 · TanStack Query 조건별 캐시 · 서버 집계 SQL</small>
+      </Link>
+      <Link className="utility-card" to="/games/tarot">
+        <span>✦</span>
+        <h3>타로 카드 뽑기</h3>
+        <p>메이저 아르카나 22장 중 한 장 또는 세 장을 뽑고 정방향·역방향의 의미를 읽습니다.</p>
+        <small className="utility-card-usecase">배우는 것 · 배열 섞기 · React 상태 전이 · 조건부 렌더링</small>
       </Link>
     </div>
 

@@ -16,6 +16,7 @@ describe("createDocumentTitle", () => {
     expect(createDocumentTitle("/account")).toBe("내 계정 | DevNote");
     expect(createDocumentTitle("/games/online/abcd2345")).toBe("온라인 대전 | DevNote");
     expect(createDocumentTitle("/games")).toBe("게임 홈 | DevNote");
+    expect(createDocumentTitle("/games/tarot")).toBe("타로 카드 | DevNote");
   });
 
   it("메뉴에 없는 주소는 기본 제목을 쓴다", () => {

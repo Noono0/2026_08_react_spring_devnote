@@ -1,0 +1,41 @@
+/* 타로 화면은 별도 lazy 페이지에서만 불러온다. 그림 파일 없이 CSS로 카드 앞·뒷면을 만든다. */
+.tarot-page { max-width: 1050px; margin-inline: auto; }
+.tarot-table { padding: clamp(18px, 3vw, 32px); border: 1px solid #695782; border-radius: 24px; background: radial-gradient(circle at 50% 3%, #33264d 0, #1b1932 45%, #101726 100%); color: #f9f2e5; box-shadow: 0 18px 45px #1118292b; }
+.tarot-controls { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 18px; }
+.tarot-controls fieldset { display: flex; flex: 1; flex-wrap: wrap; gap: 12px 22px; margin: 0; padding: 0; border: 0; }
+.tarot-controls legend { margin-bottom: 9px; font-weight: 800; }
+.tarot-controls label { display: inline-flex; align-items: center; gap: 7px; color: #f9f2e5; white-space: nowrap; cursor: pointer; }
+.tarot-controls input { accent-color: #e7b96d; }
+.tarot-draw-button { min-height: 44px; padding: 10px 20px; border: 1px solid #f4d595; border-radius: 10px; background: #e8c88e; color: #231c33; font-weight: 800; cursor: pointer; }
+.tarot-draw-button:hover { background: #f6dda9; }
+.tarot-draw-button:focus-visible, .tarot-card:focus-visible, .tarot-help summary:focus-visible { outline: 3px solid #fff; outline-offset: 4px; }
+.tarot-empty { min-height: 280px; display: grid; align-content: center; justify-items: center; text-align: center; color: #e8d7f2; }
+.tarot-empty p { color: #e8d7f2; }
+.tarot-empty span { font-size: 88px; line-height: 1; color: #e8c88e; }
+.tarot-instruction { margin: 24px 0 12px; text-align: center; color: #e8d7f2; }
+.tarot-spread { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: center; gap: clamp(18px, 3vw, 34px); margin: 20px 0 28px; }
+.tarot-slot { display: grid; justify-items: center; align-content: start; width: min(100%, 260px); text-align: center; }
+.tarot-slot h2 { margin: 0 0 12px; color: #f1d89c; font-size: 16px; }
+.tarot-card { width: 180px; aspect-ratio: 2 / 3; padding: 8px; border: 2px solid #e8c88e; border-radius: 13px; background: #151c37; color: #f9f2e5; cursor: pointer; box-shadow: 0 8px 22px #070c1d85; transition: transform 220ms ease, box-shadow 220ms ease; }
+.tarot-card:hover { transform: translateY(-5px); box-shadow: 0 13px 28px #070c1db0; }
+.tarot-card-back, .tarot-card-face { display: flex; width: 100%; height: 100%; flex-direction: column; align-items: center; justify-content: center; border: 1px solid #cba96b; border-radius: 7px; }
+.tarot-card-back { background: repeating-radial-gradient(circle at center, transparent 0 16px, #dfbd7935 17px 18px, transparent 19px 32px), linear-gradient(145deg, #352346, #172341); }
+.tarot-card-back > span { display: grid; place-items: center; width: 92px; height: 92px; border: 2px solid #f1d89c; border-radius: 50%; font-size: 68px; color: #f1d89c; }
+.tarot-card-face { gap: 5px; background: radial-gradient(circle at 50% 38%, #8d7184, #383f62 56%, #222b4e); }
+.tarot-card-number { align-self: flex-start; margin-left: 14px; color: #f1d89c; font-size: 14px; letter-spacing: .12em; }
+.tarot-card-symbol { display: grid; place-items: center; flex: 1; font-family: Georgia, serif; font-size: 76px; line-height: 1; color: #f7d48d; text-shadow: 0 0 22px #fbdb9e85; }
+.tarot-card-name { font-size: 21px; font-weight: 900; }
+.tarot-card-direction { margin-bottom: 12px; color: #f3dcae; font-size: 12px; }
+.tarot-meaning { margin-top: 13px; }
+.tarot-meaning strong { display: block; color: #f1d89c; font-size: 17px; }
+.tarot-meaning p { margin: 6px 0 0; color: #f9f2e5; line-height: 1.65; }
+.tarot-placeholder { color: #d8c8de; }
+.tarot-summary { margin: 0 auto 18px; max-width: 760px; padding: 18px 22px; border: 1px solid #b79a78; border-radius: 14px; background: #ffffff12; }
+.tarot-summary h2 { margin: 0 0 8px; font-size: 19px; color: #f1d89c; }
+.tarot-summary p { margin: 0; color: #f9f2e5; line-height: 1.7; }
+.tarot-progress { text-align: center; color: #e8d7f2; }
+.tarot-help { margin-top: 18px; border-top: 1px solid #ffffff42; padding-top: 16px; }
+.tarot-help summary { width: fit-content; cursor: pointer; font-weight: 700; }
+.tarot-help p { max-width: 720px; color: #f9f2e5; line-height: 1.7; }
+@media (max-width: 600px) { .tarot-controls { display: grid; } .tarot-controls fieldset { display: grid; } .tarot-spread { gap: 28px; } }
+@media (prefers-reduced-motion: reduce) { .tarot-card { transition: none; } }
