@@ -66,3 +66,21 @@ export interface LoginRequest {
   // 자동 로그인 체크 여부. 서버가 세션 유지 기간을 길게 잡는 데 쓴다.
   autoLogin: boolean;
 }
+
+/** 비밀번호 해시를 포함하지 않는 회원 상세 응답. */
+export interface MemberDetail {
+  memberId: number;
+  loginId: string | null;
+  email: string;
+  memberName: string;
+  memberRole: MemberRole;
+  gradeCode: MemberGrade;
+  accountStatus: "ACTIVE" | "LOCKED" | "WITHDRAWN";
+  useYn: "Y" | "N";
+  lastLoginAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MemberProfileUpdateRequest { memberName: string; email: string }
+export interface PasswordChangeRequest { currentPassword: string; newPassword: string }

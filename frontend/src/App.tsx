@@ -100,6 +100,8 @@ const DeveloperToolsPage = lazy(async () => ({ default: (await import("@/feature
 const PollPage = lazy(async () => ({ default: (await import("@/features/utility/pages/PollPage")).PollPage }));
 const AdminHomePage = lazy(async () => ({ default: (await import("@/features/admin/pages/AdminHomePage")).AdminHomePage }));
 const MemberManagementPage = lazy(async () => ({ default: (await import("@/features/admin/pages/MemberManagementPage")).MemberManagementPage }));
+const MemberDetailPage = lazy(async () => ({ default: (await import("@/features/admin/pages/MemberDetailPage")).MemberDetailPage }));
+const OwnAccountPage = lazy(async () => ({ default: (await import("@/features/auth/pages/OwnAccountPage")).OwnAccountPage }));
 const GradeManagementPage = lazy(async () => ({ default: (await import("@/features/admin/pages/GradeManagementPage")).GradeManagementPage }));
 const PermissionManagementPage = lazy(async () => ({ default: (await import("@/features/admin/pages/PermissionManagementPage")).PermissionManagementPage }));
 const VisitAnalyticsPage = lazy(async () => ({ default: (await import("@/features/admin/pages/VisitAnalyticsPage")).VisitAnalyticsPage }));
@@ -259,6 +261,8 @@ export const App = () => (
           {/* 관리자 화면 묶음. 전부 RoleProtectedRoute로 감싸서 비관리자는 못 들어간다. */}
           <Route path="admin" element={<RoleProtectedRoute><AdminHomePage /></RoleProtectedRoute>} />
           <Route path="admin/members" element={<RoleProtectedRoute><MemberManagementPage /></RoleProtectedRoute>} />
+          <Route path="admin/members/:memberId" element={<RoleProtectedRoute><MemberDetailPage /></RoleProtectedRoute>} />
+          <Route path="account" element={<RoleProtectedRoute authenticatedOnly><OwnAccountPage /></RoleProtectedRoute>} />
           <Route path="admin/grades" element={<RoleProtectedRoute><GradeManagementPage /></RoleProtectedRoute>} />
           <Route path="admin/permissions" element={<RoleProtectedRoute><PermissionManagementPage /></RoleProtectedRoute>} />
           <Route path="admin/analytics" element={<RoleProtectedRoute><VisitAnalyticsPage /></RoleProtectedRoute>} />

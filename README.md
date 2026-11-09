@@ -46,6 +46,7 @@ flowchart LR
 | 크롤러 설정, 로그인 세션, 단계 실행 | [크롤러 가이드](docs/crawler.md) |
 | 테스트와 정적 검사, 필요한 개발 도구 | [검증 가이드](docs/verification.md) |
 | ERD·순서도 편집 | [Diagram Designer](docs/diagram-designer.md) |
+| 회원 목록의 공통 그룹·피벗·집계·차트 재사용 | [공통 데이터 그리드 분석](docs/data-grid.md) |
 | 서버 배포와 백업 | [배포 가이드](docs/deployment.md) |
 | 실제로 겪은 문제와 해결 과정 | [트러블슈팅 사례](docs/troubleshooting.md) |
 | 변경 기록, 검증 결과, 다음 작업 시 주의점 | [유지보수 기록](docs/maintenance.md) |

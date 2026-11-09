@@ -2,6 +2,9 @@ package com.example.devnote.admin.controller;
 
 import com.example.devnote.admin.dto.*;
 import com.example.devnote.admin.service.AdminService;
+import com.example.devnote.member.dto.MemberDetailResponse;
+import com.example.devnote.member.dto.MemberProfileUpdateRequest;
+import com.example.devnote.member.service.MemberProfileService;
 import com.example.devnote.common.api.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -13,8 +16,9 @@ import java.util.List;
 /**
  * 관리자 화면 API입니다. (/api/v1/admin)
  *
- * [권한] 조회는 관리자(ADMIN·SUPER_ADMIN), 변경은 슈퍼관리자(SUPER_ADMIN)만 가능하다.
- *   권한 검사는 Controller가 아니라 AdminService의 requireAdministrator / requireSuperAdministrator가 한다.
+ * [권한] 조회는 관리자(ADMIN·SUPER_ADMIN), 기본 정보 변경은 대상 역할에 따라 관리자도 가능하다.
+ *   등급·역할·상태 변경은 슈퍼관리자(SUPER_ADMIN)만 가능하다.
+ *   권한 검사는 Controller가 아니라 AdminService와 MemberProfileService가 한다.
  *   그래서 모든 메서드가 HttpServletRequest(로그인 세션을 꺼낼 재료)를 Service에 넘긴다.
  *
  * 각 메서드가 한 줄인 이유: Controller는 "주소 연결 + Service 호출"만 하므로 짧게 모아 API 목록처럼 읽히게 했다.
@@ -24,9 +28,12 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AdminController {
     private final AdminService adminService;
+    private final MemberProfileService memberProfileService;
 
     // 회원 목록 조회 / 회원 등급·역할·상태 변경
     @GetMapping("/members") public ApiResponse<List<AdminMemberResponse>> getMembers(HttpServletRequest request) { return ApiResponse.success(adminService.getMembers(request)); }
+    @GetMapping("/members/{memberId}") public ApiResponse<MemberDetailResponse> getMember(@PathVariable Long memberId, HttpServletRequest request) { return ApiResponse.success(memberProfileService.getManagedProfile(memberId, request)); }
+    @PutMapping("/members/{memberId}/profile") public ApiResponse<MemberDetailResponse> updateMemberProfile(@PathVariable Long memberId, @Valid @RequestBody MemberProfileUpdateRequest updateRequest, HttpServletRequest request) { return ApiResponse.success(memberProfileService.updateManagedProfile(memberId, updateRequest, request)); }
     @PutMapping("/members/{memberId}") public ApiResponse<AdminMemberResponse> updateMember(@PathVariable Long memberId, @Valid @RequestBody MemberManagementUpdateRequest updateRequest, HttpServletRequest request) { return ApiResponse.success(adminService.updateMember(memberId, updateRequest, request)); }
     // 회원 등급 표(이름·기준 점수·순서) 조회 / 변경
     @GetMapping("/grades") public ApiResponse<List<GradeResponse>> getGrades(HttpServletRequest request) { return ApiResponse.success(adminService.getGrades(request)); }

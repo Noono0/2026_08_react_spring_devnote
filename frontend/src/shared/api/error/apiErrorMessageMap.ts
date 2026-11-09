@@ -42,6 +42,7 @@ export const apiErrorMessageMap: Record<string, string> = {
   //   사전에 고정 문구를 넣으면 그 값이 우선해서 남은 시간이 가려진다.
   LOGIN_ID_ALREADY_EXISTS: "이미 사용 중인 아이디입니다.",
   EMAIL_ALREADY_EXISTS: "이미 가입된 이메일입니다.",
+  CURRENT_PASSWORD_INVALID: "현재 비밀번호가 올바르지 않습니다.",
 
   // ── 투표 기능 ─────────────────────────────────────────────
   POLL_NOT_FOUND: "투표를 찾을 수 없습니다.",

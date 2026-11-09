@@ -21,9 +21,10 @@ const signedOutSession: AuthSession = {
 };
 
 describe("useLogoutMutation", () => {
-  it("로그아웃하면 학습용 문서와 업무 History 캐시를 모두 무효화한다", async () => {
+  it("로그아웃하면 권한별 캐시를 무효화하고 이전 계정 상세 캐시를 제거한다", async () => {
     vi.mocked(logout).mockResolvedValue(signedOutSession);
     const queryClient = new QueryClient();
+    queryClient.setQueryData(["account"], { memberId: 1, email: "previous@example.com" });
     const invalidateQueries = vi.spyOn(queryClient, "invalidateQueries");
     const wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
 
@@ -35,5 +36,6 @@ describe("useLogoutMutation", () => {
     // 업무 History는 슈퍼관리자에게만 임시저장 글이 보이므로, 로그아웃 뒤 남아 있으면 정보 노출이 된다.
     expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["history"] });
     expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["documents"] });
+    expect(queryClient.getQueryData(["account"])).toBeUndefined();
   });
 });

@@ -24,6 +24,10 @@
         SELECT <include refid="memberColumns"/> FROM members WHERE member_id = #{memberId} AND use_yn = 'Y'
     </select>
 
+    <select id="selectMemberForManagement" resultType="com.example.devnote.member.dao.row.MemberRow">
+        SELECT <include refid="memberColumns"/> FROM members WHERE member_id = #{memberId}
+    </select>
+
     <!-- 관리자 화면용: use_yn 조건이 없어 삭제 표시된 회원도 보이고, 최근 가입자부터 정렬한다. -->
     <select id="selectAllMembers" resultType="com.example.devnote.member.dao.row.MemberRow">
         SELECT <include refid="memberColumns"/> FROM members ORDER BY member_id DESC
@@ -38,6 +42,16 @@
     <update id="updateLastLoginAt">
         <!-- CURRENT_TIMESTAMP(6): DB 서버의 현재 시각(마이크로초까지). -->
         UPDATE members SET last_login_at = CURRENT_TIMESTAMP(6) WHERE member_id = #{memberId}
+    </update>
+
+    <update id="updateMemberProfile">
+        UPDATE members SET member_name = #{memberName}, email = #{email}, updated_at = CURRENT_TIMESTAMP(6)
+        WHERE member_id = #{memberId} AND use_yn = 'Y'
+    </update>
+
+    <update id="updateMemberPassword">
+        UPDATE members SET password_hash = #{passwordHash}, updated_at = CURRENT_TIMESTAMP(6)
+        WHERE member_id = #{memberId} AND use_yn = 'Y'
     </update>
 
     <update id="updateMemberManagement">

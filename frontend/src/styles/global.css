@@ -1076,6 +1076,41 @@ tbody tr:hover { background: color-mix(in srgb, var(--primary-color) 5%, var(--b
 
 /* 관리자 / Administration */
 .admin-search { display: grid; grid-template-columns: minmax(180px, 360px); gap: 7px; margin-bottom: 16px; font-weight: 800; }
+.member-list-count { margin-bottom: 10px; color: var(--text-secondary); font-weight: 700; }
+.member-grid-wrap { height: 480px; min-width: 0; border: 1px solid var(--border-color); border-radius: 16px; overflow: hidden; }
+.member-grid-wrap a { font-weight: 800; text-decoration: underline; text-underline-offset: 3px; }
+.grid-analysis-panel { margin-top: 18px; padding: 18px; border: 1px solid var(--border-color); border-radius: 16px; background: var(--background-panel); }
+.grid-analysis-panel > summary { cursor: pointer; font-weight: 800; }
+.grid-analysis-panel > p { margin: 14px 0; color: var(--text-secondary); }
+.grid-analysis-controls { display: flex; flex-wrap: wrap; gap: 12px; margin: 14px 0; }
+.grid-analysis-controls label { display: grid; gap: 5px; min-width: 150px; font-size: 13px; font-weight: 700; }
+.grid-analysis-total { font-weight: 800; }
+.grid-analysis-layout { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.grid-analysis-layout section { min-width: 0; }
+.grid-analysis-groups { margin: 0; padding-left: 20px; }
+.grid-analysis-groups li { margin: 8px 0; }
+.grid-analysis-groups summary { cursor: pointer; }
+.grid-analysis-chart { display: block; width: 100%; max-height: 400px; overflow: auto; }
+.grid-analysis-chart text { fill: var(--text-primary); font-size: 13px; }
+.grid-analysis-positive { fill: var(--primary-color); }
+.grid-analysis-negative { fill: var(--danger-color); }
+.grid-analysis-pivot-wrap { overflow-x: auto; }
+.grid-analysis-pivot-wrap table { border-collapse: collapse; min-width: 440px; width: 100%; }
+.grid-analysis-pivot-wrap th, .grid-analysis-pivot-wrap td { padding: 9px; border: 1px solid var(--border-color); text-align: right; }
+.grid-analysis-pivot-wrap th:first-child { text-align: left; }
+.grid-analysis-pivot-wrap thead, .grid-analysis-pivot-wrap tfoot { background: var(--background-muted); }
+.member-detail-layout { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 18px; }
+.member-detail-card { min-width: 0; padding: 22px; border: 1px solid var(--border-color); border-radius: 16px; background: var(--background-panel); }
+.member-detail-card h2 { margin-bottom: 18px; }
+.member-detail-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 0 0 22px; }
+.member-detail-fields div { min-width: 0; padding: 10px; border-radius: 10px; background: var(--background-muted); }
+.member-detail-fields dt { color: var(--text-secondary); font-size: 12px; font-weight: 700; }
+.member-detail-fields dd { margin: 5px 0 0; overflow-wrap: anywhere; }
+.member-detail-form { display: grid; gap: 14px; }
+.member-detail-form label { display: grid; gap: 6px; font-weight: 700; }
+.member-detail-form input, .member-detail-form select { width: 100%; min-width: 0; }
+.member-detail-form button { justify-self: start; }
+@media (max-width: 760px) { .member-detail-layout, .member-detail-fields, .grid-analysis-layout { grid-template-columns: 1fr; } }
 .admin-table-wrap { overflow-x: auto; border: 1px solid var(--border-color); border-radius: 16px; background: var(--background-panel); }
 .admin-table-wrap table { width: 100%; border-collapse: collapse; }
 .admin-table-wrap th, .admin-table-wrap td { padding: 14px; border-bottom: 1px solid var(--border-color); text-align: left; }

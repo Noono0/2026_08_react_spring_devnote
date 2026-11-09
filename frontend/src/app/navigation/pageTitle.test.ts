@@ -12,6 +12,8 @@ describe("createDocumentTitle", () => {
     expect(createDocumentTitle("/utilities/api-workspace/mock")).toBe("Mock API | DevNote");
     expect(createDocumentTitle("/history/12")).toBe("나의 업무 History | DevNote");
     expect(createDocumentTitle("/admin/members")).toBe("회원관리 | DevNote");
+    expect(createDocumentTitle("/admin/members/1")).toBe("회원 상세정보 | DevNote");
+    expect(createDocumentTitle("/account")).toBe("내 계정 | DevNote");
     expect(createDocumentTitle("/games/online/abcd2345")).toBe("온라인 대전 | DevNote");
     expect(createDocumentTitle("/games")).toBe("게임 홈 | DevNote");
   });

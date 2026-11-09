@@ -15,6 +15,7 @@ const getPageTitle = (pathname: string): string => {
   if (pathname.startsWith("/utilities")) return "각종 유틸리티 게시판";
   if (pathname.startsWith("/games")) return "게임";
   if (pathname.startsWith("/admin")) return "관리자";
+  if (pathname === "/account") return "내 계정";
   return "홈";
 };
 
