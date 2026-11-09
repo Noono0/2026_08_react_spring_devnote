@@ -32,9 +32,13 @@ import { useApplicationUiStore } from "@/app/state/applicationUiStore";
 import { applicationLogger } from "@/shared/logging/applicationLogger";
 import { SandboxResizeHandle, type ResizeAxis } from "@/features/curriculum/components/SandboxResizeHandle";
 import { selectSandboxDependencies } from "@/features/curriculum/sandbox/sandboxSetup";
+import { installSandpackDigestFallback } from "@/features/curriculum/sandbox/sandpackDigestFallback";
 import { createSandboxStyles, isSandboxThemeChoice, resolveSandboxTheme, sandboxEditorThemes, sandboxThemeChoices, sandboxThemeLabels } from "@/features/curriculum/sandbox/sandboxThemes";
 import { stageSandboxSources } from "@/features/curriculum/sandbox/stageSandboxes";
 import { SANDBOX_EDITOR_WIDTH_RANGE, SANDBOX_LAYOUT_HEIGHT_RANGE, useStageSandboxStore } from "@/features/curriculum/state/stageSandboxStore";
+
+// Sandpack을 펼칠 때만 실행한다. HTTP IP에서 빠진 Web Crypto digest를 채워 미리보기가 시작되게 한다.
+installSandpackDigestFallback();
 
 interface StageSandboxPanelProperties {
   /**
