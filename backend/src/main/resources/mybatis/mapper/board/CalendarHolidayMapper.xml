@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.devnote.board.CalendarHolidayMapper">
+    <select id="list" resultType="com.example.devnote.board.dao.CalendarHolidayRow">
+        SELECT holiday_id, holiday_date, holiday_name, holiday_kind, version_number
+        FROM calendar_holidays WHERE holiday_date &gt;= #{startDate} AND holiday_date &lt; #{endDate}
+        ORDER BY holiday_date, holiday_id
+    </select>
+    <select id="find" resultType="com.example.devnote.board.dao.CalendarHolidayRow">
+        SELECT holiday_id, holiday_date, holiday_name, holiday_kind, version_number FROM calendar_holidays WHERE holiday_id = #{holidayId}
+    </select>
+    <insert id="insert" parameterType="com.example.devnote.board.dao.CalendarHolidayRow" useGeneratedKeys="true" keyProperty="holidayId">
+        INSERT INTO calendar_holidays (holiday_date, holiday_name, holiday_kind) VALUES (#{holidayDate}, #{holidayName}, #{holidayKind})
+    </insert>
+    <update id="update" parameterType="com.example.devnote.board.dao.CalendarHolidayRow">
+        UPDATE calendar_holidays SET holiday_date = #{holidayDate}, holiday_name = #{holidayName}, holiday_kind = #{holidayKind},
+            version_number = version_number + 1
+        WHERE holiday_id = #{holidayId} AND version_number = #{versionNumber}
+    </update>
+    <delete id="delete">DELETE FROM calendar_holidays WHERE holiday_id = #{holidayId} AND version_number = #{versionNumber}</delete>
+</mapper>

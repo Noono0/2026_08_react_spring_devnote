@@ -15,7 +15,7 @@ import com.example.devnote.member.dto.MemberRole;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.dao.DuplicateKeyException;
@@ -27,18 +27,33 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.time.LocalDate;
+import java.time.Clock;
+import java.time.ZoneId;
 import java.time.YearMonth;
 import java.time.format.DateTimeParseException;
 
 /** Controller → Service → DAO → Mapper. 게시판 종류별 차이는 여기에서 검증한다. */
 @Service
-@RequiredArgsConstructor
 public class BoardService {
     private static final Pattern EDITOR_IMAGE_URL = Pattern.compile("^/api/v1/files/([1-9][0-9]*)/content$");
     private final BoardDao boardDao;
     private final MemberDao memberDao;
     private final FileResourceDao fileResourceDao;
     private final ObjectMapper objectMapper;
+    private final Clock clock;
+
+    @Autowired
+    public BoardService(BoardDao boardDao, MemberDao memberDao, FileResourceDao fileResourceDao, ObjectMapper objectMapper) {
+        this(boardDao, memberDao, fileResourceDao, objectMapper, Clock.systemUTC());
+    }
+
+    BoardService(BoardDao boardDao, MemberDao memberDao, FileResourceDao fileResourceDao, ObjectMapper objectMapper, Clock clock) {
+        this.boardDao = boardDao;
+        this.memberDao = memberDao;
+        this.fileResourceDao = fileResourceDao;
+        this.objectMapper = objectMapper;
+        this.clock = clock;
+    }
 
     public BoardType parseType(String value) {
         try {
@@ -60,13 +75,45 @@ public class BoardService {
 
     @Transactional(readOnly = true)
     public PageResponse<PostSummary> list(BoardType type, String keyword, int pageNumber, int pageSize) {
+        return list(type, keyword, pageNumber, pageSize, null);
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<PostSummary> list(BoardType type, String keyword, int pageNumber, int pageSize, Long viewerId) {
+        if (type == BoardType.POPUP) requirePopupAdministrator(viewerId);
+        return listPosts(type.name(), keyword, pageNumber, pageSize);
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<PostSummary> listCommunity(String category, String keyword, int pageNumber, int pageSize) {
+        String type = "COMMUNITY";
+        if (category != null && !category.isBlank()) {
+            BoardType parsed = parseType(category);
+            if (parsed != BoardType.GENERAL && parsed != BoardType.NOTICE && parsed != BoardType.QNA) {
+                throw new BusinessException(ErrorCode.COMMON_INVALID_REQUEST, "통합 게시판의 분류는 일반·공지·Q&A 중에서 선택해 주세요.");
+            }
+            type = parsed.name();
+        }
+        return listPosts(type, keyword, pageNumber, pageSize);
+    }
+
+    private PageResponse<PostSummary> listPosts(String type, String keyword, int pageNumber, int pageSize) {
         if (pageNumber < 0 || pageSize < 1 || pageSize > 50 || (long) pageNumber * pageSize > Integer.MAX_VALUE) {
             throw new BusinessException(ErrorCode.COMMON_INVALID_REQUEST, "페이지 번호와 크기를 확인해 주세요.");
         }
         String normalizedKeyword = normalizeKeyword(keyword);
-        List<PostSummary> posts = boardDao.list(type.name(), normalizedKeyword, pageSize, pageNumber * pageSize)
+        List<PostSummary> posts = boardDao.list(type, normalizedKeyword, pageSize, pageNumber * pageSize)
             .stream().map(this::toSummary).toList();
-        return PageResponse.of(posts, pageNumber, pageSize, boardDao.count(type.name(), normalizedKeyword));
+        return PageResponse.of(posts, pageNumber, pageSize, boardDao.count(type, normalizedKeyword));
+    }
+
+    @Transactional(readOnly = true)
+    public List<ActivePopup> activePopups(BoardType type, String path) {
+        if (type != BoardType.POPUP) throw new BusinessException(ErrorCode.COMMON_INVALID_REQUEST, "팝업 표시 조회는 팝업 게시판에서만 사용할 수 있습니다.");
+        String normalizedPath = normalizePopupPath(path);
+        LocalDate today = LocalDate.now(clock.withZone(ZoneId.of("Asia/Seoul")));
+        return boardDao.activePopups(normalizedPath, today).stream()
+            .map(post -> new ActivePopup(post.getPostId(), post.getTitle(), post.getContentHtml(), post.getVersionNumber(), post.getEventEndDate())).toList();
     }
 
     @Transactional(readOnly = true)
@@ -89,6 +136,7 @@ public class BoardService {
 
     @Transactional
     public PostDetail detail(BoardType type, long postId, Long viewerId) {
+        if (type == BoardType.POPUP) requirePopupAdministrator(viewerId);
         BoardPostRow post = requirePost(type, postId);
         boardDao.incrementViews(postId);
         post.setViewCount(post.getViewCount() + 1);
@@ -104,7 +152,8 @@ public class BoardService {
         post.setAuthorId(memberId);
         fillPost(post, request, type);
         boardDao.insert(post);
-        if (type == BoardType.CALENDAR) boardDao.upsertCalendarDate(post.getPostId(), request.eventDate());
+        if (type == BoardType.CALENDAR) boardDao.upsertCalendarDate(post.getPostId(), request.eventDate(), calendarEndDate(request));
+        if (type == BoardType.POPUP) savePopup(post.getPostId(), request);
         activateImage(request.imageFileId(), memberId);
         activateEmbeddedImages(request.contentJson(), memberId);
         return toDetail(requirePost(type, post.getPostId()), memberId);
@@ -124,7 +173,8 @@ public class BoardService {
         validatePost(type, request, member, post);
         fillPost(post, request, type);
         if (boardDao.update(post) == 0) throw new BusinessException(ErrorCode.BOARD_VERSION_CONFLICT);
-        if (type == BoardType.CALENDAR) boardDao.upsertCalendarDate(postId, request.eventDate());
+        if (type == BoardType.CALENDAR) boardDao.upsertCalendarDate(postId, request.eventDate(), calendarEndDate(request));
+        if (type == BoardType.POPUP) savePopup(postId, request);
         activateImage(request.imageFileId(), memberId);
         activateEmbeddedImages(request.contentJson(), memberId);
         return toDetail(requirePost(type, postId), memberId);
@@ -199,8 +249,13 @@ public class BoardService {
         if (!administrator(member)) throw new BusinessException(ErrorCode.ACCESS_DENIED);
     }
 
+    private void requirePopupAdministrator(Long viewerId) {
+        if (viewerId == null) throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
+        requireAdministrator(requireMember(viewerId));
+    }
+
     private void requireEdit(BoardPostRow post, MemberRow member) {
-        if (BoardType.NOTICE.name().equals(post.getBoardType())) requireAdministrator(member);
+        if (BoardType.NOTICE.name().equals(post.getBoardType()) || BoardType.POPUP.name().equals(post.getBoardType())) requireAdministrator(member);
         else if (!member.getMemberId().equals(post.getAuthorId()) && !administrator(member)) {
             throw new BusinessException(ErrorCode.ACCESS_DENIED);
         }
@@ -208,20 +263,30 @@ public class BoardService {
 
     private void validatePost(BoardType type, PostRequest request, MemberRow member, BoardPostRow existing) {
         validateContent(request.contentJson(), request.contentHtml(), request.contentText());
-        if (type == BoardType.NOTICE) requireAdministrator(member);
-        else if (request.pinned()) {
+        if (type == BoardType.NOTICE || type == BoardType.POPUP) requireAdministrator(member);
+        if (type != BoardType.NOTICE && request.pinned()) {
             throw new BusinessException(ErrorCode.COMMON_INVALID_REQUEST, "상단 고정은 공지 게시판에서만 사용할 수 있습니다.");
         }
         if (type == BoardType.GALLERY && request.imageFileId() == null) {
             throw new BusinessException(ErrorCode.COMMON_INVALID_REQUEST, "갤러리에는 대표 이미지가 필요합니다.");
         }
-        if (type == BoardType.CALENDAR) {
+        if (type == BoardType.CALENDAR || type == BoardType.POPUP) {
             LocalDate date = request.eventDate();
+            LocalDate endDate = calendarEndDate(request);
             if (date == null || date.getYear() < 1900 || date.getYear() > 2100) {
-                throw new BusinessException(ErrorCode.COMMON_INVALID_REQUEST, "달력 글의 날짜를 선택해 주세요.");
+                throw new BusinessException(ErrorCode.COMMON_INVALID_REQUEST, "시작일을 1900~2100년의 날짜로 선택해 주세요.");
             }
-        } else if (request.eventDate() != null) {
-            throw new BusinessException(ErrorCode.COMMON_INVALID_REQUEST, "날짜는 달력 게시판에서만 사용할 수 있습니다.");
+            if (endDate.getYear() < 1900 || endDate.getYear() > 2100 || endDate.isBefore(date)) {
+                throw new BusinessException(ErrorCode.COMMON_INVALID_REQUEST, "종료일은 1900~2100년이며 시작일과 같거나 이후여야 합니다.");
+            }
+        } else if (request.eventDate() != null || request.eventEndDate() != null) {
+            throw new BusinessException(ErrorCode.COMMON_INVALID_REQUEST, "기간은 달력·팝업 게시판에서만 사용할 수 있습니다.");
+        }
+        if (type == BoardType.POPUP) {
+            if (request.popup() == null) throw new BusinessException(ErrorCode.COMMON_INVALID_REQUEST, "팝업을 표시할 메뉴 URL을 입력해 주세요.");
+            normalizePopupPath(request.popup().targetPath());
+        } else if (request.popup() != null) {
+            throw new BusinessException(ErrorCode.COMMON_INVALID_REQUEST, "팝업 설정은 팝업 게시판에서만 사용할 수 있습니다.");
         }
         Long fileId = request.imageFileId();
         if (fileId != null && (existing == null || !fileId.equals(existing.getImageFileId()))) {
@@ -230,6 +295,32 @@ public class BoardService {
             if (!member.getMemberId().equals(file.getUploaderId())) throw new BusinessException(ErrorCode.FILE_ACCESS_FORBIDDEN);
             if (file.getMimeType() == null || !file.getMimeType().startsWith("image/")) throw new BusinessException(ErrorCode.FILE_NOT_IMAGE);
         }
+    }
+
+    /** 기존 단일 날짜 요청은 시작일과 종료일이 같은 기간으로 저장한다. */
+    private LocalDate calendarEndDate(PostRequest request) {
+        return request.eventEndDate() == null ? request.eventDate() : request.eventEndDate();
+    }
+
+    private void savePopup(long postId, PostRequest request) {
+        PopupSettings popup = request.popup();
+        boardDao.upsertPopup(postId, normalizePopupPath(popup.targetPath()), popup.includeChildren(), popup.enabled(),
+            request.eventDate(), calendarEndDate(request));
+    }
+
+    /** 외부 주소·쿼리·상대 경로는 받지 않고 사이트 내부 메뉴 경로만 저장한다. */
+    private String normalizePopupPath(String path) {
+        String normalized = path == null ? "" : path.trim();
+        if (normalized.length() > 300 || !normalized.matches("/(?:[A-Za-z0-9_-]+/)*[A-Za-z0-9_-]*")) {
+            throw new BusinessException(ErrorCode.COMMON_INVALID_REQUEST, "메뉴 URL은 /react/boards처럼 사이트 내부 경로로 입력해 주세요.");
+        }
+        return normalized.length() > 1 && normalized.endsWith("/") ? normalized.substring(0, normalized.length() - 1) : normalized;
+    }
+
+    private PopupSettings popupSettings(BoardPostRow post) {
+        return BoardType.POPUP.name().equals(post.getBoardType())
+            ? new PopupSettings(post.getPopupTargetPath(), Boolean.TRUE.equals(post.getPopupIncludeChildren()), Boolean.TRUE.equals(post.getPopupEnabled()))
+            : null;
     }
 
     private void validateContent(JsonNode json, String html, String text) {
@@ -295,13 +386,14 @@ public class BoardService {
         String text = post.getContentText();
         return new PostSummary(post.getPostId(), BoardType.valueOf(post.getBoardType()), post.getTitle(), post.getAuthorName(),
             text.length() > 140 ? text.substring(0, 140) : text, post.getPinned(), post.getAnswered(),
-            post.getImageFileId(), post.getViewCount(), post.getCreatedAt(), post.getEventDate());
+            post.getImageFileId(), post.getViewCount(), post.getCreatedAt(), post.getEventDate(), post.getEventEndDate(), popupSettings(post));
     }
 
     private PostDetail toDetail(BoardPostRow post, Long viewerId) {
         MemberRow viewer = viewerId == null ? null : memberDao.selectMemberById(viewerId);
         boolean admin = administrator(viewer);
-        boolean canEdit = viewer != null && (admin || (viewerId.equals(post.getAuthorId()) && !BoardType.NOTICE.name().equals(post.getBoardType())));
+        boolean canEdit = viewer != null && (admin || (viewerId.equals(post.getAuthorId())
+            && !BoardType.NOTICE.name().equals(post.getBoardType()) && !BoardType.POPUP.name().equals(post.getBoardType())));
         BoardAnswerRow answer = boardDao.findAnswer(post.getPostId());
         AnswerResponse answerResponse = answer == null ? null : new AnswerResponse(answer.getAnswerId(), readJson(answer.getContentJson()),
             answer.getContentHtml(), answer.getAuthorName(), answer.getCreatedAt());
@@ -309,6 +401,6 @@ public class BoardService {
             post.getContentHtml(), post.getContentText(), post.getAuthorName(), post.getPinned(), post.getAnswered(),
             post.getImageFileId(), post.getViewCount(), post.getVersionNumber(), canEdit, canEdit,
             admin && BoardType.QNA.name().equals(post.getBoardType()) && answer == null,
-            post.getCreatedAt(), post.getUpdatedAt(), post.getEventDate(), answerResponse);
+            post.getCreatedAt(), post.getUpdatedAt(), post.getEventDate(), post.getEventEndDate(), popupSettings(post), answerResponse);
     }
 }

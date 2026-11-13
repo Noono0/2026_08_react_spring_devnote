@@ -24,4 +24,8 @@ public class BoardPostRow {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private LocalDate eventDate;
+    private LocalDate eventEndDate;
+    private String popupTargetPath;
+    private Boolean popupIncludeChildren;
+    private Boolean popupEnabled;
 }

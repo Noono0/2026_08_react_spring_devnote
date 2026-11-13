@@ -17,6 +17,7 @@ vi.mock("@/shared/config/applicationEnvironment", () => ({
 }));
 vi.mock("@tanstack/react-query-devtools", () => ({ ReactQueryDevtools: () => null }));
 vi.mock("@/app/components/VisitTracker", () => ({ VisitTracker: () => null }));
+vi.mock("@/features/board-lab/PopupDisplay", () => ({ PopupDisplay: () => null }));
 vi.mock("@/features/portfolio/layouts/PortfolioLayout", async () => {
   const { Outlet } = await import("react-router-dom");
   return { PortfolioLayout: () => <Outlet /> };

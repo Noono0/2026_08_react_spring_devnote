@@ -14,7 +14,7 @@ import type { MinesweeperDifficulty } from "@/features/games/minesweeper/mineswe
 import { parseColorCount, type ColorCount } from "@/features/games/puyo/puyoLogic";
 import type { SudokuDifficulty } from "@/features/games/sudoku/sudokuLogic";
 
-export const practiceGameTypes = ["TETRIS", "PUYO", "MEMORY_MATCH", "GAME_2048", "MINESWEEPER", "SUDOKU", "OLYMPIC", "ALKKAGI", "APPLE", "SUIKA"] as const;
+export const practiceGameTypes = ["TETRIS", "PUYO", "MEMORY_MATCH", "GAME_2048", "MINESWEEPER", "SUDOKU", "OLYMPIC", "ALKKAGI", "APPLE", "SUIKA", "MARBLE", "MAZE"] as const;
 export type PracticeGameType = (typeof practiceGameTypes)[number];
 
 export const practiceGameLabels: Record<PracticeGameType, string> = {
@@ -28,6 +28,8 @@ export const practiceGameLabels: Record<PracticeGameType, string> = {
   ALKKAGI: "알까기",
   APPLE: "사과게임",
   SUIKA: "수박게임",
+  MARBLE: "부루마블",
+  MAZE: "미로게임",
 };
 
 export const isPracticeGameType = (gameType: string): gameType is PracticeGameType =>

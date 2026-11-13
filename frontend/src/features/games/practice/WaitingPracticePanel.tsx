@@ -25,6 +25,8 @@ import { PuyoPractice } from "./PuyoPractice";
 import { SudokuPractice } from "./SudokuPractice";
 import { SuikaPractice } from "./SuikaPractice";
 import { TetrisPractice } from "./TetrisPractice";
+import { MarblePractice } from "@/features/games/marble/MarblePage";
+import { MazePractice } from "@/features/games/maze/MazePage";
 
 interface WaitingPracticePanelProps {
   gameType: string;
@@ -54,6 +56,10 @@ const PracticeBody = ({ gameType, gameOption, nickname }: { gameType: PracticeGa
       return <ApplePractice nickname={nickname} />;
     case "SUIKA":
       return <SuikaPractice nickname={nickname} />;
+    case "MARBLE":
+      return <MarblePractice />;
+    case "MAZE":
+      return <MazePractice initialDifficulty={gameOption === "EASY" || gameOption === "HARD" ? gameOption : "NORMAL"} />;
   }
 };
 
@@ -67,7 +73,7 @@ export const WaitingPracticePanel = ({ gameType, gameOption, nickname }: Waiting
       <div className="waiting-practice-header">
         <div>
           <h2>혼자 연습하기</h2>
-          <p className="online-hint">상대를 기다리는 동안 이 게임을 혼자 해 볼 수 있습니다. 게임이 시작되면 연습은 닫힙니다. 끝난 판은 연습 기록 랭킹에 올릴 수 있습니다.</p>
+          <p className="online-hint">상대를 기다리는 동안 이 게임을 혼자 해 볼 수 있습니다. 게임이 시작되면 연습은 닫힙니다. {gameType === "MARBLE" || gameType === "MAZE" ? "부루마블은 컴퓨터와 연습하며 미로 최고 기록은 이 브라우저에 저장합니다." : "끝난 판은 연습 기록 랭킹에 올릴 수 있습니다."}</p>
         </div>
         <button type="button" className={open ? "ghost-button" : ""} aria-expanded={open} onClick={() => setOpen((previous) => !previous)}>
           {open ? "연습 접기" : `${label} 연습하기`}

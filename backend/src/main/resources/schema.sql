@@ -197,10 +197,10 @@ CREATE TABLE IF NOT EXISTS documents (
     CONSTRAINT fk_documents_thumbnail_file FOREIGN KEY (thumbnail_file_id) REFERENCES file_resources(file_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='문서';
 
--- 통합 게시판 실습: 여섯 종류가 같은 CRUD 구조를 쓰고 종류별 규칙은 Service에서 처리한다.
+-- 통합 게시판 실습: 같은 CRUD 구조를 쓰고 분류·표시 방식별 규칙은 Service에서 처리한다.
 CREATE TABLE IF NOT EXISTS board_posts (
     post_id BIGINT NOT NULL AUTO_INCREMENT,
-    board_type VARCHAR(20) NOT NULL COMMENT 'GENERAL, NOTICE, QNA, GALLERY, GRID, CALENDAR',
+    board_type VARCHAR(20) NOT NULL COMMENT 'GENERAL, NOTICE, QNA, GALLERY, GRID, CALENDAR, POPUP',
     author_id BIGINT NOT NULL,
     title VARCHAR(200) NOT NULL,
     content_json JSON NOT NULL COMMENT 'Tiptap 편집 원본',
@@ -225,10 +225,11 @@ CREATE TABLE IF NOT EXISTS board_posts (
 CREATE TABLE IF NOT EXISTS board_calendar_dates (
     post_id BIGINT NOT NULL,
     event_date DATE NOT NULL,
+    event_end_date DATE NULL COMMENT '종료일 포함, 기존 단일 날짜 글은 event_date 사용',
     PRIMARY KEY (post_id),
     KEY idx_board_calendar_dates_date (event_date, post_id),
     CONSTRAINT fk_board_calendar_dates_post FOREIGN KEY (post_id) REFERENCES board_posts(post_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='달력 게시글 날짜';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='달력 게시글 기간';
 
 CREATE TABLE IF NOT EXISTS board_answers (
     answer_id BIGINT NOT NULL AUTO_INCREMENT,
@@ -243,6 +244,35 @@ CREATE TABLE IF NOT EXISTS board_answers (
     CONSTRAINT fk_board_answers_post FOREIGN KEY (post_id) REFERENCES board_posts(post_id),
     CONSTRAINT fk_board_answers_author FOREIGN KEY (author_id) REFERENCES members(member_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Q&A 관리자 답변';
+
+CREATE TABLE IF NOT EXISTS board_popup_settings (
+    post_id BIGINT NOT NULL,
+    target_path VARCHAR(300) NOT NULL,
+    include_children BOOLEAN NOT NULL DEFAULT FALSE,
+    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    PRIMARY KEY (post_id),
+    KEY idx_board_popup_schedule (enabled, start_date, end_date),
+    CONSTRAINT fk_board_popup_post FOREIGN KEY (post_id) REFERENCES board_posts(post_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='메뉴·기간별 팝업 설정';
+
+CREATE TABLE IF NOT EXISTS calendar_holiday_cache (
+    holiday_year INT NOT NULL,
+    content_json JSON NOT NULL,
+    verified_date DATE NOT NULL COMMENT '한국 시간 기준 API 확인일',
+    PRIMARY KEY (holiday_year)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='공공데이터 공휴일 연도별 저장본';
+
+CREATE TABLE IF NOT EXISTS calendar_holidays (
+    holiday_id BIGINT NOT NULL AUTO_INCREMENT,
+    holiday_date DATE NOT NULL,
+    holiday_name VARCHAR(80) NOT NULL,
+    holiday_kind VARCHAR(20) NOT NULL COMMENT 'PUBLIC, SUBSTITUTE, TEMPORARY, COMPANY',
+    version_number BIGINT NOT NULL DEFAULT 1,
+    PRIMARY KEY (holiday_id),
+    UNIQUE KEY uk_calendar_holiday_date_name (holiday_date, holiday_name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='관리자 추가 휴일';
 
 CREATE TABLE IF NOT EXISTS document_histories (
     document_history_id BIGINT NOT NULL AUTO_INCREMENT COMMENT '문서 이력 식별자',

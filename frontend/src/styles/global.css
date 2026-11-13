@@ -660,6 +660,7 @@ tbody tr:hover { background: color-mix(in srgb, var(--primary-color) 5%, var(--b
 .thumbnail-placeholder-large { display: grid; height: 100%; place-content: center; gap: 6px; color: var(--text-muted); text-align: center; }
 .thumbnail-placeholder-large span { color: var(--primary-color); font-size: 31px; font-weight: 900; }
 .rendered-document-content { min-width: 0; min-height: 300px; padding: 24px; border: 1px solid var(--border-color); border-radius: 15px; background: var(--background-panel); }
+.board-popup-error { position: fixed; left: 16px; right: 16px; bottom: 16px; z-index: 50; width: fit-content; max-width: calc(100vw - 32px); padding: 10px 14px; border: 1px solid var(--border-color); border-radius: 10px; background: var(--background-panel); color: var(--text-secondary); }
 .rendered-document-content img { max-width: 100%; border-radius: 12px; }
 .rendered-document-content table, .portfolio-rich-content table { width: 100%; max-width: 100%; margin: 20px 0; border-collapse: collapse; }
 .rendered-document-content th, .rendered-document-content td, .portfolio-rich-content th, .portfolio-rich-content td { min-width: 0; padding: 10px 12px; border: 1px solid var(--border-strong); overflow-wrap: anywhere; text-align: inherit; }

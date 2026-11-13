@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.devnote.board.CalendarHolidayCacheMapper">
+    <select id="find" resultType="com.example.devnote.board.dao.CalendarHolidayCacheRow">
+        SELECT holiday_year, content_json, verified_date FROM calendar_holiday_cache WHERE holiday_year = #{year}
+    </select>
+    <select id="years" resultType="java.lang.Integer">SELECT holiday_year FROM calendar_holiday_cache ORDER BY holiday_year</select>
+    <insert id="save" parameterType="com.example.devnote.board.dao.CalendarHolidayCacheRow">
+        INSERT INTO calendar_holiday_cache (holiday_year, content_json, verified_date) VALUES (#{holidayYear}, #{contentJson}, #{verifiedDate})
+        ON DUPLICATE KEY UPDATE content_json = #{contentJson}, verified_date = #{verifiedDate}
+    </insert>
+</mapper>

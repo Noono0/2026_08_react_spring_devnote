@@ -72,8 +72,22 @@ const applyModalSize = (dialogElement: HTMLDialogElement, width: number, height:
   dialogElement.style.height = `${nextSize.height}px`;
 };
 
+const clearStoredModalSize = (storageKey: string): void => {
+  try {
+    localStorage.removeItem(storageKey);
+  } catch (error: unknown) {
+    console.warn("[ModalDialog] 저장된 모달 크기를 초기화하지 못했습니다.", { storageKey, error });
+  }
+};
+
 const readStoredModalSize = (storageKey: string): StoredModalSize | undefined => {
-  const storedValue = localStorage.getItem(storageKey);
+  let storedValue: string | null;
+  try {
+    storedValue = localStorage.getItem(storageKey);
+  } catch (error: unknown) {
+    console.warn("[ModalDialog] 저장된 모달 크기를 읽지 못했습니다.", { storageKey, error });
+    return undefined;
+  }
   if (!storedValue) return undefined;
 
   try {
@@ -94,7 +108,7 @@ const readStoredModalSize = (storageKey: string): StoredModalSize | undefined =>
     console.warn("[ModalDialog] 저장된 모달 크기를 해석하지 못했습니다.", { storageKey, error });
   }
 
-  localStorage.removeItem(storageKey);
+  clearStoredModalSize(storageKey);
   return undefined;
 };
 
@@ -323,7 +337,7 @@ export const ModalDialog = ({
 
     dialogElement.style.removeProperty("width");
     dialogElement.style.removeProperty("height");
-    if (resolvedResizeStorageKey) localStorage.removeItem(resolvedResizeStorageKey);
+    if (resolvedResizeStorageKey) clearStoredModalSize(resolvedResizeStorageKey);
   };
 
   /**

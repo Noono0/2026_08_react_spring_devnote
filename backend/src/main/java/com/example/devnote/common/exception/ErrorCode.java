@@ -30,6 +30,9 @@ public enum ErrorCode {
     COMMON_INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "COMMON_INTERNAL_SERVER_ERROR", "서버에서 요청을 처리하지 못했습니다."),
     COMMON_RESOURCE_NOT_FOUND(HttpStatus.NOT_FOUND, "COMMON_RESOURCE_NOT_FOUND", "요청한 API 또는 리소스를 찾을 수 없습니다."),
     COMMON_METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "COMMON_METHOD_NOT_ALLOWED", "지원하지 않는 HTTP 메서드입니다."),
+    CALENDAR_HOLIDAY_NOT_FOUND(HttpStatus.NOT_FOUND, "CALENDAR_HOLIDAY_NOT_FOUND", "휴일 정보를 찾을 수 없습니다."),
+    CALENDAR_HOLIDAY_EXISTS(HttpStatus.CONFLICT, "CALENDAR_HOLIDAY_EXISTS", "같은 날짜와 이름의 휴일이 이미 등록되어 있습니다."),
+    CALENDAR_HOLIDAY_VERSION_CONFLICT(HttpStatus.CONFLICT, "CALENDAR_HOLIDAY_VERSION_CONFLICT", "휴일 정보가 변경되었습니다. 최신 정보를 확인해 주세요."),
     // ── 로그인·회원 ───────────────────────────────────────────────────
     AUTHENTICATION_REQUIRED(HttpStatus.UNAUTHORIZED, "AUTHENTICATION_REQUIRED", "로그인이 필요합니다."),
     ACCESS_DENIED(HttpStatus.FORBIDDEN, "ACCESS_DENIED", "요청한 기능을 사용할 권한이 없습니다."),

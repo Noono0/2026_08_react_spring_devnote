@@ -25,6 +25,9 @@ describe("useLogoutMutation", () => {
     vi.mocked(logout).mockResolvedValue(signedOutSession);
     const queryClient = new QueryClient();
     queryClient.setQueryData(["account"], { memberId: 1, email: "previous@example.com" });
+    queryClient.setQueryData(["board-lab", "detail", "POPUP", 9, 1, true], { title: "예약된 관리자 안내" });
+    queryClient.setQueryData(["board-lab", "list", "POPUP", "", 0, 1, true], { content: ["예약된 관리자 안내"] });
+    const cancelQueries = vi.spyOn(queryClient, "cancelQueries");
     const invalidateQueries = vi.spyOn(queryClient, "invalidateQueries");
     const wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
 
@@ -38,5 +41,8 @@ describe("useLogoutMutation", () => {
     expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["documents"] });
     expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["board-lab"] });
     expect(queryClient.getQueryData(["account"])).toBeUndefined();
+    expect(cancelQueries).toHaveBeenCalledWith({ queryKey: ["board-lab", "detail", "POPUP"] });
+    expect(queryClient.getQueriesData({ queryKey: ["board-lab", "detail", "POPUP"] })).toEqual([]);
+    expect(queryClient.getQueriesData({ queryKey: ["board-lab", "list", "POPUP"] })).toEqual([]);
   });
 });

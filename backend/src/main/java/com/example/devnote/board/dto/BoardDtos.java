@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import jakarta.validation.Valid;
 
 import java.time.LocalDateTime;
 import java.time.LocalDate;
@@ -13,7 +14,9 @@ import java.util.List;
 public final class BoardDtos {
     private BoardDtos() {}
 
-    public enum BoardType { GENERAL, NOTICE, QNA, GALLERY, GRID, CALENDAR }
+    public enum BoardType { GENERAL, NOTICE, QNA, GALLERY, GRID, CALENDAR, POPUP }
+
+    public record PopupSettings(@NotBlank @Size(max = 300) String targetPath, boolean includeChildren, boolean enabled) {}
 
     public record PostRequest(
         @NotBlank @Size(max = 200) String title,
@@ -23,7 +26,9 @@ public final class BoardDtos {
         Long imageFileId,
         boolean pinned,
         Long versionNumber,
-        LocalDate eventDate
+        LocalDate eventDate,
+        LocalDate eventEndDate,
+        @Valid PopupSettings popup
     ) {}
 
     public record AnswerRequest(
@@ -35,7 +40,7 @@ public final class BoardDtos {
     public record PostSummary(
         long postId, BoardType boardType, String title, String authorName,
         String contentPreview, boolean pinned, boolean answered, Long imageFileId,
-        long viewCount, LocalDateTime createdAt, LocalDate eventDate
+        long viewCount, LocalDateTime createdAt, LocalDate eventDate, LocalDate eventEndDate, PopupSettings popup
     ) {}
 
     /** 월 전체 일정. 최대 500건을 표시하고 초과 여부를 화면에 알린다. */
@@ -51,6 +56,10 @@ public final class BoardDtos {
         String contentHtml, String contentText, String authorName,
         boolean pinned, boolean answered, Long imageFileId, long viewCount, long versionNumber,
         boolean canEdit, boolean canDelete, boolean canAnswer,
-        LocalDateTime createdAt, LocalDateTime updatedAt, LocalDate eventDate, AnswerResponse answer
+        LocalDateTime createdAt, LocalDateTime updatedAt, LocalDate eventDate, LocalDate eventEndDate,
+        PopupSettings popup, AnswerResponse answer
     ) {}
+
+    /** 공개 표시용 응답에는 현재 노출 중인 제목·본문만 담는다. */
+    public record ActivePopup(long postId, String title, String contentHtml, long versionNumber, LocalDate endDate) {}
 }

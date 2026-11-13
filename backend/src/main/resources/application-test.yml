@@ -1,3 +1,8 @@
+application:
+  calendar-holidays:
+    # 일반 테스트는 개인 인증키·외부 공공데이터 서버를 사용하지 않는다.
+    # Regular tests never use personal keys or the external public API.
+    service-key: ""
 spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver

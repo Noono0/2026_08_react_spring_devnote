@@ -11,7 +11,9 @@ public interface BoardDao {
     BoardPostRow find(long postId);
     void insert(BoardPostRow post);
     int update(BoardPostRow post);
-    void upsertCalendarDate(long postId, LocalDate eventDate);
+    void upsertCalendarDate(long postId, LocalDate eventDate, LocalDate eventEndDate);
+    void upsertPopup(long postId, String targetPath, boolean includeChildren, boolean enabled, LocalDate startDate, LocalDate endDate);
+    List<BoardPostRow> activePopups(String path, LocalDate today);
     int delete(long postId, long versionNumber);
     void incrementViews(long postId);
     BoardAnswerRow findAnswer(long postId);

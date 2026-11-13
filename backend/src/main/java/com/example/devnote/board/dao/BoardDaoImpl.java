@@ -26,8 +26,15 @@ public class BoardDaoImpl implements BoardDao {
     @Override public BoardPostRow find(long postId) { return sqlSession.selectOne(NAMESPACE + "find", postId); }
     @Override public void insert(BoardPostRow post) { sqlSession.insert(NAMESPACE + "insert", post); }
     @Override public int update(BoardPostRow post) { return sqlSession.update(NAMESPACE + "update", post); }
-    @Override public void upsertCalendarDate(long postId, LocalDate eventDate) {
-        sqlSession.insert(NAMESPACE + "upsertCalendarDate", Map.of("postId", postId, "eventDate", eventDate));
+    @Override public void upsertCalendarDate(long postId, LocalDate eventDate, LocalDate eventEndDate) {
+        sqlSession.insert(NAMESPACE + "upsertCalendarDate", Map.of("postId", postId, "eventDate", eventDate, "eventEndDate", eventEndDate));
+    }
+    @Override public void upsertPopup(long postId, String targetPath, boolean includeChildren, boolean enabled, LocalDate startDate, LocalDate endDate) {
+        sqlSession.insert(NAMESPACE + "upsertPopup", Map.of("postId", postId, "targetPath", targetPath,
+            "includeChildren", includeChildren, "enabled", enabled, "startDate", startDate, "endDate", endDate));
+    }
+    @Override public List<BoardPostRow> activePopups(String path, LocalDate today) {
+        return sqlSession.selectList(NAMESPACE + "activePopups", Map.of("path", path, "today", today));
     }
     @Override public int delete(long postId, long versionNumber) {
         return sqlSession.update(NAMESPACE + "delete", Map.of("postId", postId, "versionNumber", versionNumber));

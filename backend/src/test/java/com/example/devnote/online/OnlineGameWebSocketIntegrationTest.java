@@ -148,6 +148,65 @@ class OnlineGameWebSocketIntegrationTest {
         watcher.session.close();
     }
 
+    private Client[] startTwoPlayerGame(String type) throws Exception {
+        var input = new java.util.HashMap<String,Object>();
+        input.put("title",type+" 통합 테스트"); input.put("gameType",type); input.put("seatCount",2); input.put("password",""); input.put("membersOnly",false);
+        if(type.equals("MAZE")) input.put("gameOption","EASY");
+        JsonNode created=restTemplate.postForObject("http://localhost:"+port+"/api/v1/online/rooms",input,JsonNode.class);
+        String roomId=created.path("data").path("roomId").asText();
+        Client first=connect(),second=connect();
+        try {
+            first.send(Map.of("type","JOIN","roomId",roomId,"nickname","첫째","hostToken",created.path("data").path("hostToken").asText()));
+            first.awaitRoom(room->room.path("participants").size()==1);
+            second.send(Map.of("type","JOIN","roomId",roomId,"nickname","둘째"));
+            first.awaitRoom(room->room.path("participants").size()==2);
+            first.send(Map.of("type","SIT","seatIndex",0)); second.send(Map.of("type","SIT","seatIndex",1));
+            first.awaitRoom(room->!room.path("seats").get(0).isNull()&&!room.path("seats").get(1).isNull());
+            first.send(Map.of("type","START"));
+            second.awaitRoom(room->room.path("status").asText().equals("PLAYING"));
+            return new Client[]{first,second};
+        } catch(Exception exception) { first.session.close(); second.session.close(); throw exception; }
+    }
+
+    @Test void 부루마블의_자산과_차례를_두_연결에_동일하게_보낸다() throws Exception {
+        Client[] clients=startTwoPlayerGame("MARBLE"); Client first=clients[0],second=clients[1];
+        try {
+            first.awaitRoom(room->room.path("status").asText().equals("PLAYING"));
+            second.send(Map.of("type","GAME_ACTION","action","ROLL"));
+            JsonNode error=second.await(message->message.path("type").asText().equals("ERROR"));
+            assertThat(error.path("error").path("code").asText()).isEqualTo("ONLINE_NOT_YOUR_TURN");
+            first.send(Map.of("type","GAME_ACTION","action","ROLL"));
+            JsonNode rolled=first.awaitRoom(room->!room.path("game").path("phase").asText().equals("ROLL"));
+            if(rolled.path("room").path("game").path("phase").asText().equals("DECIDE")) {
+                first.send(Map.of("type","GAME_ACTION","action","BUY"));
+                first.awaitRoom(room->room.path("game").path("phase").asText().equals("END"));
+            }
+            first.send(Map.of("type","GAME_ACTION","action","END"));
+            var a=first.awaitRoom(room->room.path("game").path("turn").asInt()==1).path("room").path("game");
+            var b=second.awaitRoom(room->room.path("game").path("turn").asInt()==1).path("room").path("game");
+            assertThat(a.path("players")).isEqualTo(b.path("players"));
+            assertThat(a.path("properties")).isEqualTo(b.path("properties"));
+            assertThat(a.has("randomState")).isFalse();
+        } finally { first.session.close(); second.session.close(); }
+    }
+
+    @Test void 같은_미로에서_각자_이동하고_기권_결과를_공유한다() throws Exception {
+        Client[] clients=startTwoPlayerGame("MAZE"); Client first=clients[0],second=clients[1];
+        try {
+            var started=first.awaitRoom(room->room.path("game").path("walls").size()==11).path("room").path("game");
+            String direction=started.path("walls").get(1).asText().charAt(2)=='0'?"RIGHT":"DOWN";
+            first.send(Map.of("type","GAME_ACTION","action","MOVE","text",direction));
+            var moved=second.awaitRoom(room->room.path("game").path("moves").get(0).asInt()==1).path("room").path("game");
+            assertThat(moved.path("moves").get(1).asInt()).isZero();
+            assertThat(moved.path("walls")).isEqualTo(started.path("walls"));
+            assertThat(moved.path("positions").get(1).path("row").asInt()).isEqualTo(1);
+            assertThat(moved.path("positions").get(1).path("col").asInt()).isEqualTo(1);
+            second.send(Map.of("type","RESIGN"));
+            var finished=first.awaitRoom(room->room.path("status").asText().equals("WAITING")&&room.path("game").path("finished").asBoolean());
+            assertThat(finished.path("room").path("game").path("winnerSeats").get(0).asInt()).isZero();
+        } finally { first.session.close(); second.session.close(); }
+    }
+
     @Test
     void 허락하지_않은_사이트에서_온_연결은_거절한다() {
         WebSocketHttpHeaders headers = new WebSocketHttpHeaders();
