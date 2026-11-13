@@ -89,6 +89,8 @@ mybatis:
     default-statement-timeout: 10
 
 application:
+  calendar-holidays:
+    service-key: ${DATA_GO_KR_SERVICE_KEY:}
   authentication:
     # 초기 계정 admin / admin1234 해시입니다. 외부 배포 전 환경변수로 반드시 교체합니다.
     initial-super-admin-password-hash: ${INITIAL_SUPER_ADMIN_PASSWORD_HASH:600000:2519u3hcpq5hx8SaSCvL9A==:LQjLKoKo4WuJr2WDDpE3FAkNQCMtoPmH8e9U77Fa2Gc=}

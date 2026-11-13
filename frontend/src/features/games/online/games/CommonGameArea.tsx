@@ -24,6 +24,8 @@ import { SudokuGame } from "@/features/games/online/games/SudokuGame";
 import { SuikaBattle } from "@/features/games/online/games/SuikaBattle";
 import { SutdaGame } from "@/features/games/online/games/SutdaGame";
 import { YutnoriGame } from "@/features/games/online/games/YutnoriGame";
+import { MarbleBattle } from "./MarbleBattle";
+import { MazeBattle } from "./MazeBattle";
 import type { OnlineClientMessage, OnlineRoom } from "@/features/games/online/onlineTypes";
 
 export interface CommonGameProperties {
@@ -75,6 +77,10 @@ export const CommonGameArea = (properties: CommonGameProperties) => {
       return <AppleBattle {...properties} />;
     case "SUIKA":
       return <SuikaBattle {...properties} />;
+    case "MARBLE":
+      return <MarbleBattle {...properties} />;
+    case "MAZE":
+      return <MazeBattle {...properties} />;
     default:
       return <p className="online-hint">아직 준비 중인 게임입니다.</p>;
   }

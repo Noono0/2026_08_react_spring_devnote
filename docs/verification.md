@@ -65,6 +65,10 @@ python -m unittest discover -s scripts -p "test_*.py"
 
 Windows의 `python`이 Microsoft Store 별칭이면 실제 Python을 설치하거나 설치된 Python의 절대 경로를 사용하세요. 도구 부재 또는 문법 오류는 실패로 보고하며, 정적 검사를 통과해도 실제 실행·단위 테스트를 대체하지 않습니다.
 
+## 외부 공휴일 API 테스트
+
+일반 테스트에서는 `KoreanHolidayApiExternalTest`를 건너뜁니다. 명시적으로 `RUN_HOLIDAY_API_EXTERNAL_TEST=true`와 서버 전용 `DATA_GO_KR_SERVICE_KEY` 환경 변수를 설정한 뒤 `gradlew.bat test --tests '*KoreanHolidayApiExternalTest'`를 실행하면 실제 Java 클라이언트로 2026·2027년의 대체공휴일을 확인합니다. 키를 명령행 인자·Git·로그에 넣지 않습니다. `test` 프로필의 일반 서비스는 외부 키를 사용하지 않으며, 이 외부 테스트만 명시적으로 전달된 환경 변수로 통신합니다. 네트워크·인증·제공기관의 자료 상태에 따라 실패할 수 있습니다.
+
 ## 외부 크롤러 테스트
 
 일반 테스트에서는 외부 사이트에 접속하는 `PlaywrightCrawlerExternalTest` 한 개를 건너뜁니다. Chromium이 설치된 환경에서 외부 접속을 직접 확인하려면 다음 명령을 별도로 실행합니다.

@@ -4,10 +4,17 @@
     <sql id="postColumns">
         p.post_id, p.board_type, p.author_id, m.member_name AS author_name,
         p.title, p.content_json, p.content_html, p.content_text, p.image_file_id,
-        p.pinned, p.answered, p.view_count, p.version_number, p.created_at, p.updated_at, c.event_date
+        p.pinned, p.answered, p.view_count, p.version_number, p.created_at, p.updated_at,
+        COALESCE(c.event_date, s.start_date) AS event_date,
+        COALESCE(c.event_end_date, c.event_date, s.end_date) AS event_end_date,
+        s.target_path AS popup_target_path, s.include_children AS popup_include_children, s.enabled AS popup_enabled
     </sql>
     <sql id="filter">
-        p.use_yn = 'Y' AND p.board_type = #{boardType}
+        p.use_yn = 'Y'
+        <choose>
+            <when test="boardType == 'COMMUNITY'">AND p.board_type IN ('GENERAL', 'NOTICE', 'QNA')</when>
+            <otherwise>AND p.board_type = #{boardType}</otherwise>
+        </choose>
         <if test="keyword != null and keyword != ''">
             AND (p.title LIKE CONCAT('%', #{keyword}, '%') OR p.content_text LIKE CONCAT('%', #{keyword}, '%'))
         </if>
@@ -16,6 +23,7 @@
         SELECT <include refid="postColumns"/>
         FROM board_posts p JOIN members m ON m.member_id = p.author_id
         LEFT JOIN board_calendar_dates c ON c.post_id = p.post_id
+        LEFT JOIN board_popup_settings s ON s.post_id = p.post_id
         WHERE <include refid="filter"/>
         ORDER BY p.pinned DESC, p.created_at DESC, p.post_id DESC
         LIMIT #{limit} OFFSET #{offset}
@@ -28,8 +36,10 @@
         FROM board_calendar_dates c
         JOIN board_posts p ON p.post_id = c.post_id
         JOIN members m ON m.member_id = p.author_id
+        LEFT JOIN board_popup_settings s ON s.post_id = p.post_id
         WHERE p.use_yn = 'Y' AND p.board_type = 'CALENDAR'
-          AND c.event_date &gt;= #{startDate} AND c.event_date &lt; #{endDate}
+          AND c.event_date &lt; #{endDate}
+          AND COALESCE(c.event_end_date, c.event_date) &gt;= #{startDate}
         <if test="keyword != null and keyword != ''">
           AND (p.title LIKE CONCAT('%', #{keyword}, '%') OR p.content_text LIKE CONCAT('%', #{keyword}, '%'))
         </if>
@@ -40,12 +50,30 @@
         SELECT <include refid="postColumns"/>
         FROM board_posts p JOIN members m ON m.member_id = p.author_id
         LEFT JOIN board_calendar_dates c ON c.post_id = p.post_id
+        LEFT JOIN board_popup_settings s ON s.post_id = p.post_id
         WHERE p.post_id = #{postId} AND p.use_yn = 'Y'
     </select>
     <insert id="insert" parameterType="com.example.devnote.board.dao.BoardPostRow" useGeneratedKeys="true" keyProperty="postId">
         INSERT INTO board_posts (board_type, author_id, title, content_json, content_html, content_text, image_file_id, pinned)
         VALUES (#{boardType}, #{authorId}, #{title}, #{contentJson}, #{contentHtml}, #{contentText}, #{imageFileId}, #{pinned})
     </insert>
+    <insert id="upsertPopup">
+        INSERT INTO board_popup_settings (post_id, target_path, include_children, enabled, start_date, end_date)
+        VALUES (#{postId}, #{targetPath}, #{includeChildren}, #{enabled}, #{startDate}, #{endDate})
+        ON DUPLICATE KEY UPDATE target_path = VALUES(target_path), include_children = VALUES(include_children),
+            enabled = VALUES(enabled), start_date = VALUES(start_date), end_date = VALUES(end_date)
+    </insert>
+    <select id="activePopups" resultType="com.example.devnote.board.dao.BoardPostRow">
+        SELECT <include refid="postColumns"/>
+        FROM board_posts p JOIN members m ON m.member_id = p.author_id
+        JOIN board_popup_settings s ON s.post_id = p.post_id
+        LEFT JOIN board_calendar_dates c ON c.post_id = p.post_id
+        WHERE p.use_yn = 'Y' AND p.board_type = 'POPUP' AND s.enabled = TRUE
+          AND s.start_date &lt;= #{today} AND s.end_date &gt;= #{today}
+          AND (s.target_path = #{path} OR (s.include_children = TRUE
+            AND (s.target_path = '/' OR LEFT(#{path}, CHAR_LENGTH(s.target_path) + 1) = CONCAT(s.target_path, '/'))))
+        ORDER BY p.created_at DESC, p.post_id DESC
+    </select>
     <update id="update" parameterType="com.example.devnote.board.dao.BoardPostRow">
         UPDATE board_posts SET title = #{title}, content_json = #{contentJson},
             content_html = #{contentHtml}, content_text = #{contentText},
@@ -53,8 +81,9 @@
         WHERE post_id = #{postId} AND version_number = #{versionNumber} AND use_yn = 'Y'
     </update>
     <insert id="upsertCalendarDate">
-        INSERT INTO board_calendar_dates (post_id, event_date) VALUES (#{postId}, #{eventDate})
-        ON DUPLICATE KEY UPDATE event_date = VALUES(event_date)
+        INSERT INTO board_calendar_dates (post_id, event_date, event_end_date)
+        VALUES (#{postId}, #{eventDate}, #{eventEndDate})
+        ON DUPLICATE KEY UPDATE event_date = VALUES(event_date), event_end_date = VALUES(event_end_date)
     </insert>
     <update id="delete">
         UPDATE board_posts SET use_yn = 'N', version_number = version_number + 1

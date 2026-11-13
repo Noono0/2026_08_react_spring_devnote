@@ -54,7 +54,9 @@ public enum OnlineGameType {
     /** 같은 사과판으로 2분 동안 합 10 만들기 점수를 겨룬다(각자 자기 판) */
     APPLE("사과게임 대전", 2, 4, true),
     /** 같은 과일 순서로 3분 동안 점수를 겨룬다(각자 자기 상자, 물리는 브라우저가 계산) */
-    SUIKA("수박게임 대전", 2, 4, true);
+    SUIKA("수박게임 대전", 2, 4, true),
+    MARBLE("부루마블", 2, 4, true),
+    MAZE("미로게임 대전", 2, 4, true);
 
     private final String label;
     private final int minSeats;
@@ -73,7 +75,7 @@ public enum OnlineGameType {
     /** 방장이 고를 수 있는 옵션(화면에 보일 순서대로). 옵션이 없는 게임은 빈 목록 */
     public List<OnlineGameOption> getOptions() {
         return switch (this) {
-            case SUDOKU -> List.of(
+            case SUDOKU, MAZE -> List.of(
                 new OnlineGameOption("EASY", "쉬움"), new OnlineGameOption("NORMAL", "보통"), new OnlineGameOption("HARD", "어려움"));
             case GAME_2048 -> List.of(
                 new OnlineGameOption("256", "목표 256"), new OnlineGameOption("512", "목표 512"),
@@ -100,7 +102,7 @@ public enum OnlineGameType {
     /** 방을 만들거나 게임을 바꿨을 때의 처음 옵션. 옵션이 없는 게임은 null */
     public String getDefaultOption() {
         return switch (this) {
-            case SUDOKU -> "NORMAL";
+            case SUDOKU, MAZE -> "NORMAL";
             case GAME_2048 -> "512";
             case MINESWEEPER -> "BEGINNER";
             case PUYO -> "4";

@@ -31,8 +31,28 @@ beforeAll(() => {
 });
 
 beforeEach(() => localStorage.clear());
+afterEach(() => vi.restoreAllMocks());
 
 describe("ModalDialog 크기 조절", () => {
+  it("브라우저 저장소 읽기가 차단되어도 기본 크기로 모달을 연다", () => {
+    const warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => { throw new DOMException("차단됨", "SecurityError"); });
+    render(<ModalDialog isOpen title="저장소 차단" resizable resizeStorageKey="blocked" onRequestClose={vi.fn()}><p>내용</p></ModalDialog>);
+    expect(screen.getByRole("dialog", { name: /저장소 차단/ })).toBeInTheDocument();
+    expect(warning).toHaveBeenCalledWith(expect.stringContaining("읽지 못했습니다"), expect.objectContaining({ storageKey: "devnote:modal-size:blocked" }));
+  });
+
+  it("저장소 삭제가 차단되어도 화면의 크기 초기화는 동작한다", () => {
+    const warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    vi.spyOn(Storage.prototype, "removeItem").mockImplementation(() => { throw new DOMException("차단됨", "SecurityError"); });
+    render(<ModalDialog isOpen title="초기화 차단" resizable resizeStorageKey="blocked-reset" onRequestClose={vi.fn()}><p>내용</p></ModalDialog>);
+    const handle = screen.getByRole("button", { name: "초기화 차단 모달 크기 조절" });
+    fireEvent.keyDown(handle, { key: "ArrowRight" });
+    fireEvent.doubleClick(handle);
+    expect(screen.getByRole("dialog").style.width).toBe("");
+    expect(warning).toHaveBeenCalledWith(expect.stringContaining("초기화하지 못했습니다"), expect.objectContaining({ storageKey: "devnote:modal-size:blocked-reset" }));
+  });
+
   it("resizable 옵션이 있으면 핸들과 키보드 크기 조절을 제공하고 크기를 저장한다", () => {
     render(
       <ModalDialog

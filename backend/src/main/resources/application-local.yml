@@ -1,0 +1,7 @@
+spring:
+  config:
+    # Git에서 제외된 개인 설정만 읽는다. 환경 변수로 지정해도 된다.
+    # Read only ignored personal settings; environment variables also work.
+    import:
+      - optional:file:../.local/holiday-api.env[.properties]
+      - optional:file:.local/holiday-api.env[.properties]

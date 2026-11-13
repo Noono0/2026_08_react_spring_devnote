@@ -12,6 +12,8 @@ describe("혼자 연습할 수 있는 게임", () => {
     expect(isPracticeGameType("ALKKAGI")).toBe(true);
     expect(isPracticeGameType("APPLE")).toBe(true);
     expect(isPracticeGameType("SUIKA")).toBe(true);
+    expect(isPracticeGameType("MARBLE")).toBe(true);
+    expect(isPracticeGameType("MAZE")).toBe(true);
     expect(isPracticeGameType("JANGGI")).toBe(false);
     expect(isPracticeGameType("OMOK")).toBe(false);
     expect(isPracticeGameType("BLACKJACK")).toBe(false);

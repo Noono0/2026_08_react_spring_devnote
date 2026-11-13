@@ -44,6 +44,8 @@ public final class OnlineGames {
             case ALKKAGI -> AlkkagiGame.create(nicknames, option);
             case APPLE -> new AppleGame(nicknames, random);
             case SUIKA -> new SuikaGame(nicknames, random);
+            case MARBLE -> new MarbleGame(nicknames, random);
+            case MAZE -> new MazeGame(nicknames, random, option);
             default -> throw new IllegalStateException("아직 만들지 않은 게임입니다: " + type);
         };
     }

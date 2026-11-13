@@ -10,6 +10,8 @@ describe("게임 홈", () => {
     expect(screen.getByRole("link", { name: /온라인 대전/ })).toHaveAttribute("href", "/games/online");
     expect(screen.getByRole("link", { name: /게임 랭킹/ })).toHaveAttribute("href", "/games/rankings");
     expect(screen.getByRole("link", { name: /타로 카드 뽑기/ })).toHaveAttribute("href", "/games/tarot");
+    expect(screen.getByRole("heading", { name: "부루마블" }).closest("a")).toHaveAttribute("href", "/games/marble");
+    expect(screen.getByRole("heading", { name: "미로게임" }).closest("a")).toHaveAttribute("href", "/games/maze");
     const links = screen.getAllByRole("link").map((link) => link.getAttribute("href"));
     expect(links).not.toContain("/games/memory");
     expect(links).not.toContain("/games/tetris");

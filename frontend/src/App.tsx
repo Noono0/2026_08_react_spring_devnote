@@ -58,6 +58,7 @@ const developmentScenarioEnabled = import.meta.env.VITE_ENABLE_DEVELOPMENT_MENU 
 const AdminUserPracticePage = lazy(async () => ({ default: (await import("@/features/practice/13-admin-users/pages/AdminUserPracticePage")).AdminUserPracticePage }));
 const GeneralBoardPracticePage = lazy(async () => ({ default: (await import("@/features/practice/06-board/pages/GeneralBoardPracticePage")).GeneralBoardPracticePage }));
 const BoardLabPage = lazy(async () => ({ default: (await import("@/features/board-lab/BoardLabPage")).BoardLabPage }));
+const PopupDisplay = lazy(async () => ({ default: (await import("@/features/board-lab/PopupDisplay")).PopupDisplay }));
 const CategoryTreePracticePage = lazy(async () => ({ default: (await import("@/features/practice/12-category/pages/CategoryTreePracticePage")).CategoryTreePracticePage }));
 const CommentPracticePage = lazy(async () => ({ default: (await import("@/features/practice/08-comment/pages/CommentPracticePage")).CommentPracticePage }));
 const ContactPracticePage = lazy(async () => ({ default: (await import("@/features/practice/03-contact/pages/ContactPracticePage")).ContactPracticePage }));
@@ -144,6 +145,8 @@ const OnlineLobbyPage = lazy(async () => ({ default: (await import("@/features/g
 const OnlineRoomPage = lazy(async () => ({ default: (await import("@/features/games/online/pages/OnlineRoomPage")).OnlineRoomPage }));
 const GameRankingPage = lazy(async () => ({ default: (await import("@/features/games/ranking/GameRankingPage")).GameRankingPage }));
 const TarotPage = lazy(async () => ({ default: (await import("@/features/games/tarot/TarotPage")).TarotPage }));
+const MarblePage = lazy(async () => ({ default: (await import("@/features/games/marble/MarblePage")).MarblePage }));
+const MazePage = lazy(async () => ({ default: (await import("@/features/games/maze/MazePage")).MazePage }));
 const WebCrawlerPage = lazy(async () => ({ default: (await import("@/features/crawler/pages/WebCrawlerPage")).WebCrawlerPage }));
 
 // ----------------------------------------------------------------------------
@@ -193,6 +196,7 @@ export const App = () => (
       <VisitTracker />
       {/* 주소에 맞춰 브라우저 탭 제목을 바꾼다. 이것도 화면에는 아무것도 그리지 않는다. */}
       <DocumentTitle />
+      <Suspense fallback={null}><PopupDisplay /></Suspense>
       <Routes>
         {/* ── 영역 1: 포트폴리오 (주소 앞에 아무 접두사가 없는 "/" 계열) ──────────
             path 없이 element만 있는 Route = "레이아웃 라우트".
@@ -251,12 +255,14 @@ export const App = () => (
               </RoleProtectedRoute>
             } />
           </Route>
-          {/* 게임: 게임 홈·온라인 대전·랭킹·타로. 화면마다 필요한 코드만 따로 내려받는다(lazy). */}
+          {/* 게임: 게임 홈·온라인 대전·랭킹·타로·부루마블·미로. 화면마다 지연 로딩한다. */}
           <Route path="games" element={<UtilityLayout />}>
             <Route index element={<Suspense fallback={<UtilityLazyFallback name="게임 홈" />}><GameHomePage /></Suspense>} />
             {/* 랭킹: 종목·난이도는 주소의 ?game=·?difficulty=로 받는다(화면에서 목록에 있는 값인지 검사한다) */}
             <Route path="rankings" element={<Suspense fallback={<UtilityLazyFallback name="게임 랭킹" />}><GameRankingPage /></Suspense>} />
             <Route path="tarot" element={<Suspense fallback={<UtilityLazyFallback name="타로 카드" />}><TarotPage /></Suspense>} />
+            <Route path="marble" element={<Suspense fallback={<UtilityLazyFallback name="부루마블" />}><MarblePage /></Suspense>} />
+            <Route path="maze" element={<Suspense fallback={<UtilityLazyFallback name="미로게임" />}><MazePage /></Suspense>} />
             {/* 온라인 대전: 대기실(방 목록·만들기)과 방(:roomId는 화면에서 모양을 검사한다) */}
             <Route path="online" element={<Suspense fallback={<UtilityLazyFallback name="온라인 대전" />}><OnlineLobbyPage /></Suspense>} />
             <Route path="online/:roomId" element={<Suspense fallback={<UtilityLazyFallback name="온라인 대전 방" />}><OnlineRoomPage /></Suspense>} />

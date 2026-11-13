@@ -69,7 +69,7 @@ export const reactNavigationGroup: NavigationGroup = {
   collapsible: true,
   items: [
     { label: "전체 로드맵", description: "왕초보부터 고급까지 학습 순서", route: "/react", symbol: "00" },
-    { label: "게시판 실전", description: "일반·공지·Q&A·갤러리·그리드·달력", route: "/react/boards", symbol: "BD", matchChildren: true },
+    { label: "게시판 실전", description: "통합 게시판·갤러리·그리드·달력·팝업", route: "/react/boards", symbol: "BD", matchChildren: true },
     { label: "왕초보", description: "컴포넌트·State·이벤트", route: "/react/level/beginner", symbol: "01" },
     { label: "초급", description: "폼·Reducer·로컬 CRUD", route: "/react/level/basic", symbol: "02" },
     { label: "중급", description: "Effect·게시판·비동기", route: "/react/level/intermediate", symbol: "03" },
@@ -157,10 +157,12 @@ export const gameNavigationGroup: NavigationGroup = {
   symbol: "GM",
   collapsible: true,
   items: [
-    { label: "게임 홈", description: "온라인 대전·랭킹·타로 안내", route: "/games", symbol: "GM" },
-    { label: "온라인 대전", description: "방·관전·채팅 · 대전 23종", route: "/games/online", symbol: "ON", matchChildren: true },
+    { label: "게임 홈", description: "온라인 대전·보드게임·미로·타로 안내", route: "/games", symbol: "GM" },
+    { label: "온라인 대전", description: "방·관전·채팅 · 대전 25종", route: "/games/online", symbol: "ON", matchChildren: true },
     { label: "게임 랭킹", description: "종목별 순위 · 기간 선택", route: "/games/rankings", symbol: "RK" },
     { label: "타로 카드", description: "한 장·세 장 뽑기와 해석", route: "/games/tarot", symbol: "✦" },
+    { label: "부루마블", description: "컴퓨터와 땅 매입·개발·통행료", route: "/games/marble", symbol: "BM" },
+    { label: "미로게임", description: "난이도별 랜덤 미로 탈출", route: "/games/maze", symbol: "MZ" },
   ],
 };
 

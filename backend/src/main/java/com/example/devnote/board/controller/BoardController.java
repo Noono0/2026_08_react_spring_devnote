@@ -15,7 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.time.YearMonth;
 
-/** 여섯 게시판이 같은 REST 흐름을 사용하는 학습용 API. */
+/** 분류형 통합 목록과 에디터·팝업 게시판을 연결하는 학습용 API. */
 @RestController
 @RequestMapping("/api/v1/boards/{boardType}/posts")
 @RequiredArgsConstructor
@@ -27,9 +27,20 @@ public class BoardController {
     @GetMapping
     public ApiResponse<PageResponse<PostSummary>> list(@PathVariable String boardType,
         @RequestParam(defaultValue = "") String keyword,
+        @RequestParam(defaultValue = "") String category,
         @RequestParam(defaultValue = "0") int pageNumber,
-        @RequestParam(defaultValue = "12") int pageSize) {
-        return ApiResponse.success(boardService.list(boardService.parseType(boardType), keyword, pageNumber, pageSize));
+        @RequestParam(defaultValue = "12") int pageSize, HttpServletRequest request) {
+        if ("COMMUNITY".equalsIgnoreCase(boardType)) {
+            return ApiResponse.success(boardService.listCommunity(category, keyword, pageNumber, pageSize));
+        }
+        MemberRow member = authenticationService.findAuthenticatedMember(request);
+        return ApiResponse.success(boardService.list(boardService.parseType(boardType), keyword, pageNumber, pageSize,
+            member == null ? null : member.getMemberId()));
+    }
+
+    @GetMapping("/active")
+    public ApiResponse<java.util.List<ActivePopup>> active(@PathVariable String boardType, @RequestParam String path) {
+        return ApiResponse.success(boardService.activePopups(boardService.parseType(boardType), path));
     }
 
     @GetMapping("/calendar")

@@ -118,6 +118,23 @@ describe("2048 연습", () => {
   });
 });
 
+describe("부루마블·미로 연습", () => {
+  it("부루마블 방에서 컴퓨터와 혼자 연습할 수 있다", () => {
+    renderPanel(<WaitingPracticePanel gameType="MARBLE" gameOption={null} nickname="철수" />);
+    fireEvent.click(screen.getByRole("button", { name: "부루마블 연습하기" }));
+    fireEvent.click(screen.getByRole("button", { name: "게임 시작" }));
+    expect(screen.getByRole("region", { name: "부루마블 게임판" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "주사위 굴리기" })).toBeEnabled();
+  });
+  it("미로 연습은 방의 난이도를 초기값으로 사용한다", () => {
+    renderPanel(<WaitingPracticePanel gameType="MAZE" gameOption="HARD" nickname="철수" />);
+    fireEvent.click(screen.getByRole("button", { name: "미로게임 연습하기" }));
+    expect(screen.getByLabelText("난이도")).toHaveValue("HARD");
+    fireEvent.click(screen.getByRole("button", { name: "미로 시작" }));
+    expect(screen.getByRole("img", { name: /미로: 현재/ })).toHaveAttribute("viewBox", "0 0 23 23");
+  });
+});
+
 describe("지뢰 찾기 연습", () => {
   it("오른쪽 클릭으로 깃발을 꽂으면 남은 지뢰 수가 줄고, 깃발 칸은 눌러도 열리지 않는다", () => {
     renderPanel(<WaitingPracticePanel gameType="MINESWEEPER" gameOption="BEGINNER" nickname="철수" />);

@@ -37,6 +37,7 @@ services:
 
       FILE_STORAGE_ROOT: /application/storage
       SERVER_PORT: 8080
+      DATA_GO_KR_SERVICE_KEY: ${DATA_GO_KR_SERVICE_KEY:-}
 
       # ★ 반드시 새로 생성한 값을 넣는다. 기본값을 쓰면 저장소를 본 누구나 로그인할 수 있다.
       #   생성 방법은 docs/deployment.md 참고.

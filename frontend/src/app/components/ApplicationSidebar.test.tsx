@@ -105,6 +105,8 @@ describe("ApplicationSidebar", () => {
     expect(within(navigation).getByRole("link", { name: /^온라인 대전/ })).toHaveAttribute("aria-current", "page");
     expect(within(navigation).getByRole("link", { name: /^게임 홈/ })).toHaveAttribute("href", "/games");
     expect(within(navigation).getByRole("link", { name: /게임 랭킹/ })).toHaveAttribute("href", "/games/rankings");
+    expect(within(navigation).getByRole("link", { name: /^부루마블/ })).toHaveAttribute("href", "/games/marble");
+    expect(within(navigation).getByRole("link", { name: /^미로게임/ })).toHaveAttribute("href", "/games/maze");
     // 혼자 하는 게임 화면은 없앴다(직접 만들어 보기는 React 연습으로 옮김)
     expect(within(navigation).queryByRole("link", { name: /테트리스|카드 짝 맞추기|지뢰 찾기/ })).not.toBeInTheDocument();
   });

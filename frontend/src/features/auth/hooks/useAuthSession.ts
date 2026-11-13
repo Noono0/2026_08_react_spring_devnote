@@ -54,6 +54,10 @@ export const authSessionQueryKey = ["auth", "session"] as const;
 const resetAuthenticatedQueries = async (queryClient: ReturnType<typeof useQueryClient>): Promise<void> => {
   // 내 계정 상세에는 이메일 등 개인정보가 있으므로 계정이 바뀔 때 즉시 캐시에서 제거한다.
   queryClient.removeQueries({ queryKey: ["account"] });
+  // 예약·중지 팝업은 관리자 전용이다. 진행 중 요청도 취소해야 이전 계정의 응답이 캐시를 복구하지 않는다.
+  const privatePopupKeys = [["board-lab", "detail", "POPUP"], ["board-lab", "list", "POPUP"]];
+  await Promise.all(privatePopupKeys.map((queryKey) => queryClient.cancelQueries({ queryKey })));
+  privatePopupKeys.forEach((queryKey) => queryClient.removeQueries({ queryKey }));
   await Promise.all([
     queryClient.invalidateQueries({ queryKey: ["portfolio", "sections"] }),
     queryClient.invalidateQueries({ queryKey: ["admin"] }),

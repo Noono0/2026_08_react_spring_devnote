@@ -485,6 +485,12 @@ docker compose -f compose.app.yml --env-file .env.app up -d
 > 해당 기능을 쓰는 순간 `Table doesn't exist` 오류가 납니다.
 > 2026-10-04 버전에서 추가된 테이블: `portfolio_project_details`(프로젝트 기술 스택·링크), `document_tags`(업무 History 태그).
 
+2026-11-13 달력 기간 버전은 **기존 테이블에 컬럼을 추가**합니다. 새 백엔드 시작 전에 DB 서버에서 `scripts/migrations/2026-11-13-board-calendar-period.sql`을 대상 DB에 실행해야 합니다. `SQL_INIT_MODE=always`만으로는 `board_calendar_dates.event_end_date`가 추가되지 않습니다. 기존 글은 그대로 보존되며, 자세한 적용·확인 방법은 [게시판 가이드](board-lab.md#기존-db에-기간-컬럼-적용)를 따릅니다.
+
+같은 날짜의 통합·팝업 게시판 버전은 `scripts/migrations/2026-11-13-board-popups.sql`도 먼저 적용합니다. 팝업 설정 테이블만 추가하며 기존 글은 수정하지 않습니다. 일반·공지·Q&A 통합 목록은 기존 분류를 그대로 사용합니다. 팝업 노출 기간은 서버 운영체제 시간대와 관계없이 한국 시간 기준입니다.
+
+공휴일·휴일 관리 버전에서는 `scripts/migrations/2026-11-13-calendar-holidays.sql`을, API 연동 버전에서는 `scripts/migrations/2026-11-13-calendar-holiday-cache.sql`도 적용합니다. 각각 관리자 추가 휴일과 공식 API 연도별 저장본을 보관합니다. 자동 갱신에는 한국천문연구원 특일 정보의 활용신청이 승인된 `DATA_GO_KR_SERVICE_KEY`를 서버의 `.env.app`에 설정하고 변경된 `compose.app.yml`로 백엔드를 재생성합니다. 인증키는 프론트 빌드 인자나 Git에 넣지 않습니다. API 장애·키 미설정 시 저장본과 2026·2027년 포함 자료를 사용합니다. 새 운영 라이브러리는 추가하지 않았습니다. 갱신 시점·자료 범위·출처·확인일은 [게시판 가이드](board-lab.md#공휴일대체공휴일과-휴일-관리)를 확인합니다.
+
 ---
 
 ## 8. HTTPS — Cloudflare (무료)
