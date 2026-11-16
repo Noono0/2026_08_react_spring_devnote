@@ -89,6 +89,10 @@ mybatis:
     default-statement-timeout: 10
 
 application:
+  todo-push:
+    public-key: ${WEB_PUSH_PUBLIC_KEY:}
+    private-key: ${WEB_PUSH_PRIVATE_KEY:}
+    subject: ${WEB_PUSH_SUBJECT:}
   calendar-holidays:
     service-key: ${DATA_GO_KR_SERVICE_KEY:}
   authentication:

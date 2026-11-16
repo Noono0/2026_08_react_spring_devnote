@@ -23,6 +23,19 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import com.example.devnote.board.todo.dto.TodoDtos.TodoRequest;
+import com.example.devnote.board.todo.dto.TodoDtos.GuestMergeRequest;
+import com.example.devnote.board.todo.dao.TodoGuestRow;
+import com.example.devnote.board.todo.service.TodoService;
+import com.example.devnote.board.todo.domain.TodoOwner;
+import com.example.devnote.board.todo.controller.TodoOwnerResolver;
+import org.springframework.mock.web.MockCookie;
+import jakarta.servlet.http.Cookie;
+import com.example.devnote.member.service.AuthenticationService;
+import org.springframework.mock.web.MockHttpSession;
+import org.springframework.http.MediaType;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.ZoneId;
@@ -49,12 +62,271 @@ class BoardIntegrationTest {
     @Autowired ObjectMapper objectMapper;
     @Autowired JdbcTemplate jdbcTemplate;
     @Autowired MockMvc mockMvc;
+    @Autowired TodoService todoService;
+
+    private MockHttpSession todoSession(long memberId) {
+        var session = new MockHttpSession();
+        session.setAttribute(AuthenticationService.AUTHENTICATED_MEMBER_ID, memberId);
+        return session;
+    }
+
+    private MockCookie todoGuest() throws Exception {
+        var result = mockMvc.perform(get("/api/v1/board-todos/owner"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.data.mode").value("GUEST"))
+            .andExpect(jsonPath("$.data.token").doesNotExist()).andExpect(jsonPath("$.data.tokenHash").doesNotExist())
+            .andExpect(header().string("Cache-Control", "private, no-store")).andReturn();
+        return MockCookie.parse(result.getResponse().getHeader("Set-Cookie"));
+    }
+
+    @Test void confirmedGuestMergePreservesExistingAccountTasksContentStateAndIdsWithoutDuplicates() throws Exception {
+        var cookie = todoGuest();
+        var existing = todoService.create(TodoOwner.member(2L), new TodoRequest("같은 제목의 할 일", "기존 계정 메모", false, null));
+        var created = mockMvc.perform(post("/api/v1/board-todos").cookie(cookie).contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(new TodoRequest("같은 제목의 할 일", "비회원 메모", true, null))))
+            .andExpect(status().isCreated()).andReturn();
+        var before = objectMapper.readTree(created.getResponse().getContentAsString()).path("data");
+        long id = before.path("todoId").asLong();
+        var preview = mockMvc.perform(get("/api/v1/board-todos/guest-merge").session(todoSession(2L)).cookie(cookie))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.data.count").value(1)).andReturn();
+        String key = objectMapper.readTree(preview.getResponse().getContentAsString()).path("data").path("guestKey").asText();
+        long throughTodoId = objectMapper.readTree(preview.getResponse().getContentAsString()).path("data").path("throughTodoId").asLong();
+        // 조회는 비회원 자료를 옮기지 않는다. 취소하는 경우에는 이 상태 그대로 남는다.
+        mockMvc.perform(get("/api/v1/board-todos").cookie(cookie)).andExpect(jsonPath("$.data.pageInformation.totalElements").value(1));
+        String input = objectMapper.writeValueAsString(new GuestMergeRequest(2L, key, throughTodoId));
+        mockMvc.perform(post("/api/v1/board-todos/guest-merge").session(todoSession(2L)).cookie(cookie).contentType(MediaType.APPLICATION_JSON).content(input))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.data.mergedCount").value(1));
+        mockMvc.perform(get("/api/v1/board-todos/" + id).session(todoSession(2L)))
+            .andExpect(jsonPath("$.data.content").value("비회원 메모")).andExpect(jsonPath("$.data.completed").value(true))
+            .andExpect(jsonPath("$.data.createdAt").value(before.path("createdAt").asText())).andExpect(jsonPath("$.data.versionNumber").value(2));
+        assertThat(todoService.detail(TodoOwner.member(2L), existing.todoId()).content()).isEqualTo("기존 계정 메모");
+        mockMvc.perform(get("/api/v1/board-todos").cookie(cookie)).andExpect(jsonPath("$.data.pageInformation.totalElements").value(0));
+        mockMvc.perform(get("/api/v1/board-todos/" + id).cookie(cookie)).andExpect(status().isNotFound());
+        // 오래된 승인을 재전송해도 이후 새로 쓴 비회원 항목은 가져오지 않는다.
+        mockMvc.perform(post("/api/v1/board-todos").cookie(cookie).contentType(MediaType.APPLICATION_JSON)
+            .content("{\"title\":\"승인 후 새 비회원 항목\",\"content\":\"남아 있어야 함\"}")).andExpect(status().isCreated());
+        mockMvc.perform(post("/api/v1/board-todos/guest-merge").session(todoSession(2L)).cookie(cookie).contentType(MediaType.APPLICATION_JSON).content(input))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.data.mergedCount").value(0));
+        mockMvc.perform(get("/api/v1/board-todos").cookie(cookie)).andExpect(jsonPath("$.data.pageInformation.totalElements").value(1));
+        assertThat(todoService.list(TodoOwner.member(2L), "ALL", "승인 후 새 비회원 항목", 0, 12).content()).isEmpty();
+        assertThat(todoService.list(TodoOwner.member(2L), "ALL", "같은 제목의 할 일", 0, 12).content()).hasSize(2);
+    }
+
+    @Test void guestMergeRequiresCurrentLoginAndMatchingConfirmedBrowserAndAccount() throws Exception {
+        var a = todoGuest(); var b = todoGuest();
+        mockMvc.perform(post("/api/v1/board-todos").cookie(a).contentType(MediaType.APPLICATION_JSON)
+            .content("{\"title\":\"가져오기 계정 확인\",\"content\":\"비회원 메모\"}")).andExpect(status().isCreated());
+        var preview = mockMvc.perform(get("/api/v1/board-todos/guest-merge").cookie(a).session(todoSession(2L))).andReturn();
+        String key = objectMapper.readTree(preview.getResponse().getContentAsString()).path("data").path("guestKey").asText();
+        long throughTodoId = objectMapper.readTree(preview.getResponse().getContentAsString()).path("data").path("throughTodoId").asLong();
+        String input = objectMapper.writeValueAsString(new GuestMergeRequest(2L, key, throughTodoId));
+        mockMvc.perform(get("/api/v1/board-todos/guest-merge").cookie(a)).andExpect(status().isUnauthorized());
+        mockMvc.perform(post("/api/v1/board-todos/guest-merge").cookie(a).contentType(MediaType.APPLICATION_JSON).content(input)).andExpect(status().isUnauthorized());
+        mockMvc.perform(post("/api/v1/board-todos/guest-merge").cookie(a).session(todoSession(3L)).contentType(MediaType.APPLICATION_JSON).content(input))
+            .andExpect(status().isConflict()).andExpect(jsonPath("$.errorCode").value("TODO_MERGE_CONTEXT_CHANGED"));
+        mockMvc.perform(post("/api/v1/board-todos/guest-merge").cookie(b).session(todoSession(2L)).contentType(MediaType.APPLICATION_JSON).content(input))
+            .andExpect(status().isConflict());
+        mockMvc.perform(post("/api/v1/board-todos/guest-merge").session(todoSession(2L)).contentType(MediaType.APPLICATION_JSON).content(input))
+            .andExpect(status().isConflict());
+        mockMvc.perform(get("/api/v1/board-todos/guest-merge").session(todoSession(2L)))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.data.count").value(0));
+        mockMvc.perform(get("/api/v1/board-todos").cookie(a)).andExpect(jsonPath("$.data.pageInformation.totalElements").value(1));
+    }
+
+    @Test void simultaneousGuestMergesTransferEachRowToExactlyOneAccount() throws Exception {
+        var cookie = todoGuest();
+        for (int i = 0; i < 3; i++) {
+            mockMvc.perform(post("/api/v1/board-todos").cookie(cookie).contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new TodoRequest("동시 가져오기 " + i, "보존", false, null)))).andExpect(status().isCreated());
+        }
+        var preview = mockMvc.perform(get("/api/v1/board-todos/guest-merge").session(todoSession(2L)).cookie(cookie)).andReturn();
+        String key = objectMapper.readTree(preview.getResponse().getContentAsString()).path("data").path("guestKey").asText();
+        long throughTodoId = objectMapper.readTree(preview.getResponse().getContentAsString()).path("data").path("throughTodoId").asLong();
+        TodoGuestRow guest = new TodoGuestRow();
+        guest.setPublicId(key.substring(6));
+        guest.setGuestId(jdbcTemplate.queryForObject("SELECT guest_id FROM board_todo_guests WHERE public_id = ?", Long.class, guest.getPublicId()));
+        var start = new java.util.concurrent.CountDownLatch(1);
+        try (var executor = java.util.concurrent.Executors.newFixedThreadPool(2)) {
+            var first = executor.submit(() -> { start.await(); return todoService.mergeGuest(2L, guest, new GuestMergeRequest(2L, key, throughTodoId)).mergedCount(); });
+            var second = executor.submit(() -> { start.await(); return todoService.mergeGuest(3L, guest, new GuestMergeRequest(3L, key, throughTodoId)).mergedCount(); });
+            start.countDown();
+            int a = first.get(10, java.util.concurrent.TimeUnit.SECONDS), b = second.get(10, java.util.concurrent.TimeUnit.SECONDS);
+            assertThat(a + b).isEqualTo(3);
+            assertThat(a == 0 || b == 0).isTrue();
+        }
+        mockMvc.perform(get("/api/v1/board-todos").cookie(cookie)).andExpect(jsonPath("$.data.pageInformation.totalElements").value(0));
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM board_todos WHERE title LIKE '동시 가져오기 %'", Long.class)).isEqualTo(3);
+    }
+
+    @Test void guestCookieIsPrivatePersistentAndOnlyHashedInTheDatabase() throws Exception {
+        MockCookie cookie = todoGuest();
+        assertThat(cookie.isHttpOnly()).isTrue();
+        assertThat(cookie.getPath()).isEqualTo(TodoOwnerResolver.COOKIE_PATH);
+        assertThat(cookie.getDomain()).isNull();
+        assertThat(cookie.getSameSite()).isEqualTo("Strict");
+        assertThat(cookie.getMaxAge()).isEqualTo(365 * 24 * 60 * 60);
+        assertThat(cookie.getValue()).matches("[A-Za-z0-9_-]{43}");
+        var first = mockMvc.perform(get("/api/v1/board-todos/owner").cookie(cookie)).andReturn();
+        var second = mockMvc.perform(get("/api/v1/board-todos/owner").cookie(cookie)).andReturn();
+        String cacheKey = objectMapper.readTree(first.getResponse().getContentAsString()).path("data").path("cacheKey").asText();
+        assertThat(objectMapper.readTree(second.getResponse().getContentAsString()).path("data").path("cacheKey").asText()).isEqualTo(cacheKey);
+        assertThat(first.getResponse().getContentAsString()).doesNotContain(cookie.getValue());
+        String hash = jdbcTemplate.queryForObject("SELECT token_hash FROM board_todo_guests WHERE public_id = ?", String.class, cacheKey.substring(6));
+        assertThat(hash).hasSize(64).isNotEqualTo(cookie.getValue());
+    }
+
+    @Test void guestsOnlySeeTheirOwnTodosAndCannotReadEditOrDeleteAnotherBrowsersTodo() throws Exception {
+        var a = todoGuest(); var b = todoGuest();
+        String body = objectMapper.writeValueAsString(new TodoRequest("비회원 분리 첫 글", "비공개 메모", false, null));
+        var created = mockMvc.perform(post("/api/v1/board-todos").cookie(a).contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isCreated()).andReturn();
+        long id = objectMapper.readTree(created.getResponse().getContentAsString()).path("data").path("todoId").asLong();
+        mockMvc.perform(get("/api/v1/board-todos").cookie(a)).andExpect(jsonPath("$.data.pageInformation.totalElements").value(1));
+        mockMvc.perform(get("/api/v1/board-todos").cookie(b).param("guestId", "1").header("X-Member-Id", "2"))
+            .andExpect(jsonPath("$.data.pageInformation.totalElements").value(0));
+        for (var session : new MockHttpSession[]{todoSession(1L), todoSession(2L), todoSession(3L)}) {
+            mockMvc.perform(get("/api/v1/board-todos/" + id).session(session).cookie(a)).andExpect(status().isNotFound());
+        }
+        mockMvc.perform(get("/api/v1/board-todos/" + id).cookie(b)).andExpect(status().isNotFound());
+        String update = objectMapper.writeValueAsString(new TodoRequest("다른 사람 수정", "메모", true, 1L));
+        mockMvc.perform(put("/api/v1/board-todos/" + id).cookie(b).contentType(MediaType.APPLICATION_JSON).content(update)).andExpect(status().isNotFound());
+        mockMvc.perform(delete("/api/v1/board-todos/" + id).cookie(b).param("versionNumber", "1")).andExpect(status().isNotFound());
+        mockMvc.perform(put("/api/v1/board-todos/" + id).cookie(a).contentType(MediaType.APPLICATION_JSON).content(update))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.data.completed").value(true));
+        mockMvc.perform(get("/api/v1/board-todos").cookie(a).param("status", "DONE").param("keyword", "다른 사람"))
+            .andExpect(jsonPath("$.data.pageInformation.totalElements").value(1));
+        mockMvc.perform(delete("/api/v1/board-todos/" + id).cookie(a).param("versionNumber", "1")).andExpect(status().isConflict());
+        mockMvc.perform(delete("/api/v1/board-todos/" + id).cookie(a).param("versionNumber", "2")).andExpect(status().isNoContent());
+    }
+
+    @Test void guestCookieAndMemberSessionKeepSeparateListsAcrossLoginAndLogout() throws Exception {
+        var guest = todoGuest();
+        String body = objectMapper.writeValueAsString(new TodoRequest("로그인 전후 게스트", "메모", false, null));
+        mockMvc.perform(post("/api/v1/board-todos").cookie(guest).contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isCreated());
+        mockMvc.perform(post("/api/v1/board-todos").cookie(guest).session(todoSession(2L)).contentType(MediaType.APPLICATION_JSON)
+            .content("{\"title\":\"로그인 전후 회원\",\"content\":\"메모\",\"guestId\":1}" )).andExpect(status().isCreated());
+        mockMvc.perform(get("/api/v1/board-todos/owner").cookie(guest).session(todoSession(2L)))
+            .andExpect(jsonPath("$.data.mode").value("MEMBER")).andExpect(jsonPath("$.data.cacheKey").value("member:2"));
+        mockMvc.perform(get("/api/v1/board-todos").cookie(guest).session(todoSession(2L)).param("keyword", "로그인 전후"))
+            .andExpect(jsonPath("$.data.pageInformation.totalElements").value(1)).andExpect(jsonPath("$.data.content[0].title").value("로그인 전후 회원"));
+        mockMvc.perform(get("/api/v1/board-todos").cookie(guest).param("keyword", "로그인 전후"))
+            .andExpect(jsonPath("$.data.pageInformation.totalElements").value(1)).andExpect(jsonPath("$.data.content[0].title").value("로그인 전후 게스트"));
+        mockMvc.perform(get("/api/v1/board-todos").cookie(todoGuest()).param("keyword", "로그인 전후"))
+            .andExpect(jsonPath("$.data.pageInformation.totalElements").value(0));
+    }
+
+    @Test void missingForgedMalformedAndDuplicateGuestCookiesCannotAccessOrCreateTodos() throws Exception {
+        String body = objectMapper.writeValueAsString(new TodoRequest("쿠키 누락 방지", "메모", false, null));
+        for (String value : new String[]{"A".repeat(43), "invalid", "", "guest:11111111-1111-4111-8111-111111111111"}) {
+            Cookie cookie = new Cookie(TodoOwnerResolver.COOKIE_NAME, value);
+            mockMvc.perform(post("/api/v1/board-todos").cookie(cookie).contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.errorCode").value("TODO_GUEST_COOKIE_REQUIRED"));
+        }
+        var a = todoGuest(); var b = todoGuest();
+        mockMvc.perform(get("/api/v1/board-todos").cookie(a, b)).andExpect(status().isBadRequest());
+        mockMvc.perform(get("/api/v1/board-todos").param("keyword", "쿠키 누락 방지").cookie(todoGuest()))
+            .andExpect(jsonPath("$.data.pageInformation.totalElements").value(0));
+    }
+
+    @Test void todoIsPrivateEvenFromAdministratorsAndCannotBeSpoofedWithHeaders() throws Exception {
+        var own = todoService.create(TodoOwner.member(2L), new TodoRequest("TODO 격리 내 할 일", "개인 메모", false, null));
+        todoService.create(TodoOwner.member(3L), new TodoRequest("TODO 격리 관리자 할 일", "관리자 메모", false, null));
+        todoService.create(TodoOwner.member(1L), new TodoRequest("TODO 격리 최고관리자 할 일", "최고관리자 메모", false, null));
+        for (long memberId : new long[]{1L, 2L, 3L}) {
+            mockMvc.perform(get("/api/v1/board-todos").session(todoSession(memberId)).param("keyword", "TODO 격리"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.pageInformation.totalElements").value(1))
+                .andExpect(jsonPath("$.data.content[0].authorId").doesNotExist());
+        }
+        String input = objectMapper.writeValueAsString(new TodoRequest("유출 시도", "변경 시도", true, own.versionNumber()));
+        for (long outsider : new long[]{1L, 3L}) {
+            var session = todoSession(outsider);
+            mockMvc.perform(get("/api/v1/board-todos/" + own.todoId()).session(session).header("X-Member-Id", "2"))
+                .andExpect(status().isNotFound()).andExpect(jsonPath("$.errorCode").value("TODO_NOT_FOUND"));
+            mockMvc.perform(put("/api/v1/board-todos/" + own.todoId()).session(session).contentType(MediaType.APPLICATION_JSON).content(input))
+                .andExpect(status().isNotFound());
+            mockMvc.perform(delete("/api/v1/board-todos/" + own.todoId()).session(session).param("versionNumber", "1"))
+                .andExpect(status().isNotFound());
+        }
+        assertThat(todoService.detail(TodoOwner.member(2L), own.todoId()).content()).isEqualTo("개인 메모");
+        mockMvc.perform(get("/api/v1/boards/COMMUNITY/posts").param("keyword", "TODO 격리"))
+            .andExpect(jsonPath("$.data.pageInformation.totalElements").value(0));
+    }
+
+    @Test void todoRequiresCookieHandshakeForGuestsAndIgnoresDevelopmentHeaders() throws Exception {
+        String input = objectMapper.writeValueAsString(new TodoRequest("로그인 필요", "메모", false, 1L));
+        mockMvc.perform(get("/api/v1/board-todos").header("X-Member-Id", "2")).andExpect(status().isBadRequest());
+        mockMvc.perform(get("/api/v1/board-todos/1").header("X-Member-Id", "2")).andExpect(status().isBadRequest());
+        mockMvc.perform(post("/api/v1/board-todos").header("X-Member-Id", "2").contentType(MediaType.APPLICATION_JSON).content(input))
+            .andExpect(status().isBadRequest());
+        mockMvc.perform(put("/api/v1/board-todos/1").header("X-Member-Id", "2").contentType(MediaType.APPLICATION_JSON).content(input))
+            .andExpect(status().isBadRequest());
+        mockMvc.perform(delete("/api/v1/board-todos/1").header("X-Member-Id", "2").param("versionNumber", "1"))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test void todoSearchStatePaginationAndCountsAreScopedToTheAuthor() throws Exception {
+        todoService.create(TodoOwner.member(2L), new TodoRequest("TODO 페이지 첫 번째", "메모", false, null));
+        todoService.create(TodoOwner.member(2L), new TodoRequest("TODO 페이지 두 번째", "메모", false, null));
+        todoService.create(TodoOwner.member(2L), new TodoRequest("TODO 페이지 완료", "메모", true, null));
+        todoService.create(TodoOwner.member(3L), new TodoRequest("TODO 페이지 다른 사람", "메모", false, null));
+        mockMvc.perform(get("/api/v1/board-todos").session(todoSession(2L)).param("keyword", "TODO 페이지")
+                .param("status", "ACTIVE").param("pageSize", "1").param("pageNumber", "1"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.data.content.length()").value(1))
+            .andExpect(jsonPath("$.data.content[0].completed").value(false))
+            .andExpect(jsonPath("$.data.pageInformation.totalElements").value(2))
+            .andExpect(jsonPath("$.data.pageInformation.totalPages").value(2));
+        assertThat(todoService.list(TodoOwner.member(2L), "DONE", "TODO 페이지", 0, 12).content()).hasSize(1);
+    }
+
+    @Test void todoCompletionUpdatesAndDeletionUseOptimisticVersions() throws Exception {
+        var created = todoService.create(TodoOwner.member(2L), new TodoRequest("버전 검증", "내용", false, null));
+        var session = todoSession(2L);
+        String body = objectMapper.writeValueAsString(new TodoRequest("수정된 할 일", "수정 메모", true, created.versionNumber()));
+        mockMvc.perform(put("/api/v1/board-todos/" + created.todoId()).session(session).contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.data.completed").value(true))
+            .andExpect(jsonPath("$.data.versionNumber").value(2));
+        mockMvc.perform(put("/api/v1/board-todos/" + created.todoId()).session(session).contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isConflict());
+        mockMvc.perform(delete("/api/v1/board-todos/" + created.todoId()).session(session).param("versionNumber", "1"))
+            .andExpect(status().isConflict());
+        mockMvc.perform(delete("/api/v1/board-todos/" + created.todoId()).session(session).param("versionNumber", "2"))
+            .andExpect(status().isNoContent());
+        mockMvc.perform(get("/api/v1/board-todos/" + created.todoId()).session(session)).andExpect(status().isNotFound());
+    }
+
+    @Test void todoUsesSessionAuthorAndValidatesInputs() throws Exception {
+        var session = todoSession(2L);
+        var result = mockMvc.perform(post("/api/v1/board-todos").session(session).header("X-Member-Id", "3")
+                .contentType(MediaType.APPLICATION_JSON).content("{\"title\":\"작성자 위조 검증\",\"content\":\"메모\",\"authorId\":3}"))
+            .andExpect(status().isCreated()).andReturn();
+        long todoId = objectMapper.readTree(result.getResponse().getContentAsString()).path("data").path("todoId").asLong();
+        assertThat(todoService.detail(TodoOwner.member(2L), todoId).title()).isEqualTo("작성자 위조 검증");
+        mockMvc.perform(get("/api/v1/board-todos/" + todoId).session(todoSession(3L))).andExpect(status().isNotFound());
+        mockMvc.perform(post("/api/v1/board-todos").session(session).contentType(MediaType.APPLICATION_JSON).content("{\"title\":\" \",\"content\":\"\"}"))
+            .andExpect(status().isBadRequest());
+        for (String state : new String[]{"INVALID", ""}) {
+            mockMvc.perform(get("/api/v1/board-todos").session(session).param("status", state)).andExpect(state.isEmpty() ? status().isOk() : status().isBadRequest());
+        }
+        mockMvc.perform(get("/api/v1/board-todos").session(session).param("pageSize", "51")).andExpect(status().isBadRequest());
+        mockMvc.perform(get("/api/v1/board-todos").session(session).param("pageNumber", "-1")).andExpect(status().isBadRequest());
+        mockMvc.perform(put("/api/v1/board-todos/" + todoId).session(session).contentType(MediaType.APPLICATION_JSON)
+            .content("{\"title\":\"제목\",\"content\":\"메모\"}")).andExpect(status().isBadRequest());
+    }
+
+    @Test void todoMigrationCanBeReappliedWithoutLosingPrivatePosts(@Autowired DataSource dataSource) throws Exception {
+        var todo = todoService.create(TodoOwner.member(2L), new TodoRequest("마이그레이션 보존", "개인 메모", false, null));
+        try (var connection = dataSource.getConnection()) {
+            var migration = new FileSystemResource("../scripts/migrations/2026-11-16-board-todos.sql");
+            ScriptUtils.executeSqlScript(connection, migration);
+            ScriptUtils.executeSqlScript(connection, migration);
+        }
+        assertThat(todoService.detail(TodoOwner.member(2L), todo.todoId()).content()).isEqualTo("개인 메모");
+    }
     @Autowired CalendarHolidayService calendarHolidayService;
     @Autowired com.example.devnote.board.dao.CalendarHolidayCacheDao holidayCacheDao;
 
     @BeforeAll static void migratesLegacySingleDateWithoutLosingThePost(
         @Autowired BoardService boardService, @Autowired JdbcTemplate jdbcTemplate,
-        @Autowired DataSource dataSource, @Autowired ObjectMapper objectMapper
+        @Autowired DataSource dataSource, @Autowired ObjectMapper objectMapper, @Autowired TodoService todoService
     ) throws Exception {
         // 이 클래스 전용 Testcontainers DB를 이전 스키마로 만든 뒤 실제 마이그레이션을 두 번 실행한다.
         LocalDate date = LocalDate.of(2020, 1, 15);
@@ -84,6 +356,20 @@ class BoardIntegrationTest {
         assertThat(restored.eventDate()).isEqualTo(date);
         assertThat(restored.eventEndDate()).isEqualTo(date);
         boardService.delete(BoardType.CALENDAR, legacy.postId(), 2L);
+        var legacyTodo = todoService.create(TodoOwner.member(2L), new TodoRequest("기존 회원 TODO", "보존할 메모", false, null));
+        jdbcTemplate.execute("DROP TABLE board_todo_push_deliveries");
+        jdbcTemplate.execute("DROP TABLE board_todo_push_subscriptions");
+        jdbcTemplate.execute("ALTER TABLE board_todos DROP CHECK ck_board_todo_owner, DROP FOREIGN KEY fk_board_todo_guest, DROP INDEX idx_board_todo_guest_state, DROP COLUMN guest_id, MODIFY COLUMN author_id BIGINT NOT NULL");
+        jdbcTemplate.execute("DROP TABLE board_todo_guests");
+        try (var connection = dataSource.getConnection()) {
+            var guestMigration = new FileSystemResource("../scripts/migrations/2026-11-16-todo-guests.sql");
+            ScriptUtils.executeSqlScript(connection, guestMigration);
+            ScriptUtils.executeSqlScript(connection, guestMigration);
+            var pushMigration = new FileSystemResource("../scripts/migrations/2026-11-16-todo-web-push.sql");
+            ScriptUtils.executeSqlScript(connection, pushMigration);
+            ScriptUtils.executeSqlScript(connection, pushMigration);
+        }
+        assertThat(todoService.detail(TodoOwner.member(2L), legacyTodo.todoId()).content()).isEqualTo("보존할 메모");
     }
 
     @Test void persistsOfficialApiDataAcrossServiceInstancesAndUpdatesTheSameYear() throws Exception {

@@ -1,0 +1,12 @@
+{
+  "id": "/react/boards/todo",
+  "name": "DevNote TODO",
+  "short_name": "TODO",
+  "lang": "ko-KR",
+  "start_url": "/react/boards/todo",
+  "scope": "/",
+  "display": "standalone",
+  "theme_color": "#3461ff",
+  "background_color": "#ffffff",
+  "icons": [{ "src": "/todo-app-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

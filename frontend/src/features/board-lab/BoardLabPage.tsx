@@ -36,21 +36,24 @@ const showError = (error: unknown): void => applicationNotification.apiError(con
 const queryRoot = ["board-lab"] as const;
 const GridBoardList = lazy(() => import("./GridBoardList").then((module) => ({ default: module.GridBoardList })));
 const CalendarBoard = lazy(() => import("./CalendarBoard").then((module) => ({ default: module.CalendarBoard })));
+const TodoBoard = lazy(() => import("./TodoBoard").then((module) => ({ default: module.TodoBoard })));
 const withLoading = (content: ReactNode) => <Suspense fallback={<div className="state-panel" role="status">화면을 불러오는 중입니다.</div>}>{content}</Suspense>;
 
-function BoardTabs({ selected }: { selected: BoardType }) {
+function BoardTabs({ selected }: { selected: BoardType | "TODO" }) {
   const tabs: BoardType[] = ["GENERAL", "GALLERY", "GRID", "CALENDAR", "POPUP"];
   return <nav className="board-lab-tabs" aria-label="게시판 종류">
-    {tabs.map((type) => <Link key={type} to={boardPath(type)} aria-current={(isCommunityType(selected) ? "GENERAL" : selected) === type ? "page" : undefined}>
+    {tabs.map((type) => <Link key={type} to={boardPath(type)} aria-current={(selected !== "TODO" && isCommunityType(selected) ? "GENERAL" : selected) === type ? "page" : undefined}>
       {type === "GENERAL" ? "통합 게시판" : boardLabels[type]}
     </Link>)}
+    <Link to="/react/boards/todo" aria-current={selected === "TODO" ? "page" : undefined}>TODO 리스트</Link>
   </nav>;
 }
 
 function BoardGuide() {
   return <details className="board-lab-guide"><summary>게시판별 기능 차이</summary>
-    <p>통합 게시판에서 일반·공지·Q&A 글을 함께 조회하고 분류로 걸러 봅니다. 갤러리·그리드·달력·팝업은 별도 용도로 관리합니다.</p>
-    <dl>{boardTypes.map((type) => <div key={type}><dt>{boardLabels[type]}</dt><dd>{boardDescriptions[type]}</dd></div>)}</dl>
+    <p>통합 게시판에서 일반·공지·Q&A 글을 함께 조회하고 분류로 걸러 봅니다. 갤러리·그리드·달력·팝업·개인 TODO는 별도 용도로 관리합니다.</p>
+    <dl>{boardTypes.map((type) => <div key={type}><dt>{boardLabels[type]}</dt><dd>{boardDescriptions[type]}</dd></div>)}
+      <div><dt>TODO 리스트</dt><dd>회원은 계정별로, 비회원은 브라우저별로 자기 할 일만 조회·수정·완료·삭제합니다.</dd></div></dl>
   </details>;
 }
 
@@ -307,6 +310,10 @@ export function BoardLabPage() {
   const community = !boardType || boardType.toLowerCase() === "community";
   const type = community ? parseCategory(parameters.get("category")) ?? "GENERAL" : parseBoardType(boardType);
   const id = validId(postId);
+  if (boardType?.toLowerCase() === "todo" && !postId && !pathname.endsWith("/new")) {
+    return <div className="board-lab"><h1>게시판 실습</h1><p>로그인 없이도 이 브라우저의 할 일을 관리하는 개인 TODO 게시판입니다.</p>
+      <BoardTabs selected="TODO" /><BoardGuide />{withLoading(<TodoBoard />)}</div>;
+  }
   if (!type || (postId && !id)) return <div className="state-panel error-state" role="alert">게시판 주소가 올바르지 않습니다. <Link to={boardPath("GENERAL")}>일반 게시판으로 이동</Link></div>;
   const editing = pathname.endsWith("/edit");
   const creating = pathname.endsWith("/new");

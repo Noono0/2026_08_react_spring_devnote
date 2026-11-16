@@ -34,6 +34,8 @@ pnpm run e2e
 `frontend/e2e/`의 Playwright 테스트는 실제 Chromium으로 학습 로드맵, 2단계 할 일 CRUD, 14단계 문서 등록·조회·검색·수정·삭제를 확인합니다. 설정(`playwright.config.ts`)이 `vite --mode online`을 5191 포트로 직접 켜므로 백엔드나 Docker는 필요하지 않습니다. 문서 API는 MSW 가짜 서버가 응답합니다. 모든 테스트는 화면에서 잡히지 않은 오류(`pageerror`)가 발생하면 실패합니다(`e2e/fixtures.ts`).
 
 - 통과해도 실제 Spring Boot API와의 연결까지 검증된 것은 아닙니다.
+- 개인 TODO E2E는 해당 테스트만 백엔드 모드로 전환하고 Playwright의 소유자·세션·TODO API 응답으로 CRUD·완료·모바일 화면과 브라우저 두 개의 쿠키 분리·새로고침 유지·쿠키 삭제 후 새 목록을 검증합니다. 실제 회원/비회원 격리, 위조·중복 쿠키 차단, 관리자 권한, 버전 충돌과 기존 회원 글 보존 마이그레이션은 `BoardIntegrationTest`의 MySQL·MockMvc 테스트에서 확인합니다.
+- 로그인 후 TODO 가져오기 E2E는 실제 로그인 폼 → 확인창 취소 → 로그아웃 후 비회원 글 보존 → 재로그인 후 승인 → 기존 계정 글과 완료 상태 보존 → 로그아웃 뒤 비회원 목록 비움을 확인합니다. 실제 SQL의 소유권 이동·반복 요청·계정/쿠키 변경 거절·동시 두 계정 요청의 단일 이전은 MySQL 통합 테스트로 검증합니다.
 - MSW의 문서 저장소는 페이지 메모리에 있어 `page.goto`·`reload`를 하면 처음 57건으로 돌아갑니다. 저장 결과는 화면 안의 링크로 이동해 확인합니다.
 - 로컬에서는 이미 5191 포트에 떠 있는 서버를 재사용합니다. 다른 프로그램이 이 포트를 쓰고 있으면 먼저 종료합니다. 5174는 Vite가 두 번째 개발 서버에 자동으로 주는 포트라서 일부러 피했습니다.
 - CI에서는 `frontend-e2e` job이 실행됩니다. 실패하면 Actions 실행 화면의 `playwright-report` artifact에서 HTML 보고서와 스크린샷을 내려받을 수 있습니다.
@@ -64,6 +66,10 @@ python -m unittest discover -s scripts -p "test_*.py"
 검사 범위는 JSON·YAML·XML·셸·TypeScript·Java 문법, 로컬 import, DAO와 Mapper ID 연결, Gradle·Docker 필수 파일입니다. `node_modules`, 빌드 결과물, Gradle 캐시, `.local`의 세션 파일은 탐색하지 않습니다. 단순 화면 문구의 포함 여부를 기능 테스트로 취급하지 않습니다.
 
 Windows의 `python`이 Microsoft Store 별칭이면 실제 Python을 설치하거나 설치된 Python의 절대 경로를 사용하세요. 도구 부재 또는 문법 오류는 실패로 보고하며, 정적 검사를 통과해도 실제 실행·단위 테스트를 대체하지 않습니다.
+
+## TODO 웹 푸시 테스트
+
+TODO 웹 푸시의 자동 검증은 `TodoPushIntegrationTest`(실제 MySQL 예약·소유자·기기별 발송·재시도·로그아웃·DB 점유), `VapidAuthorizationTest`(실제 JDK 서명 검증·표준 헤더·빈 요청 본문·URL 제한·SQL 로그 가림), 프론트 알림 시간·권한·설정 테스트로 나눕니다. 전송 대상은 모의 `WebPushTransport`라 외부 푸시 서버에는 요청하지 않습니다. Chromium E2E는 실제 서비스 워커에 CDP push 이벤트를 전달해 TODO 화면 없이 알림 표시 API를 두 번 호출하는 것까지 확인합니다. Windows 테스트 환경에서 `getNotifications()`로 OS 알림창을 확인할 수 없어 해당 API 경계만 관측하며, Google·Apple 푸시 경유와 실제 PC/휴대폰 알림창 수신은 HTTPS 배포 후 별도 검증합니다. 예약을 여러 개 저장·수정하는 모바일 UI E2E는 API 모의 응답을 사용합니다.
 
 ## 외부 공휴일 API 테스트
 

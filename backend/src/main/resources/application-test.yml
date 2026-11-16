@@ -1,4 +1,9 @@
 application:
+  todo-push:
+    public-key: ""
+    private-key: ""
+    subject: ""
+    initial-delay-ms: 3600000
   calendar-holidays:
     # 일반 테스트는 개인 인증키·외부 공공데이터 서버를 사용하지 않는다.
     # Regular tests never use personal keys or the external public API.

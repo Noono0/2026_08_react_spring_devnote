@@ -25,6 +25,7 @@ describe("useLogoutMutation", () => {
     vi.mocked(logout).mockResolvedValue(signedOutSession);
     const queryClient = new QueryClient();
     queryClient.setQueryData(["account"], { memberId: 1, email: "previous@example.com" });
+    queryClient.setQueryData(["board-todos", 1, "ALL", "", 0], { content: ["이전 계정 개인 할 일"] });
     queryClient.setQueryData(["board-lab", "detail", "POPUP", 9, 1, true], { title: "예약된 관리자 안내" });
     queryClient.setQueryData(["board-lab", "list", "POPUP", "", 0, 1, true], { content: ["예약된 관리자 안내"] });
     const cancelQueries = vi.spyOn(queryClient, "cancelQueries");
@@ -41,6 +42,8 @@ describe("useLogoutMutation", () => {
     expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["documents"] });
     expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["board-lab"] });
     expect(queryClient.getQueryData(["account"])).toBeUndefined();
+    expect(cancelQueries).toHaveBeenCalledWith({ queryKey: ["board-todos"] });
+    expect(queryClient.getQueriesData({ queryKey: ["board-todos"] })).toEqual([]);
     expect(cancelQueries).toHaveBeenCalledWith({ queryKey: ["board-lab", "detail", "POPUP"] });
     expect(queryClient.getQueriesData({ queryKey: ["board-lab", "detail", "POPUP"] })).toEqual([]);
     expect(queryClient.getQueriesData({ queryKey: ["board-lab", "list", "POPUP"] })).toEqual([]);
