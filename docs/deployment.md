@@ -497,6 +497,10 @@ docker compose -f compose.app.yml --env-file .env.app up -d
 
 웹 푸시는 HTTPS 주소와 서버 전용 VAPID 키 쌍이 필요합니다. HTTP 공인 IP만 제공하는 환경에서는 모바일 구독을 할 수 없습니다. 새 외부 서비스 계정이나 앱스토어 배포는 필요하지 않습니다. 아이폰은 iOS 16.4 이상에서 홈 화면에 추가한 앱으로 사용합니다.
 
+도메인이 없어도 Certbot 5.4 이상과 [Let’s Encrypt의 공인 IP 인증서](https://letsencrypt.org/2026/03/11/shorter-certs-certbot)를 사용할 수 있습니다. 이 경우 Certbot은 인증서 발급·갱신용 서버 도구이며 앱 라이브러리는 아닙니다. 서버에 Certbot을 설치한 뒤 저장소 소스를 준비하고 `PUBLIC_IP=<공인IP> TLS_CONTACT_EMAIL=<운영연락처> APP_DIRECTORY=/home/ubuntu bash scripts/prepare-ip-https.sh`를 실행합니다. 동작 중인 `devnote-frontend`에 HTTP 검증 파일을 잠깐 생성하므로 기존 사이트를 중지하지 않습니다. 인증서는 `/etc/letsencrypt/live/devnote-ip/`, 갱신 훅과 생성된 nginx 설정은 `/home/ubuntu/devnote-tls/`에 보관하며 Git에 넣지 않습니다.
+
+기존 `compose.app.yml`에 선택적 `compose.https.yml`을 함께 지정해 `docker compose -f compose.app.yml -f compose.https.yml --env-file .env.app up -d`로 배포합니다. nginx는 HTTP의 인증서 검증 경로를 유지하고 나머지 요청을 HTTPS로 이동시킵니다. Oracle 네트워크와 OS 방화벽에서 TCP 443을 허용해야 합니다. 인증서 유효 기간이 약 6일이므로 Certbot 자동 갱신 타이머와 nginx 재적용 훅을 반드시 확인합니다. 기존 `scripts/deploy.sh`는 서버에 HTTPS 오버레이가 있으면 함께 사용합니다. 인증서가 없는 서버에서는 오버레이를 사용하지 않습니다.
+
 저장소 루트에서 `node scripts/generate-web-push-keys.mjs`를 실행하면 Git에서 제외된 `.local/web-push.env`에 키를 생성합니다. 기존 파일은 덮어쓰지 않고 비밀 키를 콘솔에 출력하지 않습니다. 파일의 `WEB_PUSH_SUBJECT`를 실제 운영 연락처(`mailto:...` 또는 HTTPS 연락처 URL)로 수정한 뒤 세 값을 서버 전용 `.env.app`에 옮깁니다. 비밀 키는 프론트의 `VITE_` 환경 변수나 Git에 넣지 않습니다.
 
 ```dotenv

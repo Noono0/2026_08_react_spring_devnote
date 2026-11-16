@@ -41,13 +41,17 @@ echo "▶ 서버에 접속해 최신 이미지를 반영합니다..."
 ssh -i "$APP_KEY" -o BatchMode=yes "$APP_HOST" 'bash -s' <<'REMOTE'
 set -e
 cd ~
+compose_files=(-f compose.app.yml)
+# HTTPS를 준비한 서버에서는 인증서 마운트와 443 포트도 유지한다.
+# Preserve certificate mounts and port 443 on HTTPS-enabled servers.
+if [ -f compose.https.yml ]; then compose_files+=(-f compose.https.yml); fi
 
 echo "── 새 이미지 받기 ──"
-docker compose -f compose.app.yml --env-file .env.app pull
+docker compose "${compose_files[@]}" --env-file .env.app pull
 
 echo
 echo "── 컨테이너 교체 ──"
-docker compose -f compose.app.yml --env-file .env.app up -d
+docker compose "${compose_files[@]}" --env-file .env.app up -d
 
 echo
 echo "── 기동 대기 (최대 5분) ──"
