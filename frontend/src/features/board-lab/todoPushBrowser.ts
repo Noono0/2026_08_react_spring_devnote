@@ -24,7 +24,7 @@ function waitForActivation(registration: ServiceWorkerRegistration): Promise<voi
   });
 }
 
-export async function subscribeTodoPush(publicKey: string): Promise<PushSubscription> {
+export async function subscribeTodoPush(publicKey: string, replaceExisting = false): Promise<PushSubscription> {
   // 권한 창은 사용자 클릭에서 바로 요청한다. / Request permission directly from the user gesture.
   const permission = Notification.permission === "granted" ? "granted" : await Notification.requestPermission();
   if (permission !== "granted") throw new Error("알림 권한이 허용되지 않았습니다. 브라우저의 사이트 설정에서 알림을 허용해 주세요.");
@@ -35,7 +35,7 @@ export async function subscribeTodoPush(publicKey: string): Promise<PushSubscrip
   const previous = await registration.pushManager.getSubscription();
   if (previous) {
     const oldKey = previous.options.applicationServerKey;
-    if (oldKey && btoa(String.fromCharCode(...new Uint8Array(oldKey))).replace(/=+$/, "") === btoa(binary).replace(/=+$/, "")) return previous;
+    if (!replaceExisting && oldKey && btoa(String.fromCharCode(...new Uint8Array(oldKey))).replace(/=+$/, "") === btoa(binary).replace(/=+$/, "")) return previous;
     if (!await previous.unsubscribe()) throw new Error("이전 알림 연결을 해제하지 못했습니다. 다시 시도해 주세요.");
   }
   return registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });

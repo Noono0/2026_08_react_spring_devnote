@@ -27,6 +27,13 @@ it("권한을 먼저 요청하고 전용 워커와 VAPID 키로 구독한다", a
 it("거부하면 워커·구독 등록을 시작하지 않는다", async () => {
   permission.mockResolvedValue("denied"); await expect(subscribeTodoPush(publicKey)).rejects.toThrow("권한"); expect(register).not.toHaveBeenCalled();
 });
+it("서버의 기기 연결이 사라졌으면 같은 키여도 기존 주소를 폐기하고 새 구독을 만든다", async () => {
+  vi.stubGlobal("Notification", { permission: "granted", requestPermission: permission });
+  const unsubscribe = vi.fn().mockResolvedValue(true);
+  getSubscription.mockResolvedValue({ options: { applicationServerKey: publicBytes.buffer }, unsubscribe });
+  await subscribeTodoPush(publicKey, true);
+  expect(unsubscribe).toHaveBeenCalledTimes(1); expect(subscribe).toHaveBeenCalledTimes(1);
+});
 it("같은 공개 키의 기존 구독을 재사용하고 키 교체 시 재구독한다", async () => {
   vi.stubGlobal("Notification", { permission: "granted", requestPermission: permission });
   const unsubscribe = vi.fn().mockResolvedValue(true); const old = { options: { applicationServerKey: publicBytes.buffer }, unsubscribe };

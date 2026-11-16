@@ -31,6 +31,7 @@ it("클릭할 때만 구독하고 현재 소유자 키와 주소만 서버에 �
   setup(); const button = await screen.findByRole("button", { name: "이 기기 알림 켜기" });
   expect(mocks.browserSubscribe).not.toHaveBeenCalled();
   fireEvent.click(button);
+  await waitFor(() => expect(mocks.browserSubscribe).toHaveBeenCalledWith("public", true));
   await waitFor(() => expect(mocks.subscribe).toHaveBeenCalledWith({ expectedOwnerKey: "member:2", endpoint: "https://fcm.googleapis.com/test" }));
 });
 it("서버에서 먼저 끄고 브라우저 구독을 해제한다", async () => {

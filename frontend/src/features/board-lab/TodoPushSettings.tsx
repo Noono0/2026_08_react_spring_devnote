@@ -12,7 +12,9 @@ export function TodoPushSettings({ owner }: { owner: TodoOwnerView }) {
     mutationFn: async (enable: boolean) => {
       if (enable) {
         if (!settings.data?.server.configured) throw new Error("서버의 웹 푸시 설정이 아직 준비되지 않았습니다.");
-        const subscription = await subscribeTodoPush(settings.data.server.publicKey);
+        // 쿠키 삭제·계정 전환 뒤 서버 연결이 없으면 이전 주소 대신 새 구독을 만든다.
+        // Replace orphaned browser subscriptions after cookie loss or an ownership transition.
+        const subscription = await subscribeTodoPush(settings.data.server.publicKey, !settings.data.server.subscribed);
         await todoPushApi.subscribe({ expectedOwnerKey: owner.cacheKey, endpoint: subscription.endpoint });
       } else {
         await todoPushApi.unsubscribe(owner.cacheKey);
