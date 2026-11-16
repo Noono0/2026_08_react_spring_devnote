@@ -25,6 +25,8 @@ import org.springframework.http.HttpStatus;
 @Getter
 @RequiredArgsConstructor
 public enum ErrorCode {
+    TODO_PUSH_NOT_CONFIGURED(HttpStatus.SERVICE_UNAVAILABLE, "TODO_PUSH_NOT_CONFIGURED", "서버의 웹 푸시 설정이 아직 준비되지 않았습니다."),
+    TODO_PUSH_CONTEXT_CHANGED(HttpStatus.CONFLICT, "TODO_PUSH_CONTEXT_CHANGED", "계정 또는 브라우저 연결이 바뀌었습니다. 알림 연결을 다시 확인해 주세요."),
     // ── 공통 ──────────────────────────────────────────────────────────
     COMMON_INVALID_REQUEST(HttpStatus.BAD_REQUEST, "COMMON_INVALID_REQUEST", "입력한 요청값을 확인해 주세요."),
     COMMON_INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "COMMON_INTERNAL_SERVER_ERROR", "서버에서 요청을 처리하지 못했습니다."),
@@ -67,6 +69,10 @@ public enum ErrorCode {
     BOARD_POST_NOT_FOUND(HttpStatus.NOT_FOUND, "BOARD_POST_NOT_FOUND", "게시글을 찾을 수 없습니다."),
     BOARD_VERSION_CONFLICT(HttpStatus.CONFLICT, "BOARD_VERSION_CONFLICT", "다른 화면에서 게시글을 먼저 수정했습니다."),
     BOARD_ANSWER_EXISTS(HttpStatus.CONFLICT, "BOARD_ANSWER_EXISTS", "이미 답변이 등록된 질문입니다."),
+    TODO_NOT_FOUND(HttpStatus.NOT_FOUND, "TODO_NOT_FOUND", "할 일을 찾을 수 없습니다."),
+    TODO_GUEST_COOKIE_REQUIRED(HttpStatus.BAD_REQUEST, "TODO_GUEST_COOKIE_REQUIRED", "비회원 TODO를 이용하려면 이 사이트의 쿠키를 허용하고 다시 연결해 주세요."),
+    TODO_MERGE_CONTEXT_CHANGED(HttpStatus.CONFLICT, "TODO_MERGE_CONTEXT_CHANGED", "로그인 계정 또는 브라우저 목록이 바뀌었습니다. 다시 확인한 뒤 가져와 주세요."),
+    TODO_VERSION_CONFLICT(HttpStatus.CONFLICT, "TODO_VERSION_CONFLICT", "다른 화면에서 할 일을 먼저 변경했습니다. 새로고침 후 다시 시도해 주세요."),
     // ── 파일 업로드·다운로드 ───────────────────────────────────────────
     FILE_NOT_FOUND(HttpStatus.NOT_FOUND, "FILE_NOT_FOUND", "요청한 파일을 찾을 수 없습니다."),
     FILE_ACCESS_FORBIDDEN(HttpStatus.FORBIDDEN, "FILE_ACCESS_FORBIDDEN", "다른 사용자가 업로드한 파일은 사용할 수 없습니다."),

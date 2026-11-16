@@ -19,13 +19,16 @@
  *   성공 즉시 비워진다. 어디에도 저장되지 않는다.
  */
 
-import { useState, type FormEvent } from "react";
+import { lazy, Suspense, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { ModalDialog } from "@/shared/ui/ModalDialog";
 import { useAuthSessionQuery, useLoginMutation, useLogoutMutation, useRegisterMutation } from "@/features/auth/hooks/useAuthSession";
 import { applicationNotification } from "@/shared/notification/applicationNotification";
 import { convertRequestErrorToProblemDetails } from "@/shared/api/error/apiErrorHelpers";
 import { disableAutoLoginPreference, readLoginPreferences, saveLoginPreferences } from "@/features/auth/utils/loginPreferenceStorage";
+import type { AuthSession } from "@/features/auth/types/authTypes";
+
+const TodoGuestMergePrompt = lazy(() => import("@/features/board-lab/TodoGuestMergePrompt").then((module) => ({ default: module.TodoGuestMergePrompt })));
 
 export const AuthenticationControls = () => {
   const sessionQuery = useAuthSessionQuery();
@@ -37,6 +40,7 @@ export const AuthenticationControls = () => {
   //   ProductModalCrudPage에서 본 것과 같은 발상이다.
   //   isOpen + isRegisterMode 두 개로 나누면 모순된 조합이 생길 수 있다.
   const [dialogMode, setDialogMode] = useState<"LOGIN" | "REGISTER">();
+  const [mergeMemberId, setMergeMemberId] = useState<number>();
 
   // ★ useState에 함수 이름을 그대로 넘겼다(호출한 게 아니다!).
   //   useState(readLoginPreferences)  ← 함수 자체 (첫 렌더에 한 번만 실행)
@@ -65,9 +69,10 @@ export const AuthenticationControls = () => {
     // 폼의 기본 제출(페이지 새로고침)을 막는다.
     event.preventDefault();
     try {
-      if (dialogMode === "REGISTER") await registerMutation.mutateAsync({ loginId, password, memberName, email });
+      let signedIn: AuthSession;
+      if (dialogMode === "REGISTER") signedIn = await registerMutation.mutateAsync({ loginId, password, memberName, email });
       else {
-        await loginMutation.mutateAsync({ loginId: loginId.trim(), password, autoLogin });
+        signedIn = await loginMutation.mutateAsync({ loginId: loginId.trim(), password, autoLogin });
         // ★ 설정 저장은 "로그인이 성공한 뒤에" 한다.
         //   실패했는데 아이디를 저장하면, 오타 난 아이디가 계속 남는다.
         saveLoginPreferences({ loginId, rememberLoginId, autoLogin });
@@ -75,6 +80,7 @@ export const AuthenticationControls = () => {
 
       // 성공 후 정리.
       setDialogMode(undefined);
+      setMergeMemberId(signedIn.memberId);
       // ★ 아이디는 "기억하기"를 켰을 때만 남긴다. 아니면 비운다.
       setLoginId(rememberLoginId || autoLogin ? loginId.trim() : "");
       // ★★ 비밀번호는 무조건 즉시 비운다.
@@ -95,6 +101,7 @@ export const AuthenticationControls = () => {
   const handleLogout = async (): Promise<void> => {
     try {
       await logoutMutation.mutateAsync();
+      setMergeMemberId(undefined);
 
       // ★ 로그아웃하면 자동 로그인을 꺼야 한다.
       //   안 그러면 방금 나갔는데 다음에 들어올 때 자동으로 다시 로그인된다.
@@ -118,6 +125,10 @@ export const AuthenticationControls = () => {
         <span><strong>{sessionQuery.data.memberName}</strong> · {sessionQuery.data.grade}</span>
         <Link className="ghost-button" to="/account">내 계정</Link>
         <button type="button" className="ghost-button" disabled={logoutMutation.isPending} onClick={() => void handleLogout()}>{logoutMutation.isPending ? "로그아웃 중..." : "로그아웃"}</button>
+        {mergeMemberId !== undefined && mergeMemberId === sessionQuery.data.memberId ? <Suspense fallback={null}>
+          <TodoGuestMergePrompt key={mergeMemberId} memberId={mergeMemberId}
+            onClose={() => setMergeMemberId((current) => current === mergeMemberId ? undefined : current)} />
+        </Suspense> : null}
       </div>
     );
   }

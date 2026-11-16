@@ -2,6 +2,7 @@ package com.example.devnote.common.logging;
 
 import com.p6spy.engine.spy.appender.MessageFormattingStrategy;
 import org.slf4j.MDC;
+import java.util.Locale;
 
 /**
  * P6Spy가 치환한 실제 SQL과 실행 시간을 사람이 읽기 쉬운 한 덩어리로 출력합니다.
@@ -32,7 +33,11 @@ public class P6SpySqlFormatter implements MessageFormattingStrategy {
             return "";
         }
         // Mapper XML의 줄바꿈·들여쓰기를 공백 하나로 합쳐 한 줄로 만든다(\\s+ = 공백 문자 1개 이상).
-        String compactSql = sql.replaceAll("\\s+", " ").trim();
+        // 푸시 구독 주소는 발송 권한이므로 바인딩 값을 기록하지 않는다.
+        // Push endpoints are capabilities: log only the prepared statement.
+        String safeSql = sql.toLowerCase(Locale.ROOT).contains("board_todo_push_")
+            ? prepared == null || prepared.isBlank() ? "<TODO push SQL omitted>" : prepared : sql;
+        String compactSql = safeSql.replaceAll("\\s+", " ").trim();
         return System.lineSeparator()
             // TraceIdFilter가 MDC에 넣은 값. 요청 밖(예약 작업 등)에서 실행된 SQL은 none으로 찍힌다.
             + "[SQL] traceId=" + valueOrDefault(MDC.get("traceId"), "none")

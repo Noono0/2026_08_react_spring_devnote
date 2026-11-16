@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.devnote.board.TodoReminderMapper">
+    <select id="list" resultType="com.example.devnote.board.todo.dao.TodoReminderRow">
+        SELECT * FROM board_todo_reminders WHERE todo_id = #{value} ORDER BY scheduled_at, reminder_id
+    </select>
+    <insert id="insert">
+        INSERT INTO board_todo_reminders (todo_id, scheduled_at, status) VALUES (#{todoId}, #{scheduledAt}, #{status})
+    </insert>
+    <delete id="delete">DELETE FROM board_todo_reminders WHERE reminder_id = #{value}</delete>
+    <update id="cancel">UPDATE board_todo_reminders SET status = 'CANCELLED' WHERE todo_id = #{value} AND status = 'PENDING'</update>
+</mapper>

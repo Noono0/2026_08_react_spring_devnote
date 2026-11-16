@@ -6,6 +6,8 @@ import { BoardLabPage } from "./BoardLabPage";
 
 const api = vi.hoisted(() => ({ list: vi.fn(), communityList: vi.fn(), calendarMonth: vi.fn(), detail: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn(), answer: vi.fn(), deleteAnswer: vi.fn() }));
 const holidayApi = vi.hoisted(() => ({ month: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() }));
+const todoApi = vi.hoisted(() => ({ owner: vi.fn(), list: vi.fn() }));
+vi.mock("./todoApi", async (original) => ({ ...await original<typeof import("./todoApi")>(), todoApi }));
 vi.mock("@/shared/api/http/selectedHttpClient", () => ({ selectedHttpClient: { get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() } }));
 vi.mock("./boardApi", async (importOriginal) => ({
   ...await importOriginal<typeof import("./boardApi")>(), boardApi: api,
@@ -37,6 +39,8 @@ const renderPage = (path: string) => render(<QueryClientProvider client={new Que
 
 beforeEach(() => {
   vi.clearAllMocks();
+  todoApi.owner.mockResolvedValue({ mode: "GUEST", cacheKey: "guest:11111111-1111-4111-8111-111111111111" });
+  todoApi.list.mockResolvedValue({ content: [], pageInformation: { pageNumber: 0, pageSize: 12, totalElements: 0, totalPages: 0, firstPage: true, lastPage: true } });
   session.authenticated = true;
   session.administrator = true;
   session.memberId = 1;
@@ -55,6 +59,13 @@ beforeEach(() => {
     eventDate: null, eventEndDate: null, versionNumber: 1 });
 });
 afterEach(() => vi.useRealTimers());
+
+it("게시판 실전의 TODO 탭에서 로그인 없이 비회원 목록을 연다", async () => {
+  session.authenticated = false;
+  renderPage("/react/boards/todo");
+  expect(screen.getByRole("link", { name: "TODO 리스트" })).toHaveAttribute("aria-current", "page");
+  expect(await screen.findByText(/비회원 · 이 브라우저의 할 일/)).toBeVisible();
+});
 
 describe("게시판의 계정 전환과 저장 상태", () => {
   it("계정 변경 직후 이전 사용자의 편집 권한이 담긴 상세 캐시를 재사용하지 않는다", async () => {

@@ -1,4 +1,12 @@
 .board-lab { display: grid; gap: 18px; max-width: 1120px; margin: 0 auto; }
+.todo-push-settings, .todo-reminder-editor { min-width: 0; padding: 16px; border: 1px solid var(--border-color); border-radius: 12px; }
+.todo-push-settings h3 { margin-top: 0; }
+.todo-reminder-editor { display: grid; gap: 12px; }
+.todo-reminder-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.todo-reminder-row input { flex: 1 1 190px; min-width: 0; max-width: 100%; }
+.todo-reminder-summary { padding-left: 20px; display: grid; gap: 6px; }
+.todo-reminder-summary li { display: flex; flex-wrap: wrap; gap: 8px; }
+.todo-reminder-summary span { color: var(--text-secondary); font-size: 12px; }
 .board-lab > h1 { margin-bottom: 0; }
 .board-lab > p { margin: 0; color: var(--text-secondary); }
 .board-lab-tabs { display: flex; gap: 8px; flex-wrap: wrap; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; }
@@ -18,6 +26,19 @@
 .board-lab-search { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .board-lab-search input { flex: 1; min-width: 180px; }
 .board-lab-count, .board-lab-hint { color: var(--text-secondary); margin: 0; }
+.todo-editor { display: grid; gap: 12px; }
+.todo-editor textarea { width: 100%; min-width: 0; resize: vertical; }
+.todo-board-list { display: grid; gap: 12px; list-style: none; margin: 0; padding: 0; }
+.todo-board-list > li { display: grid; gap: 12px; min-width: 0; padding: 16px; border: 1px solid var(--border-color); border-radius: 12px; }
+.todo-board-item { display: flex; align-items: start; justify-content: space-between; gap: 12px; }
+.todo-board-item > label { flex: 1; min-width: 0; }
+.todo-board-item input[type="checkbox"] { flex: 0 0 auto; width: 18px; height: 18px; }
+.todo-board-item > .board-lab-status { flex-shrink: 0; }
+.todo-board-title { flex: 1; min-width: 0; }
+.todo-board-title, .todo-board-memo { overflow-wrap: anywhere; }
+.todo-board-list [data-completed="true"] .todo-board-title { text-decoration: line-through; color: var(--text-secondary); }
+.todo-board-memo { white-space: pre-wrap; margin-bottom: 0; }
+.todo-board-buttons { display: flex; gap: 8px; }
 .board-lab-list, .board-lab-gallery { list-style: none; padding: 0; margin: 0; }
 .board-lab-list { display: grid; border-top: 1px solid var(--border-color); }
 .board-lab-list li { border-bottom: 1px solid var(--border-color); }

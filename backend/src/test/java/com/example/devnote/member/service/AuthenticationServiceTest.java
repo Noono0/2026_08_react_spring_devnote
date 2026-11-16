@@ -16,6 +16,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpHeaders;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -36,6 +37,7 @@ class AuthenticationServiceTest {
     @Mock private HttpServletRequest request;
     @Mock private HttpServletResponse response;
     @Mock private HttpSession session;
+    @Mock private ApplicationEventPublisher events;
 
     private AuthenticationService authenticationService;
     private LoginAttemptLimiter loginAttemptLimiter;
@@ -45,7 +47,7 @@ class AuthenticationServiceTest {
         // 실패 제한기는 가짜가 아니라 실제 객체를 쓴다(5번 실패 시 잠금, 고정된 시계).
         loginAttemptLimiter = new LoginAttemptLimiter(
             Clock.fixed(Instant.parse("2026-10-08T00:00:00Z"), ZoneOffset.UTC), 5, Duration.ofMinutes(15), Duration.ofMinutes(15));
-        authenticationService = new AuthenticationService(memberDao, passwordService, loginAttemptLimiter);
+        authenticationService = new AuthenticationService(memberDao, passwordService, loginAttemptLimiter, events);
         ReflectionTestUtils.setField(authenticationService, "rememberMeDuration", Duration.ofDays(30));
         ReflectionTestUtils.setField(authenticationService, "sessionCookieName", "JSESSIONID");
         ReflectionTestUtils.setField(authenticationService, "sessionCookieSecure", false);

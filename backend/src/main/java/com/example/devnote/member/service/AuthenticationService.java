@@ -16,6 +16,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.Duration;
 
@@ -39,6 +40,7 @@ public class AuthenticationService {
     private final MemberDao memberDao;
     private final MemberPasswordService passwordService;
     private final LoginAttemptLimiter loginAttemptLimiter;
+    private final ApplicationEventPublisher events;
     // @Value("${이름:기본값}"): application.yml 값을 읽고, 없으면 : 뒤의 기본값을 쓴다. "30d"는 Duration(30일)으로 자동 변환된다.
     @Value("${auth.remember-me-duration:30d}")
     private Duration rememberMeDuration;
@@ -70,6 +72,7 @@ public class AuthenticationService {
             throw new BusinessException(ErrorCode.ACCOUNT_NOT_ACTIVE);
         }
         // getSession(true): 세션이 없으면 새로 만든다.
+        events.publishEvent(new AuthenticationStateChanging(servletRequest));
         HttpSession session = servletRequest.getSession(true);
         // ★ 로그인 순간 세션 ID를 새로 바꾼다(세션 고정 공격 방지).
         //   공격자가 미리 알려 준 세션 ID로 로그인하게 만들어도, 로그인 후에는 다른 ID가 되어 그 ID로는 접근할 수 없다.
@@ -116,6 +119,7 @@ public class AuthenticationService {
             throw exception;
         }
         // 가입 직후 바로 로그인 상태로 만든다(로그인 화면을 한 번 더 거치지 않게).
+        events.publishEvent(new AuthenticationStateChanging(servletRequest));
         HttpSession session = servletRequest.getSession(true);
         servletRequest.changeSessionId();
         session.setAttribute(AUTHENTICATED_MEMBER_ID, parameter.getMemberId());
@@ -144,7 +148,9 @@ public class AuthenticationService {
     }
 
     /** 서버의 세션을 없애고(invalidate), 브라우저 쿠키도 만료 시간 0으로 덮어써 즉시 지우게 한다. */
+    @Transactional
     public void logout(HttpServletRequest request, HttpServletResponse response) {
+        events.publishEvent(new AuthenticationStateChanging(request));
         HttpSession session = request.getSession(false);
         if (session != null) session.invalidate();
         response.addHeader(HttpHeaders.SET_COOKIE, buildSessionCookie("", Duration.ZERO).toString());

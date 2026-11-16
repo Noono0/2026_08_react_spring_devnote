@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.devnote.board.TodoGuestMapper">
+    <select id="findByTokenHash" resultType="com.example.devnote.board.todo.dao.TodoGuestRow">
+        SELECT guest_id, token_hash, public_id FROM board_todo_guests WHERE token_hash = #{tokenHash}
+    </select>
+    <insert id="insert" parameterType="com.example.devnote.board.todo.dao.TodoGuestRow" useGeneratedKeys="true" keyProperty="guestId">
+        INSERT INTO board_todo_guests (token_hash, public_id) VALUES (#{tokenHash}, #{publicId})
+    </insert>
+</mapper>

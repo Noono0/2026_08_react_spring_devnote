@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.devnote.board.TodoPushMapper">
+    <select id="device" resultType="com.example.devnote.board.todo.dao.TodoPushSubscriptionRow">
+        SELECT * FROM board_todo_push_subscriptions WHERE device_hash = #{value}
+    </select>
+    <select id="countDevices" resultType="long">
+        SELECT COUNT(*) FROM board_todo_push_subscriptions WHERE enabled = TRUE AND <include refid="com.example.devnote.board.TodoMapper.owner"/>
+    </select>
+    <insert id="saveDevice" useGeneratedKeys="true" keyProperty="subscriptionId">
+        INSERT INTO board_todo_push_subscriptions (device_hash, endpoint_hash, endpoint, author_id, guest_id)
+        VALUES (#{deviceHash}, #{endpointHash}, #{endpoint}, #{authorId}, #{guestId})
+    </insert>
+    <delete id="removeDevice">DELETE FROM board_todo_push_subscriptions WHERE device_hash = #{value}</delete>
+    <update id="disableSubscription">UPDATE board_todo_push_subscriptions SET enabled = FALSE WHERE subscription_id = #{value}</update>
+    <sql id="matchingOwner">
+        ((t.author_id IS NOT NULL AND s.author_id = t.author_id AND s.guest_id IS NULL)
+        OR (t.guest_id IS NOT NULL AND s.guest_id = t.guest_id AND s.author_id IS NULL))
+    </sql>
+    <sql id="activeOwner">
+        (t.author_id IS NULL OR EXISTS (SELECT 1 FROM members m WHERE m.member_id = t.author_id AND m.account_status = 'ACTIVE' AND m.use_yn = 'Y'))
+    </sql>
+    <insert id="enqueue">
+        INSERT IGNORE INTO board_todo_push_deliveries (reminder_id, subscription_id, next_attempt_at)
+        SELECT r.reminder_id, s.subscription_id, #{now}
+        FROM board_todo_reminders r JOIN board_todos t ON t.todo_id = r.todo_id
+        JOIN board_todo_push_subscriptions s ON <include refid="matchingOwner"/>
+        WHERE r.status = 'PENDING' AND t.completed = FALSE AND s.enabled = TRUE
+          AND r.scheduled_at &lt;= #{now} AND r.scheduled_at &gt;= #{cutoff} AND <include refid="activeOwner"/>
+    </insert>
+    <update id="expire">UPDATE board_todo_reminders SET status = 'EXPIRED' WHERE status = 'PENDING' AND scheduled_at &lt; #{value}</update>
+    <select id="due" resultType="long">
+        SELECT delivery_id FROM board_todo_push_deliveries WHERE status = 'PENDING' AND next_attempt_at &lt;= #{value}
+        ORDER BY next_attempt_at, delivery_id LIMIT 50
+    </select>
+    <update id="claim">
+        UPDATE board_todo_push_deliveries SET attempts = attempts + 1, next_attempt_at = #{leaseUntil}, claim_token = #{claimToken}
+        WHERE delivery_id = #{deliveryId} AND status = 'PENDING' AND next_attempt_at &lt;= #{now}
+    </update>
+    <select id="target" resultType="com.example.devnote.board.todo.dao.TodoPushDeliveryRow">
+        SELECT d.delivery_id, d.reminder_id, d.subscription_id, d.attempts, s.endpoint
+        FROM board_todo_push_deliveries d JOIN board_todo_reminders r ON r.reminder_id = d.reminder_id
+        JOIN board_todos t ON t.todo_id = r.todo_id JOIN board_todo_push_subscriptions s ON s.subscription_id = d.subscription_id
+        WHERE d.delivery_id = #{deliveryId} AND d.claim_token = #{claimToken} AND d.status = 'PENDING'
+          AND r.status = 'PENDING' AND t.completed = FALSE AND s.enabled = TRUE
+          AND <include refid="matchingOwner"/> AND <include refid="activeOwner"/>
+    </select>
+    <update id="finish">
+        UPDATE board_todo_push_deliveries SET status = #{status}, next_attempt_at = #{nextAttempt}, claim_token = NULL
+        WHERE delivery_id = #{deliveryId} AND claim_token = #{claimToken} AND status = 'PENDING'
+    </update>
+    <update id="settle">
+        UPDATE board_todo_reminders r SET r.status = CASE WHEN EXISTS
+          (SELECT 1 FROM board_todo_push_deliveries d WHERE d.reminder_id = r.reminder_id AND d.status = 'SENT') THEN 'SENT' ELSE 'FAILED' END
+        WHERE r.status = 'PENDING' AND EXISTS (SELECT 1 FROM board_todo_push_deliveries d WHERE d.reminder_id = r.reminder_id)
+          AND NOT EXISTS (SELECT 1 FROM board_todo_push_deliveries d WHERE d.reminder_id = r.reminder_id AND d.status = 'PENDING')
+    </update>
+    <delete id="clearGuestDeliveries">
+        DELETE d FROM board_todo_push_deliveries d JOIN board_todo_reminders r ON r.reminder_id = d.reminder_id
+        JOIN board_todos t ON t.todo_id = r.todo_id
+        WHERE t.guest_id = #{guestId} AND t.author_id IS NULL AND t.todo_id &lt;= #{throughTodoId} AND r.status = 'PENDING'
+    </delete>
+</mapper>

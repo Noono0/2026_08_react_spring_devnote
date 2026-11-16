@@ -491,6 +491,30 @@ docker compose -f compose.app.yml --env-file .env.app up -d
 
 공휴일·휴일 관리 버전에서는 `scripts/migrations/2026-11-13-calendar-holidays.sql`을, API 연동 버전에서는 `scripts/migrations/2026-11-13-calendar-holiday-cache.sql`도 적용합니다. 각각 관리자 추가 휴일과 공식 API 연도별 저장본을 보관합니다. 자동 갱신에는 한국천문연구원 특일 정보의 활용신청이 승인된 `DATA_GO_KR_SERVICE_KEY`를 서버의 `.env.app`에 설정하고 변경된 `compose.app.yml`로 백엔드를 재생성합니다. 인증키는 프론트 빌드 인자나 Git에 넣지 않습니다. API 장애·키 미설정 시 저장본과 2026·2027년 포함 자료를 사용합니다. 새 운영 라이브러리는 추가하지 않았습니다. 갱신 시점·자료 범위·출처·확인일은 [게시판 가이드](board-lab.md#공휴일대체공휴일과-휴일-관리)를 확인합니다.
 
+2026-11-16 개인 TODO 게시판은 기존 DB에 `scripts/migrations/2026-11-16-board-todos.sql` → `scripts/migrations/2026-11-16-todo-guests.sql` → `scripts/migrations/2026-11-16-todo-web-push.sql` 순서로 적용합니다. 회원 글은 보존하고 비회원 소유자와 예약·구독·발송 테이블을 추가합니다. 새 운영 라이브러리는 없습니다. 회원은 실제 세션, 비회원은 서버 발급 HttpOnly 쿠키를 사용하며 개발용 회원 번호 헤더는 사용하지 않습니다. HTTPS에서는 기존 `SESSION_COOKIE_SECURE=true` 설정을 유지합니다. 로그인 성공 뒤 비회원 항목을 계정으로 가져올지 확인하며, 승인한 경우에만 알림 예약을 포함한 소유권을 옮깁니다.
+
+### TODO 웹 푸시 설정
+
+웹 푸시는 HTTPS 주소와 서버 전용 VAPID 키 쌍이 필요합니다. HTTP 공인 IP만 제공하는 환경에서는 모바일 구독을 할 수 없습니다. 새 외부 서비스 계정이나 앱스토어 배포는 필요하지 않습니다. 아이폰은 iOS 16.4 이상에서 홈 화면에 추가한 앱으로 사용합니다.
+
+도메인이 없어도 Certbot 5.4 이상과 [Let’s Encrypt의 공인 IP 인증서](https://letsencrypt.org/2026/03/11/shorter-certs-certbot)를 사용할 수 있습니다. 이 경우 Certbot은 인증서 발급·갱신용 서버 도구이며 앱 라이브러리는 아닙니다. 서버에 Certbot을 설치한 뒤 저장소 소스를 준비하고 `PUBLIC_IP=<공인IP> TLS_CONTACT_EMAIL=<운영연락처> APP_DIRECTORY=/home/ubuntu bash scripts/prepare-ip-https.sh`를 실행합니다. 동작 중인 `devnote-frontend`에 HTTP 검증 파일을 잠깐 생성하므로 기존 사이트를 중지하지 않습니다. 인증서는 `/etc/letsencrypt/live/devnote-ip/`, 갱신 훅과 생성된 nginx 설정은 `/home/ubuntu/devnote-tls/`에 보관하며 Git에 넣지 않습니다.
+
+기존 `compose.app.yml`에 선택적 `compose.https.yml`을 함께 지정해 `docker compose -f compose.app.yml -f compose.https.yml --env-file .env.app up -d`로 배포합니다. nginx는 HTTP의 인증서 검증 경로를 유지하고 나머지 요청을 HTTPS로 이동시킵니다. Oracle 네트워크와 OS 방화벽에서 TCP 443을 허용해야 합니다. 인증서 유효 기간이 약 6일이므로 Certbot 자동 갱신 타이머와 nginx 재적용 훅을 반드시 확인합니다. 기존 `scripts/deploy.sh`는 서버에 HTTPS 오버레이가 있으면 함께 사용합니다. 인증서가 없는 서버에서는 오버레이를 사용하지 않습니다.
+
+저장소 루트에서 `node scripts/generate-web-push-keys.mjs`를 실행하면 Git에서 제외된 `.local/web-push.env`에 키를 생성합니다. 기존 파일은 덮어쓰지 않고 비밀 키를 콘솔에 출력하지 않습니다. 파일의 `WEB_PUSH_SUBJECT`를 실제 운영 연락처(`mailto:...` 또는 HTTPS 연락처 URL)로 수정한 뒤 세 값을 서버 전용 `.env.app`에 옮깁니다. 비밀 키는 프론트의 `VITE_` 환경 변수나 Git에 넣지 않습니다.
+
+```dotenv
+WEB_PUSH_PUBLIC_KEY=<생성한 공개 키>
+WEB_PUSH_PRIVATE_KEY=<생성한 비밀 키>
+WEB_PUSH_SUBJECT=mailto:<운영 연락처>
+```
+
+`compose.app.yml`은 이 세 변수를 백엔드에 전달합니다. 로컬 `bootRun`에서도 같은 이름의 프로세스 환경 변수로 적용하며 `.local/web-push.env`를 자동으로 읽지는 않습니다. 세 값이 모두 비어 있으면 푸시 발송을 끄고 화면에 미설정을 안내합니다. 일부만 설정하거나 키 쌍·연락처 형식이 잘못되면 비밀 값을 출력하지 않고 시작 시 오류를 냅니다. 키는 재시작 때마다 새로 만들지 않으며 키를 교체하면 각 기기에서 알림을 다시 연결합니다.
+
+원본 서버까지 HTTPS 전달 정보를 유지하고 `SESSION_COOKIE_SECURE=true`를 사용합니다. 정적 파일 `/todo.webmanifest`, `/todo-app-icon.svg`, `/todo-push-sw.js`를 제공해야 하며 워커 파일에는 장기 immutable 캐시를 적용하지 않습니다. 외부 HTTPS 통신에서 Google·Apple·Mozilla 등 해당 브라우저의 푸시 호스트를 허용합니다. 서버 시각을 동기화하고 예약 데이터는 UTC로 유지합니다.
+
+배포 후 PC Chrome·안드로이드·아이폰 홈 화면 앱에서 각각 로그인 → 이 기기 알림 켜기 → 가까운 미래의 알림 두 개 저장 → TODO 탭을 닫고 수신 → 알림 클릭으로 목록 열기를 확인합니다. 추가로 완료·예약 삭제·기기 알림 끄기·로그아웃 후 새 발송 중단을 확인합니다. 자동 검사는 실제 기기의 잠금 화면 수신을 대신하지 않습니다.
+
 ---
 
 ## 8. HTTPS — Cloudflare (무료)
