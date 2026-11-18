@@ -20,9 +20,10 @@ import { applicationNotification } from "@/shared/notification/applicationNotifi
 import { ConfirmDialog } from "@/shared/ui/ConfirmDialog";
 import { markInvalidFields } from "@/shared/lib/formValidation";
 import { RequiredMark } from "@/features/crawler/components/RequiredMark";
+import { createCrawlerCsvFileName, downloadCrawlerCsv } from "@/features/crawler/utils/crawlerCsv";
 
 /**
- * 저장된 크롤러 설정 게시판: 설정 목록·검색, 불러오기/새로 만들기/저장/삭제, 설정별 실행 이력(결과 보기·이전 결과와 비교·삭제).
+ * 저장된 크롤러 설정 게시판: 설정 목록·검색, 불러오기/새로 만들기/저장/삭제, 설정별 실행 이력(결과 보기·CSV 다운로드·이전 결과와 비교·삭제).
  * 실제 실행 설정 값(CrawlerRunRequest)은 부모(WebCrawlerPage)가 갖고 있어 getCurrentRequest()로 받아 온다.
  * 부모의 입력값이 검증을 통과하지 못하면 undefined가 와서 저장하지 않는다.
  */
@@ -50,6 +51,13 @@ const statusLabel = (status: string | null): string => {
   if (status === "FAILURE") return "실패";
   if (status === "RUNNING") return "실행 중";
   return "실행 전";
+};
+
+/** 실행 이력의 시작~종료 시각. 아직 끝나지 않은 실행은 종료 시각 대신 "진행 중"을 보여 준다. */
+const formatHistoryPeriod = (startedAt: string, completedAt: string | null): string => {
+  const start = new Date(startedAt).toLocaleString("ko-KR");
+  const end = completedAt ? new Date(completedAt).toLocaleString("ko-KR") : "진행 중";
+  return `${start} ~ ${end}`;
 };
 
 export const CrawlerConfigurationBoard = ({
@@ -150,6 +158,24 @@ export const CrawlerConfigurationBoard = ({
     }
   };
 
+  /** 결과 화면을 거치지 않고 이력 하나의 수집 결과 전체를 바로 CSV로 내려받는다. */
+  const downloadHistoryCsv = async (historyId: number): Promise<void> => {
+    try {
+      const history = await historyMutation.mutateAsync(historyId);
+      if (!history.result) {
+        applicationNotification.warning("실패한 실행에는 내려받을 수집 결과가 없습니다.", history.failureMessage ?? undefined);
+        return;
+      }
+      // 설정에 CSV 저장 단계가 있으면 그 파일 이름을 쓰고, 어느 실행인지 알 수 있게 이력 번호를 붙인다.
+      const csvStep = history.request.steps.find((step) => step.type === "CSV");
+      const baseName = `${csvStep?.value.trim().replace(/\.csv$/i, "") || "crawler-result"} #${history.historyId}`;
+      downloadCrawlerCsv(createCrawlerCsvFileName(baseName), history.result.fieldNames, history.result.items);
+      applicationNotification.success(`실행 이력 #${history.historyId}의 결과 ${history.result.items.length}건을 CSV로 내려받았습니다.`);
+    } catch (error) {
+      handleError(error);
+    }
+  };
+
   // 이력은 최신순이다. 각 성공 실행 바로 아래(더 오래된) 성공 실행을 비교 기준으로 쓴다.
   const previousSuccessIdByHistoryId = useMemo(() => {
     const successHistories = (historiesQuery.data ?? []).filter((history) => history.status === "SUCCESS");
@@ -210,7 +236,7 @@ export const CrawlerConfigurationBoard = ({
       <header className="crawler-board-header">
         <div><span className="page-kicker">Saved Crawler Board</span><h2 id="crawler-board-title">크롤링 설정 게시판</h2><p>URL·선택자·필드·키워드 조건을 저장해서 다시 사용하고, 실행 성공과 실패를 이력으로 확인합니다.</p></div>
         {editorOpen
-          ? <button type="button" className="secondary-button" onClick={onCloseEditor}>목록으로</button>
+          ? <button type="button" className="secondary-button" onClick={onCloseEditor}>결과목록보기</button>
           : <button type="button" onClick={startNewConfiguration}>+ 새 설정</button>}
       </header>
 
@@ -226,7 +252,7 @@ export const CrawlerConfigurationBoard = ({
       {!editorOpen && !configurationsQuery.isPending && filteredConfigurations.length === 0 ? <div className="portfolio-state-panel">저장된 크롤링 설정이 없습니다. `+ 새 설정`을 눌러 첫 설정을 등록해 보세요.</div> : null}
       {!editorOpen && filteredConfigurations.length > 0 ? <div className="crawler-board-table-wrap"><table><caption>저장된 크롤링 설정</caption><thead><tr><th scope="col">번호</th><th scope="col">제목과 대상</th><th scope="col">최근 실행</th><th scope="col">수정일</th><th scope="col">관리</th></tr></thead><tbody>{filteredConfigurations.map((configuration) => <tr className={configuration.configurationId === selectedConfigurationId ? "selected" : undefined} key={configuration.configurationId}><td>#{configuration.configurationId}</td><td><strong>{configuration.title}</strong><small>{configuration.description || "설명 없음"}</small><a href={configuration.request.startUrl} target="_blank" rel="noreferrer">{configuration.request.startUrl}</a></td><td><span className={`crawler-history-status ${configuration.lastRunStatus?.toLocaleLowerCase() ?? "idle"}`}>{statusLabel(configuration.lastRunStatus)}</span><small>{configuration.runCount}회 실행</small></td><td><time dateTime={configuration.updatedAt}>{new Date(configuration.updatedAt).toLocaleString("ko-KR")}</time></td><td><div className="crawler-board-actions"><button type="button" className="secondary-button" onClick={() => loadConfiguration(configuration)}>열기·수정</button><button type="button" className="danger-button" onClick={() => setPendingDelete({ type: "CONFIGURATION", id: configuration.configurationId, title: configuration.title })}>삭제</button></div></td></tr>)}</tbody></table></div> : null}
 
-      {!editorOpen && selectedConfigurationId !== undefined ? <section className="crawler-history-panel"><header><div><h3>실행 이력</h3><p>선택한 설정으로 크롤링을 실행하면 성공 결과와 실패 원인이 자동으로 기록됩니다.</p></div><button type="button" className="secondary-button" onClick={() => void historiesQuery.refetch()} disabled={historiesQuery.isFetching}>새로고침</button></header>{historiesQuery.isPending ? <div className="portfolio-state-panel">실행 이력을 불러오는 중입니다.</div> : null}{!historiesQuery.isPending && (historiesQuery.data?.length ?? 0) === 0 ? <div className="portfolio-state-panel">아직 실행 이력이 없습니다.</div> : null}<div className="crawler-history-list">{historiesQuery.data?.map((history) => <article key={history.historyId}><div><span className={`crawler-history-status ${history.status.toLocaleLowerCase()}`}>{statusLabel(history.status)}</span><strong>#{history.historyId} · {history.itemCount}건</strong><time dateTime={history.startedAt}>{new Date(history.startedAt).toLocaleString("ko-KR")}</time></div>{history.failureMessage ? <p><strong>{history.failureStage ?? "실패"}</strong> · {history.failureMessage}</p> : <p>{(history.durationMillis / 1000).toFixed(1)}초 소요</p>}<footer>{history.status === "SUCCESS" ? <button type="button" className="secondary-button" onClick={() => void showHistory(history.historyId)} disabled={historyMutation.isPending}>결과 보기</button> : null}{previousSuccessIdByHistoryId.has(history.historyId) ? <button type="button" className="secondary-button" aria-label={`실행 이력 #${history.historyId}을 이전 성공 실행과 비교`} onClick={() => void compareWithPreviousHistory(history.historyId)} disabled={historyMutation.isPending}>이전과 비교</button> : null}<button type="button" className="danger-button" onClick={() => setPendingDelete({ type: "HISTORY", id: history.historyId, title: `실행 이력 #${history.historyId}` })}>삭제</button></footer></article>)}</div></section> : null}
+      {!editorOpen && selectedConfigurationId !== undefined ? <section className="crawler-history-panel"><header><div><h3>실행 이력</h3><p>선택한 설정으로 크롤링을 실행하면 성공 결과와 실패 원인이 자동으로 기록됩니다.</p></div><button type="button" className="secondary-button" onClick={() => void historiesQuery.refetch()} disabled={historiesQuery.isFetching}>새로고침</button></header>{historiesQuery.isPending ? <div className="portfolio-state-panel">실행 이력을 불러오는 중입니다.</div> : null}{!historiesQuery.isPending && (historiesQuery.data?.length ?? 0) === 0 ? <div className="portfolio-state-panel">아직 실행 이력이 없습니다.</div> : null}<div className="crawler-history-list">{historiesQuery.data?.map((history) => <article key={history.historyId}><div className="crawler-history-summary"><span className={`crawler-history-status ${history.status.toLocaleLowerCase()}`}>{statusLabel(history.status)}</span><strong>#{history.historyId} · {history.itemCount}건</strong><span className="crawler-history-period"><time dateTime={history.startedAt}>{formatHistoryPeriod(history.startedAt, history.completedAt)}</time></span><span className="crawler-history-duration">{(history.durationMillis / 1000).toFixed(1)}초 소요</span></div>{history.failureMessage ? <p><strong>{history.failureStage ?? "실패"}</strong> · {history.failureMessage}</p> : null}<footer>{history.status === "SUCCESS" ? <button type="button" className="secondary-button" onClick={() => void showHistory(history.historyId)} disabled={historyMutation.isPending}>결과 보기</button> : null}{history.status === "SUCCESS" ? <button type="button" className="secondary-button" aria-label={`실행 이력 #${history.historyId} 결과 CSV 다운로드`} onClick={() => void downloadHistoryCsv(history.historyId)} disabled={historyMutation.isPending}>CSV 다운로드</button> : null}{previousSuccessIdByHistoryId.has(history.historyId) ? <button type="button" className="secondary-button" aria-label={`실행 이력 #${history.historyId}을 이전 성공 실행과 비교`} onClick={() => void compareWithPreviousHistory(history.historyId)} disabled={historyMutation.isPending}>이전과 비교</button> : null}<button type="button" className="danger-button" onClick={() => setPendingDelete({ type: "HISTORY", id: history.historyId, title: `실행 이력 #${history.historyId}` })}>삭제</button></footer></article>)}</div></section> : null}
 
       <ConfirmDialog isOpen={pendingDelete !== undefined} title={pendingDelete?.type === "CONFIGURATION" ? "크롤링 설정 삭제" : "실행 이력 삭제"} description={`“${pendingDelete?.title ?? ""}”을 삭제할까요?${pendingDelete?.type === "CONFIGURATION" ? " 연결된 실행 이력도 함께 삭제됩니다." : ""}`} confirmButtonLabel="삭제" isConfirming={deleting} onConfirm={() => void executeDelete()} onCancel={() => setPendingDelete(undefined)} />
     </section>

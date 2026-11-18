@@ -2,6 +2,12 @@
 
 [문서 목록으로](../README.md) · [작업 규칙](../AGENTS.md) · [검증 명령](verification.md)
 
+## 2026-11-18 — 크롤러 실행 이력 CSV·가독성 개선
+
+- 인수한 `CrawlerConfigurationBoard.tsx`, `WebCrawlerPage.test.tsx`, `global.css`, `docs/crawler.md` 변경을 검토했습니다. 실행 이력에서 결과 화면을 열지 않고 전체 CSV를 내려받으며 파일명에 이력 번호를 포함합니다. 시작~종료 시각과 성공·실패 양쪽의 소요 시간을 표시하고 편집 화면 복귀 버튼을 `결과목록보기`로 맞췄습니다. 기존 공통 CSV 생성·다운로드 도우미와 이력 상세 API를 재사용합니다.
+- 크롤러 설정·이력의 글자 크기·간격과 모바일 이력 배치를 조정했습니다. 변경된 스타일은 크롤러 선택자 범위이며 새 운영 의존성·API·DB 변경은 없습니다. 기존 `.claude/`와 로컬 인증·브라우저 설정은 보존하고 배포 대상에서 제외합니다.
+- 로컬 검증: ESLint·TypeScript·Vite 운영 빌드, 전체 Vitest 170파일 848개, Chromium E2E 15개와 `git diff --check`를 통과했습니다. 기존 대용량 번들 경고는 남아 있습니다. 백엔드 소스가 운영 버전과 같음을 확인했으며 최종 CI·이미지 게시 후 프론트엔드 서비스만 교체합니다. 운영 배포·브라우저 확인 결과는 완료 후 추가합니다.
+
 ## 2026-11-16 — 개인 TODO·웹 푸시 HTTPS 운영 배포
 
 - **Git·CI**: [PR #24](https://github.com/Noono0/2026_08_react_spring_devnote/pull/24)를 `main`에 병합하고 기기 쿠키 삭제 후 재연결 보완을 포함한 `786fca8e6e1a49b326b90b0f9382033531ac4ce0`를 최종 앱 버전으로 선택했습니다. 해당 커밋의 [CI 4개 작업](https://github.com/Noono0/2026_08_react_spring_devnote/actions/runs/43805420939)과 [이미지 빌드·게시](https://github.com/Noono0/2026_08_react_spring_devnote/actions/runs/43805678971)가 모두 통과했습니다. 프론트 847개·백엔드 441개 실행(외부 2개 기본 건너뜀)·Chromium 15개와 린트·타입·빌드·정적 검증을 확인했습니다. 배포 파일만 커밋하고 `.claude/`, 인증키, 로컬 브라우저 프로필은 제외했습니다.

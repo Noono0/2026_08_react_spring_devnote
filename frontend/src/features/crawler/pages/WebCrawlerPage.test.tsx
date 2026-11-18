@@ -129,7 +129,7 @@ describe("WebCrawlerPage", () => {
     expect(screen.queryByLabelText("수집할 URL")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "+ 새 설정" }));
     expect(screen.getByLabelText("수집할 URL")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "목록으로" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "결과목록보기" })).toBeInTheDocument();
   });
 
   it("단계 테스트 실행은 설정을 유지하면서 요청만 1페이지·3건으로 제한한다", async () => {
@@ -435,7 +435,7 @@ describe("WebCrawlerPage", () => {
     renderPage(false);
 
     fireEvent.click(await screen.findByRole("button", { name: "열기·수정" }));
-    fireEvent.click(screen.getByRole("button", { name: "목록으로" }));
+    fireEvent.click(screen.getByRole("button", { name: "결과목록보기" }));
     fireEvent.click(await screen.findByRole("button", { name: "결과 보기" }));
     fireEvent.change(await screen.findByRole("textbox", { name: "수집 결과 빠른 검색" }), { target: { value: "없는 값" } });
     expect(screen.getByText("검색 조건에 맞는 데이터가 없습니다.")).toBeInTheDocument();
@@ -443,6 +443,41 @@ describe("WebCrawlerPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "결과 보기" }));
     await waitFor(() => expect(screen.getByRole("textbox", { name: "수집 결과 빠른 검색" })).toHaveValue(""));
     expect(screen.getByText("봉천 원룸")).toBeInTheDocument();
+  });
+
+  it("실행 이력에서 시작~종료 시각을 보여 주고 결과 보기 없이 CSV를 바로 내려받는다", async () => {
+    const historySummary = {
+      historyId: 66, configurationId: 7, status: "SUCCESS", failureStage: null, failureMessage: null,
+      durationMillis: 968_240, itemCount: 1, startedAt: "2026-11-17T09:37:25Z", completedAt: "2026-11-17T09:53:33Z",
+    };
+    mockedGetCrawlerConfigurations.mockResolvedValue([savedNaverConfiguration]);
+    mockedGetCrawlerRunHistories.mockResolvedValue([historySummary]);
+    mockedGetCrawlerRunHistory.mockResolvedValue({
+      ...historySummary,
+      request: savedNaverConfiguration.request,
+      result: {
+        crawledAt: "2026-11-17T09:53:33Z", pageTitle: "이력 결과", finalUrl: "https://cafe.naver.com/lhuniv9",
+        crawledPageCount: 1, scannedItemCount: 1, durationMillis: 968_240,
+        fieldNames: ["제목"], items: [{ 제목: "봉천 원룸", _pageUrl: "https://cafe.naver.com/lhuniv9", _pageNumber: "1" }], warnings: [],
+      },
+    });
+    vi.mocked(downloadText).mockClear();
+    renderPage(false);
+
+    fireEvent.click(await screen.findByRole("button", { name: "열기·수정" }));
+    fireEvent.click(screen.getByRole("button", { name: "결과목록보기" }));
+    const start = new Date(historySummary.startedAt).toLocaleString("ko-KR");
+    const end = new Date(historySummary.completedAt).toLocaleString("ko-KR");
+    expect(await screen.findByText(`${start} ~ ${end}`)).toBeInTheDocument();
+    expect(screen.getByText("968.2초 소요")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "실행 이력 #66 결과 CSV 다운로드" }));
+    await waitFor(() => expect(downloadText).toHaveBeenCalledTimes(1));
+    const [fileName, content] = vi.mocked(downloadText).mock.calls[0] ?? [];
+    expect(fileName).toMatch(/^crawler-result #66 \d{4}-\d{2}-\d{2} \d{2}-\d{2}\.csv$/);
+    expect(content).toContain("봉천 원룸");
+    // 결과 표는 열지 않는다.
+    expect(screen.queryByRole("textbox", { name: "수집 결과 빠른 검색" })).not.toBeInTheDocument();
   });
 
   it("이전 성공 실행과 비교해 새 항목만 보고 사라진 항목을 확인한다", async () => {
@@ -467,7 +502,7 @@ describe("WebCrawlerPage", () => {
     renderPage(false);
 
     fireEvent.click(await screen.findByRole("button", { name: "열기·수정" }));
-    fireEvent.click(screen.getByRole("button", { name: "목록으로" }));
+    fireEvent.click(screen.getByRole("button", { name: "결과목록보기" }));
     // 가장 오래된 성공 실행은 비교 대상이 없으므로 비교 버튼이 하나만 보인다.
     const compareButtons = await screen.findAllByRole("button", { name: /이전 성공 실행과 비교/ });
     expect(compareButtons).toHaveLength(1);
