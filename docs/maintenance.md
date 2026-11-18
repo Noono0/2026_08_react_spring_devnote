@@ -6,7 +6,9 @@
 
 - 인수한 `CrawlerConfigurationBoard.tsx`, `WebCrawlerPage.test.tsx`, `global.css`, `docs/crawler.md` 변경을 검토했습니다. 실행 이력에서 결과 화면을 열지 않고 전체 CSV를 내려받으며 파일명에 이력 번호를 포함합니다. 시작~종료 시각과 성공·실패 양쪽의 소요 시간을 표시하고 편집 화면 복귀 버튼을 `결과목록보기`로 맞췄습니다. 기존 공통 CSV 생성·다운로드 도우미와 이력 상세 API를 재사용합니다.
 - 크롤러 설정·이력의 글자 크기·간격과 모바일 이력 배치를 조정했습니다. 변경된 스타일은 크롤러 선택자 범위이며 새 운영 의존성·API·DB 변경은 없습니다. 기존 `.claude/`와 로컬 인증·브라우저 설정은 보존하고 배포 대상에서 제외합니다.
-- 로컬 검증: ESLint·TypeScript·Vite 운영 빌드, 전체 Vitest 170파일 848개, Chromium E2E 15개와 `git diff --check`를 통과했습니다. 기존 대용량 번들 경고는 남아 있습니다. 백엔드 소스가 운영 버전과 같음을 확인했으며 최종 CI·이미지 게시 후 프론트엔드 서비스만 교체합니다. 운영 배포·브라우저 확인 결과는 완료 후 추가합니다.
+- 검증: ESLint·TypeScript·Vite 운영 빌드, 전체 Vitest 170파일 848개, Chromium E2E 15개와 `git diff --check`를 통과했습니다. 앱 커밋 `94362cbada4b7260df1bc6e2fd1fb336b150f81f`를 `main`에 푸시하고 [CI 4개 작업](https://github.com/Noono0/2026_08_react_spring_devnote/actions/runs/44291328387)의 백엔드 테스트·프론트 품질·브라우저 E2E·Docker 빌드와 [이미지 게시](https://github.com/Noono0/2026_08_react_spring_devnote/actions/runs/44292327651) 성공을 확인했습니다. 기존 대용량 번들 경고는 남아 있습니다.
+- 운영 배포: 기존 이미지·컨테이너 ID와 서버 환경·Compose·TLS 프록시 설정을 확인하고 비공개 설정을 서버에 백업했습니다. 해당 SHA의 프론트엔드 이미지만 `--no-deps`로 교체하고 실행 이미지 ID 일치를 확인했습니다. 백엔드는 운영 버전 `786fca8e6e1a49b326b90b0f9382033531ac4ce0`과 컨테이너 ID를 유지했으며 `healthy`·준비 상태 `UP`입니다. 서버 설정 해시가 배포 전후 같고 nginx 설정 검사·HTTPS 200·HTTP 308 이동·비로그인 크롤러 API 401을 확인했습니다. DB 마이그레이션이나 백엔드 재시작은 하지 않았습니다.
+- 브라우저 확인: 로컬 미리보기와 실제 운영 번들에서 Chromium으로 CSV 파일명·UTF-8 BOM·전체 행·시작~종료 기간·실패 소요 시간·복귀 버튼·390px 가로 넘침 없음·페이지 오류 없음을 확인했습니다. 인증·크롤러 API는 격리한 브라우저 컨텍스트의 모의 응답을 사용했으며 실제 운영 계정 이력·외부 크롤링·DB 쓰기는 실행하지 않았습니다.
 
 ## 2026-11-16 — 개인 TODO·웹 푸시 HTTPS 운영 배포
 
